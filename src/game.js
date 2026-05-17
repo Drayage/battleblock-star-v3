@@ -20,6 +20,13 @@ window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
+const CARD_DESCRIPTIONS = {
+  POWER_I: 'High-power cells. Each cleared cell deals 0.3 attack.',
+  CROSS: 'Five-cell cross. Awkward shape, higher clear value.',
+  BOMB: 'Clearing this block destroys nearby garbage.',
+  MANA_T: 'Cleared cells grant bonus MP.',
+  PURGE_O: 'Clearing this block removes a garbage row.'
+};
 
 class Game {
   constructor() {
@@ -105,8 +112,8 @@ class Game {
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
-    wrap.innerHTML = '';
-    for (const enemy of makeEnemyChoices(this.run.round)) {
+    const enemies = makeEnemyChoices(this.run.round);
+    this.renderChoicePager(wrap, enemies, enemy => {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type}`;
       btn.innerHTML = `
@@ -116,8 +123,8 @@ class Game {
         <small>AI ${enemy.aiProfile} · Speed ${enemy.speed} · Garbage ${enemy.startingGarbage}</small>
       `;
       btn.addEventListener('click', () => this.startBattle(enemy));
-      wrap.appendChild(btn);
-    }
+      return btn;
+    });
   }
 
   showShop() {
@@ -161,7 +168,7 @@ class Game {
   }
 
   itemDesc(item) {
-    if (item.kind === 'card') return CARD_LIBRARY[item.id].name;
+    if (item.kind === 'card') return `${CARD_LIBRARY[item.id].name}: ${CARD_DESCRIPTIONS[item.id] || 'Adds this block to your deck.'}`;
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return CONSUMABLES[item.id].desc;
     return `${item.amount} extra rows of survival space.`;
@@ -288,7 +295,7 @@ class Game {
   queueBattleEnd(result) {
     if (this.battleEndResult) return;
     this.battleEndResult = result;
-    this.battleEndDelay = result === 'win' ? 850 : 1200;
+    this.battleEndDelay = result === 'win' ? 1400 : 1200;
     this.message = result === 'win' ? 'Enemy defeated' : 'You were defeated';
   }
 
@@ -308,8 +315,7 @@ class Game {
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
     panel.classList.remove('hidden');
-    wrap.innerHTML = '';
-    rewards.forEach(reward => {
+    this.renderChoicePager(wrap, rewards, reward => {
       const btn = document.createElement('button');
       btn.className = 'choice reward';
       btn.innerHTML = `<strong>${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
@@ -320,8 +326,46 @@ class Game {
         this.run.round++;
         this.showMap();
       });
-      wrap.appendChild(btn);
+      return btn;
     });
+  }
+
+  renderChoicePager(wrap, items, renderItem) {
+    let index = 0;
+    const render = () => {
+      wrap.innerHTML = '';
+      wrap.classList.add('single-choice');
+      const shell = document.createElement('div');
+      shell.className = 'choice-pager';
+      const stage = document.createElement('div');
+      stage.className = 'choice-stage';
+      stage.appendChild(renderItem(items[index], index));
+      const nav = document.createElement('div');
+      nav.className = 'choice-nav';
+      const prev = document.createElement('button');
+      prev.className = 'ghost';
+      prev.textContent = '<';
+      prev.disabled = items.length <= 1;
+      prev.addEventListener('click', () => {
+        index = (index + items.length - 1) % items.length;
+        render();
+      });
+      const count = document.createElement('span');
+      count.className = 'choice-count';
+      count.textContent = `${index + 1} / ${items.length}`;
+      const next = document.createElement('button');
+      next.className = 'ghost';
+      next.textContent = '>';
+      next.disabled = items.length <= 1;
+      next.addEventListener('click', () => {
+        index = (index + 1) % items.length;
+        render();
+      });
+      nav.append(prev, count, next);
+      shell.append(stage, nav);
+      wrap.appendChild(shell);
+    };
+    render();
   }
 
   rewardName(reward) {
@@ -441,6 +485,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-pwa1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-pwa2').catch(() => {});
   });
 }

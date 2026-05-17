@@ -58,7 +58,23 @@ export class Renderer {
       this.garbageMeter(enemy.garbageQueue, L.eX - 12, L.y, enemy.rows * L.cell);
       this.sidePanel(player, 20, L.y, L.cell, run);
     }
+    if (battle === 'VICTORY' || battle === 'DEFEAT') this.battleOverlay(battle, L);
     if (!L.mobile) this.status(player, enemy, run, battle, message);
+  }
+
+  battleOverlay(kind, L) {
+    const ctx = this.ctx;
+    const text = kind === 'VICTORY' ? 'VICTORY' : 'DEFEAT';
+    ctx.fillStyle = 'rgba(5,7,14,.58)';
+    ctx.fillRect(0, 0, L.w, L.h);
+    ctx.fillStyle = kind === 'VICTORY' ? '#8dffb0' : '#ffcad5';
+    ctx.font = `bold ${L.mobile ? 30 : 46}px Courier New`;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, L.w / 2, L.mobile ? 120 : L.h / 2);
+    ctx.font = `${L.mobile ? 12 : 16}px Courier New`;
+    ctx.fillStyle = '#d7e5ff';
+    ctx.fillText(kind === 'VICTORY' ? 'Reward incoming...' : 'Run ending...', L.w / 2, L.mobile ? 146 : L.h / 2 + 38);
+    ctx.textAlign = 'left';
   }
 
   board(board, ox, oy, cs, label) {
