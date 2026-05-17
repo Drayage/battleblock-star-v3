@@ -9,20 +9,24 @@ export class Renderer {
   resize(playerRows, enemyRows) {
     const mobile = window.innerWidth < 720;
     const rows = Math.max(playerRows, enemyRows);
-    const cell = mobile ? Math.max(13, Math.min(22, Math.floor((window.innerWidth - 34) / 15))) : 25;
+    const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
+    const cell = mobile ? Math.max(16, Math.min(24, Math.floor((mobileWidth - 44) / COLS))) : 25;
+    const mobileBoardBottom = 72 + playerRows * cell;
     this.layout = {
       mobile,
       cell,
       rows,
-      w: mobile ? 390 : 940,
-      h: Math.max(590, rows * cell + 150),
-      pX: mobile ? 12 : 150,
+      w: mobile ? mobileWidth : 940,
+      h: mobile ? mobileBoardBottom + 250 : Math.max(590, rows * cell + 150),
+      pX: mobile ? Math.floor((mobileWidth - COLS * cell) / 2) : 150,
       eX: mobile ? 272 : 600,
       y: 72
     };
     this.canvas.width = this.layout.w;
     this.canvas.height = this.layout.h;
-    const scale = Math.min(1, (window.innerWidth - 8) / this.layout.w, (window.innerHeight - 162) / this.layout.h);
+    const scale = mobile
+      ? Math.min(1, (window.innerWidth - 4) / this.layout.w)
+      : Math.min(1, (window.innerWidth - 8) / this.layout.w, (window.innerHeight - 162) / this.layout.h);
     this.canvas.style.transform = `scale(${scale})`;
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
@@ -44,9 +48,7 @@ export class Renderer {
     this.board(player, L.pX, L.y, L.cell, 'YOU');
     this.garbageMeter(player.garbageQueue, L.pX - 10, L.y, player.rows * L.cell);
     if (L.mobile) {
-      const sideX = L.pX + COLS * L.cell + 10;
-      this.sidePanel(player, sideX, L.y, L.cell, run, true);
-      this.miniEnemy(enemy, sideX, L.y + 236);
+      this.mobileInfo(player, enemy, run, L.pX, L.y + player.rows * L.cell + 18, L.cell);
     } else {
       this.board(enemy, L.eX, L.y, L.cell, 'ENEMY');
       this.garbageMeter(enemy.garbageQueue, L.eX - 12, L.y, enemy.rows * L.cell);
@@ -170,6 +172,43 @@ export class Renderer {
     this.ctx.fillText('ENEMY', ox, oy - 5);
     this.board(enemy, ox, oy, cs, '');
     this.garbageMeter(enemy.garbageQueue, ox + COLS * cs + 5, oy, enemy.rows * cs);
+  }
+
+  mobileInfo(player, enemy, run, ox, oy, cs) {
+    const ctx = this.ctx;
+    const panelW = COLS * cs;
+    ctx.fillStyle = '#0f1424';
+    ctx.fillRect(ox, oy, panelW, 126);
+    ctx.strokeStyle = '#26375f';
+    ctx.strokeRect(ox, oy, panelW, 126);
+    ctx.fillStyle = '#9fb2dc';
+    ctx.font = 'bold 10px Courier New';
+    ctx.fillText('HOLD', ox + 8, oy + 17);
+    ctx.fillText('NEXT', ox + Math.floor(panelW * 0.38), oy + 17);
+    ctx.fillText('ENEMY', ox + Math.floor(panelW * 0.72), oy + 17);
+    if (player.held) this.preview(player.held, ox + 10, oy + 28, 8);
+    player.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + Math.floor(panelW * 0.38) + i * 28, oy + 28, 7));
+    this.board(enemy, ox + Math.floor(panelW * 0.72), oy + 27, 4, '');
+    this.garbageMeter(enemy.garbageQueue, ox + panelW - 12, oy + 27, enemy.rows * 4);
+
+    const mpY = oy + 96;
+    ctx.fillStyle = '#10192d';
+    ctx.fillRect(ox + 8, mpY, panelW - 16, 12);
+    ctx.fillStyle = '#38d0ff';
+    ctx.fillRect(ox + 8, mpY, Math.min(panelW - 16, player.mp * ((panelW - 16) / 100)), 12);
+    ctx.strokeStyle = '#26375f';
+    ctx.strokeRect(ox + 8, mpY, panelW - 16, 12);
+    ctx.fillStyle = '#e2efff';
+    ctx.font = '9px Courier New';
+    ctx.fillText(`MP ${Math.floor(player.mp)}`, ox + 12, mpY + 9);
+    run.equippedSkills.forEach((id, i) => {
+      const x = ox + 8 + i * Math.floor((panelW - 16) / 3);
+      const w = Math.floor((panelW - 24) / 3);
+      ctx.fillStyle = player.mp >= window.BBS_SKILLS[id].cost ? '#172d44' : '#111522';
+      ctx.fillRect(x, oy + 112, w, 18);
+      ctx.strokeStyle = '#24415d';
+      ctx.strokeRect(x, oy + 112, w, 18);
+    });
   }
 
   garbageMeter(amount, ox, oy, h) {
