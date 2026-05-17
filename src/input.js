@@ -57,6 +57,12 @@ export class InputController {
   }
 
   bindTouch() {
+    const pad = document.getElementById('mobilePad');
+    if (pad) {
+      pad.addEventListener('contextmenu', e => e.preventDefault());
+      pad.addEventListener('selectstart', e => e.preventDefault());
+      pad.addEventListener('dragstart', e => e.preventDefault());
+    }
     document.querySelectorAll('[data-action]').forEach(btn => {
       let timer = null;
       const action = btn.dataset.action;
