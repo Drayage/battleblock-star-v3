@@ -40,8 +40,14 @@ class Game {
   bindUi() {
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('restartRunBtn').addEventListener('click', () => this.newRun());
-    document.getElementById('leaveShopBtn').addEventListener('click', () => this.showMap());
-    document.getElementById('openShopBtn').addEventListener('click', () => this.showShop(true));
+    document.getElementById('mainMenuBtn').addEventListener('click', () => {
+      this.refreshMenu();
+      this.show('menu');
+    });
+    document.getElementById('leaveShopBtn').addEventListener('click', () => {
+      if (isShopRound(this.run.round)) this.run.visitedShops.add(this.run.round);
+      this.showMap();
+    });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
@@ -67,7 +73,7 @@ class Game {
 
   showMap() {
     if (isRunComplete(this.run)) return this.endRun(true);
-    if (isShopRound(this.run.round)) return this.showShop(false);
+    if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('mapMeta').textContent = `Gold ${this.run.gold} · HP ${this.run.hpRows} · Deck ${this.run.deckCount()}`;
@@ -83,9 +89,9 @@ class Game {
     }
   }
 
-  showShop(optional) {
+  showShop() {
     this.show('shopScreen');
-    document.getElementById('leaveShopBtn').textContent = optional ? 'Back' : 'Next Battle';
+    document.getElementById('leaveShopBtn').textContent = 'Next Battle';
     document.getElementById('shopGold').textContent = `Gold ${this.run.gold}`;
     const wrap = document.getElementById('shopItems');
     wrap.innerHTML = '';
@@ -99,7 +105,7 @@ class Game {
         this.run.gold -= item.price;
         applyReward(this.run, item);
         this.normalizePersistentGrid();
-        this.showShop(optional);
+        this.showShop();
       });
       wrap.appendChild(btn);
     }
@@ -176,8 +182,9 @@ class Game {
 
   winBattle() {
     this.run.gold += this.enemyCard.rewardGold;
-    this.run.persistentGrid = this.player.grid.map(r => [...r]);
+    this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
+    this.run.deck.refill();
     this.showRewards(makeRewards(this.enemyCard.rewardPool));
   }
 

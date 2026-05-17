@@ -12,6 +12,7 @@ export class RunState {
     this.ownedSkills = [];
     this.equippedSkills = [];
     this.relics = [];
+    this.visitedShops = new Set();
   }
 
   deckCount() {

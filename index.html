@@ -11,7 +11,7 @@
   <main id="app">
     <section id="menu" class="screen active">
       <h1>Battle Block Star</h1>
-      <p class="subtitle">테트리스 로그라이크 1v1 대전 액션 v3.0</p>
+      <p class="subtitle">Tetris roguelike 1v1 battle action v3.0</p>
       <div class="panel">
         <h2>Run Status</h2>
         <div class="stat-grid">
@@ -24,22 +24,21 @@
       <div class="panel">
         <h2>Controls</h2>
         <div class="control-grid">
-          <span>← → ↓</span><span>이동 / 소프트 드롭</span>
-          <span>↑ / X / Z</span><span>회전</span>
-          <span>Space / C</span><span>하드 드롭 / 홀드</span>
-          <span>1 2 3</span><span>장착 스킬</span>
+          <span>Arrows</span><span>Move / soft drop</span>
+          <span>Up / X / Z</span><span>Rotate</span>
+          <span>Space / C</span><span>Hard drop / hold</span>
+          <span>1 2 3</span><span>Skills</span>
         </div>
       </div>
-      <button id="startRunBtn" class="primary">새 런 시작</button>
+      <button id="startRunBtn" class="primary">Start Run</button>
     </section>
 
     <section id="mapScreen" class="screen">
       <header class="topbar">
         <div>
           <strong id="mapTitle">Round 1</strong>
-          <span id="mapMeta">적을 선택하세요</span>
+          <span id="mapMeta">Choose an enemy</span>
         </div>
-        <button id="openShopBtn" class="ghost">Shop</button>
       </header>
       <div id="enemyChoices" class="choice-grid"></div>
       <div id="rewardPanel" class="panel hidden">
@@ -54,7 +53,7 @@
           <strong>Checkpoint Shop</strong>
           <span id="shopGold">Gold 0</span>
         </div>
-        <button id="leaveShopBtn" class="ghost">Leave</button>
+        <button id="leaveShopBtn" class="ghost">Next Battle</button>
       </header>
       <div id="shopItems" class="choice-grid"></div>
     </section>
@@ -66,24 +65,25 @@
       </div>
       <div id="canvasWrap"><canvas id="gameCanvas"></canvas></div>
       <div id="mobilePad">
-        <div class="pad-left">
-          <button data-action="left">◀</button>
-          <button data-action="soft">▼</button>
-          <button data-action="right">▶</button>
+        <button class="edge" data-action="left">LEFT</button>
+        <div class="pad-center">
+          <div class="pad-actions">
+            <button class="big" data-action="rotate">ROT</button>
+            <button data-action="soft">SOFT</button>
+            <button data-action="hard">DROP</button>
+            <button data-action="hold">HOLD</button>
+          </div>
+          <div class="pad-skills" id="touchSkills"></div>
         </div>
-        <div class="pad-skills" id="touchSkills"></div>
-        <div class="pad-right">
-          <button class="big" data-action="rotate">↻</button>
-          <button data-action="hard">⬇</button>
-          <button data-action="hold">H</button>
-        </div>
+        <button class="edge" data-action="right">RIGHT</button>
       </div>
     </section>
 
     <section id="endScreen" class="screen">
       <h1 id="endTitle">Run Complete</h1>
       <p id="endSummary" class="subtitle"></p>
-      <button id="restartRunBtn" class="primary">다시 시작</button>
+      <button id="restartRunBtn" class="primary">Restart Run</button>
+      <button id="mainMenuBtn" class="ghost wide">Main Menu</button>
     </section>
   </main>
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
 import { BASE_TYPES, TYPES } from './src/constants.js';
 import { Board } from './src/board.js';
+import { RunState } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -23,5 +24,13 @@ for (let r = 17; r < 20; r++) {
 }
 assert.equal(garbageBoard.purgeGarbageRows(3), 3);
 assert.equal(garbageBoard.grid.slice(17).some(row => row.some(Boolean)), false);
+
+const run = new RunState();
+const persistBoard = new Board({ rows: 20, deck: run.deck });
+persistBoard.grid[18][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+persistBoard.grid[19][0] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+const persisted = persistBoard.grid.map(row => row.map(cell => cell?.type === TYPES.GARBAGE ? { ...cell } : null));
+assert.equal(persisted[18][0], null);
+assert.equal(persisted[19][0].type, TYPES.GARBAGE);
 
 console.log('All Battle Block Star v3.0 checks passed.');

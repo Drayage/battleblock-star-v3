@@ -9,14 +9,14 @@ export class Renderer {
   resize(playerRows, enemyRows) {
     const mobile = window.innerWidth < 720;
     const rows = Math.max(playerRows, enemyRows);
-    const cell = mobile ? Math.max(13, Math.min(24, Math.floor((window.innerWidth - 34) / 15))) : 25;
+    const cell = mobile ? Math.max(13, Math.min(22, Math.floor((window.innerWidth - 34) / 15))) : 25;
     this.layout = {
       mobile,
       cell,
       rows,
       w: mobile ? 390 : 940,
       h: Math.max(590, rows * cell + 150),
-      pX: mobile ? 18 : 150,
+      pX: mobile ? 12 : 150,
       eX: mobile ? 272 : 600,
       y: 72
     };
@@ -42,8 +42,16 @@ export class Renderer {
     ctx.fillText(`${enemyCard.name} · Gold ${run.gold} · HP ${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
-    this.board(enemy, L.eX, L.y, L.mobile ? Math.max(5, Math.floor(L.cell * 0.58)) : L.cell, 'ENEMY');
-    this.sidePanel(player, L.mobile ? 18 : 20, L.y, L.cell, run);
+    this.garbageMeter(player.garbageQueue, L.pX - 10, L.y, player.rows * L.cell);
+    if (L.mobile) {
+      const sideX = L.pX + COLS * L.cell + 10;
+      this.sidePanel(player, sideX, L.y, L.cell, run, true);
+      this.miniEnemy(enemy, sideX, L.y + 236);
+    } else {
+      this.board(enemy, L.eX, L.y, L.cell, 'ENEMY');
+      this.garbageMeter(enemy.garbageQueue, L.eX - 12, L.y, enemy.rows * L.cell);
+      this.sidePanel(player, 20, L.y, L.cell, run);
+    }
     this.status(player, enemy, run, battle, message);
   }
 
@@ -114,12 +122,13 @@ export class Renderer {
     }
   }
 
-  sidePanel(board, ox, oy, cs, run) {
+  sidePanel(board, ox, oy, cs, run, compact = false) {
     const ctx = this.ctx;
+    const width = compact ? 104 : 110;
     ctx.fillStyle = '#0f1424';
-    ctx.fillRect(ox, oy, 110, 160);
+    ctx.fillRect(ox, oy, width, 160);
     ctx.strokeStyle = '#26375f';
-    ctx.strokeRect(ox, oy, 110, 160);
+    ctx.strokeRect(ox, oy, width, 160);
     ctx.fillStyle = '#9fb2dc';
     ctx.font = 'bold 11px Courier New';
     ctx.fillText('HOLD', ox + 8, oy + 18);
@@ -127,19 +136,19 @@ export class Renderer {
     ctx.fillText('NEXT', ox + 8, oy + 78);
     board.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + 14, oy + 88 + i * 23, Math.max(6, cs * 0.38)));
     ctx.fillStyle = '#10192d';
-    ctx.fillRect(ox, oy + 172, 110, 14);
+    ctx.fillRect(ox, oy + 172, width, 14);
     ctx.fillStyle = '#38d0ff';
-    ctx.fillRect(ox, oy + 172, Math.min(110, board.mp * 1.1), 14);
+    ctx.fillRect(ox, oy + 172, Math.min(width, board.mp * (width / 100)), 14);
     ctx.strokeStyle = '#26375f';
-    ctx.strokeRect(ox, oy + 172, 110, 14);
+    ctx.strokeRect(ox, oy + 172, width, 14);
     ctx.fillStyle = '#e2efff';
     ctx.font = '10px Courier New';
     ctx.fillText(`MP ${Math.floor(board.mp)}`, ox + 6, oy + 183);
     run.equippedSkills.forEach((id, i) => {
       ctx.fillStyle = board.mp >= window.BBS_SKILLS[id].cost ? '#172d44' : '#111522';
-      ctx.fillRect(ox, oy + 196 + i * 25, 110, 20);
+      ctx.fillRect(ox, oy + 196 + i * 25, width, 20);
       ctx.strokeStyle = '#24415d';
-      ctx.strokeRect(ox, oy + 196 + i * 25, 110, 20);
+      ctx.strokeRect(ox, oy + 196 + i * 25, width, 20);
       ctx.fillStyle = '#b7c8e8';
       ctx.fillText(`${i + 1}. ${window.BBS_SKILLS[id].name}`, ox + 5, oy + 210 + i * 25);
     });
@@ -154,6 +163,28 @@ export class Renderer {
     }
   }
 
+  miniEnemy(enemy, ox, oy) {
+    const cs = 5;
+    this.ctx.fillStyle = '#a9b7d6';
+    this.ctx.font = 'bold 9px Courier New';
+    this.ctx.fillText('ENEMY', ox, oy - 5);
+    this.board(enemy, ox, oy, cs, '');
+    this.garbageMeter(enemy.garbageQueue, ox + COLS * cs + 5, oy, enemy.rows * cs);
+  }
+
+  garbageMeter(amount, ox, oy, h) {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#080a10';
+    ctx.fillRect(ox, oy, 7, h);
+    const cells = Math.min(Math.ceil(amount), Math.floor(h / 8));
+    for (let i = 0; i < cells; i++) {
+      ctx.fillStyle = amount >= 8 ? '#ff335f' : amount >= 4 ? '#ff9f2f' : '#d7c64a';
+      ctx.fillRect(ox + 1, oy + h - 7 - i * 8, 5, 6);
+    }
+    ctx.strokeStyle = '#29344f';
+    ctx.strokeRect(ox, oy, 7, h);
+  }
+
   status(player, enemy, run, battle, message) {
     const ctx = this.ctx;
     const y = this.layout.h - 58;
@@ -163,7 +194,7 @@ export class Renderer {
     ctx.strokeRect(18, y, this.layout.w - 36, 40);
     ctx.fillStyle = '#dbe7ff';
     ctx.font = '12px Courier New';
-    const text = message || `Queue ${player.garbageQueue} | Enemy Queue ${enemy.garbageQueue} | Last Attack ${player.lastAttack.toFixed(1)} | ${battle}`;
+    const text = message || `Incoming shown by side meters | Last Attack ${player.lastAttack.toFixed(1)} | ${battle}`;
     ctx.fillText(text, 28, y + 25);
   }
 }
