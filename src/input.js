@@ -45,7 +45,10 @@ export class InputController {
       KeyC: 'hold',
       Digit1: 'skill0',
       Digit2: 'skill1',
-      Digit3: 'skill2'
+      Digit3: 'skill2',
+      Digit4: 'consumable0',
+      Digit5: 'consumable1',
+      Digit6: 'consumable2'
     };
     const action = map[code];
     if (!action) return;

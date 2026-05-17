@@ -57,10 +57,7 @@ export const SHAPES = {
     [[1,1,0],[0,1,0],[0,1,0]]
   ],
   [TYPES.O]: [
-    [[1,1],[1,1]],
-    [[1,1],[1,1]],
-    [[1,1],[1,1]],
-    [[1,1],[1,1]]
+    [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
   ],
   [TYPES.S]: [
     [[0,1,1],[1,1,0],[0,0,0]],
@@ -93,10 +90,7 @@ export const SHAPES = {
     [[0,1,0],[1,1,1],[0,1,0]]
   ],
   [TYPES.BOMB]: [
-    [[1,1],[1,1]],
-    [[1,1],[1,1]],
-    [[1,1],[1,1]],
-    [[1,1],[1,1]]
+    [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
   ],
   [TYPES.MANA_T]: [
     [[0,1,0],[1,1,1],[0,0,0]],
@@ -105,10 +99,7 @@ export const SHAPES = {
     [[0,1,0],[1,1,0],[0,1,0]]
   ],
   [TYPES.PURGE_O]: [
-    [[1,1],[1,1]],
-    [[1,1],[1,1]],
-    [[1,1],[1,1]],
-    [[1,1],[1,1]]
+    [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
   ]
 };
 
@@ -120,9 +111,9 @@ export const CARD_LIBRARY = {
   [TYPES.S]: { id: TYPES.S, name: 'S Mino', shape: SHAPES[TYPES.S], cellAttack: 0.1, traits: [], rarity: 'base' },
   [TYPES.T]: { id: TYPES.T, name: 'T Mino', shape: SHAPES[TYPES.T], cellAttack: 0.1, traits: [], rarity: 'base' },
   [TYPES.Z]: { id: TYPES.Z, name: 'Z Mino', shape: SHAPES[TYPES.Z], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.POWER_I]: { id: TYPES.POWER_I, name: '고화력 I', shape: SHAPES[TYPES.POWER_I], cellAttack: 0.3, traits: ['highPower'], rarity: 'rare' },
-  [TYPES.CROSS]: { id: TYPES.CROSS, name: '기형 십자', shape: SHAPES[TYPES.CROSS], cellAttack: 0.16, traits: ['oddShape'], rarity: 'rare' },
-  [TYPES.BOMB]: { id: TYPES.BOMB, name: '폭탄 O', shape: SHAPES[TYPES.BOMB], cellAttack: 0.1, traits: ['bomb'], rarity: 'uncommon' },
-  [TYPES.MANA_T]: { id: TYPES.MANA_T, name: '마나 T', shape: SHAPES[TYPES.MANA_T], cellAttack: 0.1, traits: ['manaBonus'], rarity: 'uncommon' },
-  [TYPES.PURGE_O]: { id: TYPES.PURGE_O, name: '정화 O', shape: SHAPES[TYPES.PURGE_O], cellAttack: 0.1, traits: ['purgeGarbage'], rarity: 'rare' }
+  [TYPES.POWER_I]: { id: TYPES.POWER_I, name: 'Power I', shape: SHAPES[TYPES.POWER_I], cellAttack: 0.3, traits: ['highPower'], rarity: 'rare' },
+  [TYPES.CROSS]: { id: TYPES.CROSS, name: 'Cross Mino', shape: SHAPES[TYPES.CROSS], cellAttack: 0.16, traits: ['oddShape'], rarity: 'rare' },
+  [TYPES.BOMB]: { id: TYPES.BOMB, name: 'Bomb O', shape: SHAPES[TYPES.BOMB], cellAttack: 0.1, traits: ['bomb'], rarity: 'uncommon' },
+  [TYPES.MANA_T]: { id: TYPES.MANA_T, name: 'Mana T', shape: SHAPES[TYPES.MANA_T], cellAttack: 0.1, traits: ['manaBonus'], rarity: 'uncommon' },
+  [TYPES.PURGE_O]: { id: TYPES.PURGE_O, name: 'Cleanse O', shape: SHAPES[TYPES.PURGE_O], cellAttack: 0.1, traits: ['purgeGarbage'], rarity: 'rare' }
 };

@@ -17,7 +17,7 @@ export class Renderer {
       cell,
       rows,
       w: mobile ? mobileWidth : 940,
-      h: mobile ? mobileBoardBottom + 250 : Math.max(590, rows * cell + 150),
+      h: mobile ? mobileBoardBottom + 290 : Math.max(590, rows * cell + 150),
       pX: mobile ? Math.floor((mobileWidth - COLS * cell) / 2) : 150,
       eX: mobile ? 272 : 600,
       y: 72
@@ -154,6 +154,15 @@ export class Renderer {
       ctx.fillStyle = '#b7c8e8';
       ctx.fillText(`${i + 1}. ${window.BBS_SKILLS[id].name}`, ox + 5, oy + 210 + i * 25);
     });
+    run.consumables.forEach((id, i) => {
+      const item = window.BBS_CONSUMABLES[id];
+      ctx.fillStyle = '#1f1a2d';
+      ctx.fillRect(ox, oy + 276 + i * 22, width, 18);
+      ctx.strokeStyle = '#534875';
+      ctx.strokeRect(ox, oy + 276 + i * 22, width, 18);
+      ctx.fillStyle = '#ded4ff';
+      ctx.fillText(`${i + 4}. ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
+    });
   }
 
   preview(card, ox, oy, cs) {
@@ -178,9 +187,9 @@ export class Renderer {
     const ctx = this.ctx;
     const panelW = COLS * cs;
     ctx.fillStyle = '#0f1424';
-    ctx.fillRect(ox, oy, panelW, 126);
+    ctx.fillRect(ox, oy, panelW, 158);
     ctx.strokeStyle = '#26375f';
-    ctx.strokeRect(ox, oy, panelW, 126);
+    ctx.strokeRect(ox, oy, panelW, 158);
     ctx.fillStyle = '#9fb2dc';
     ctx.font = 'bold 10px Courier New';
     ctx.fillText('HOLD', ox + 8, oy + 17);
@@ -208,6 +217,17 @@ export class Renderer {
       ctx.fillRect(x, oy + 112, w, 18);
       ctx.strokeStyle = '#24415d';
       ctx.strokeRect(x, oy + 112, w, 18);
+    });
+    run.consumables.forEach((id, i) => {
+      const x = ox + 8 + i * Math.floor((panelW - 16) / 3);
+      const w = Math.floor((panelW - 24) / 3);
+      ctx.fillStyle = '#1f1a2d';
+      ctx.fillRect(x, oy + 134, w, 18);
+      ctx.strokeStyle = '#534875';
+      ctx.strokeRect(x, oy + 134, w, 18);
+      ctx.fillStyle = '#ded4ff';
+      ctx.font = '9px Courier New';
+      ctx.fillText(`${i + 4}.${window.BBS_CONSUMABLES[id]?.short || id}`, x + 4, oy + 147);
     });
   }
 

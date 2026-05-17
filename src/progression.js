@@ -1,6 +1,7 @@
 import { DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js';
 import { Deck, shuffle } from './deck.js';
 import { SKILLS } from './skills.js';
+import { CONSUMABLES } from './consumables.js';
 
 export class RunState {
   constructor() {
@@ -11,6 +12,7 @@ export class RunState {
     this.persistentGrid = null;
     this.ownedSkills = [];
     this.equippedSkills = [];
+    this.consumables = [];
     this.relics = [];
     this.visitedShops = new Set();
   }
@@ -20,54 +22,80 @@ export class RunState {
   }
 }
 
-const ENEMY_NAMES = ['불안정한 복제체', '라인 사냥꾼', '구멍술사', '네온 기사', '압축 드론', '폐허 관리자'];
-const ELITE_NAMES = ['엘리트: 천장 압박자', '엘리트: 쓰레기 군주', '엘리트: 초고속 코어'];
+const ENEMIES = [
+  { name: 'Soft Starter', style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -5, speed: 520, garbage: 0 },
+  { name: 'Line Hunter', style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -4, speed: 470, garbage: 0 },
+  { name: 'Speed Drone', style: 'Fast drops, messy board, low defense.', profile: 'fast', rows: -3, speed: 390, garbage: 0 },
+  { name: 'Bomb Adept', style: 'Adds Bomb O blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, deckExtras: [TYPES.BOMB] },
+  { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, ability: 'slowPlayer' },
+  { name: 'Cleanse Warden', style: 'Uses Cleanse O and resists garbage pressure.', profile: 'tetris', rows: 2, speed: 380, garbage: 2, deckExtras: [TYPES.PURGE_O] }
+];
+
+const ELITES = [
+  { name: 'Elite: Ceiling Press', style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, ability: 'spike' },
+  { name: 'Elite: Power Core', style: 'Uses Power I and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, deckExtras: [TYPES.POWER_I, TYPES.POWER_I], ability: 'power' },
+  { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, deckExtras: [TYPES.CROSS], ability: 'spike' }
+];
 
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
   const choices = [];
+  const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
   for (let i = 0; i < count; i++) {
-    const elite = round >= 4 && Math.random() < 0.28 + round * 0.01;
-    choices.push(makeEnemy(round, elite));
+    choices.push(makeEnemy(round, eliteSlot && i === count - 1));
   }
   return choices;
 }
 
 export function makeEnemy(round, elite = false) {
+  const pool = elite ? ELITES : ENEMIES;
+  const base = pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
+  const roundOneRows = round === 1 ? 15 : DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 6);
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
     type: elite ? 'elite' : 'normal',
-    name: elite ? ELITE_NAMES[Math.floor(Math.random() * ELITE_NAMES.length)] : ENEMY_NAMES[Math.floor(Math.random() * ENEMY_NAMES.length)],
-    aiProfile: elite ? 'elite' : round > 12 ? 'fast' : 'balanced',
-    rewardGold: elite ? 28 + level * 3 : 12 + level * 2,
+    name: base.name,
+    style: base.style,
+    aiProfile: base.profile,
+    rewardGold: elite ? 26 + level * 3 : 9 + level * 2,
     rewardPool: elite ? 'elite' : 'normal',
-    startingRows: elite ? DEFAULT_ROWS + 4 : DEFAULT_ROWS,
-    startingGarbage: elite ? Math.floor(level / 3) : Math.floor(level / 6),
-    speed: Math.max(95, elite ? 280 - level * 8 : 430 - level * 9)
+    startingRows: elite ? Math.max(18, DEFAULT_ROWS + base.rows + Math.floor(level / 4)) : Math.max(15, roundOneRows),
+    startingGarbage: (base.garbage || 0) + (elite ? Math.floor(level / 4) : Math.floor(level / 8)),
+    speed: Math.max(100, (base.speed || 430) - level * (elite ? 7 : 5)),
+    deckExtras: base.deckExtras || [],
+    ability: round >= 7 || elite ? base.ability : null
   };
 }
 
 export function makeRewards(pool = 'normal') {
-  const cards = pool === 'elite'
-    ? [TYPES.POWER_I, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB]
-    : [TYPES.BOMB, TYPES.MANA_T, TYPES.POWER_I];
-  const skillIds = Object.keys(SKILLS);
+  const normalCards = [TYPES.BOMB, TYPES.MANA_T, TYPES.POWER_I, TYPES.PURGE_O];
+  const eliteCards = [TYPES.POWER_I, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB];
+  const cards = pool === 'elite' ? eliteCards : normalCards;
+  if (pool === 'elite') {
+    const skillIds = Object.keys(SKILLS);
+    return shuffle([
+      { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Rare block reward' },
+      { kind: 'skill', id: skillIds[Math.floor(Math.random() * skillIds.length)], title: 'Special skill reward' },
+      { kind: 'consumable', id: randomConsumable(), title: 'Elite consumable kit' }
+    ]);
+  }
   return shuffle([
-    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: '블록 카드 추가' },
-    { kind: 'skill', id: skillIds[Math.floor(Math.random() * skillIds.length)], title: '스킬 획득' },
-    { kind: 'hp', amount: 2, title: '최대 HP +2행' }
+    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Block reward' },
+    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Block reward' },
+    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Block reward' }
   ]);
 }
 
 export function makeShopItems(run) {
   const skillIds = Object.keys(SKILLS).filter(id => !run.ownedSkills.includes(id));
   return [
-    { kind: 'card', id: TYPES.POWER_I, title: '고화력 I 추가', price: 42 },
-    { kind: 'card', id: TYPES.MANA_T, title: '마나 T 추가', price: 30 },
-    { kind: 'card', id: TYPES.PURGE_O, title: '정화 O 추가', price: 46 },
-    { kind: 'hp', amount: 5, title: '최대 HP +5행', price: 55 },
-    { kind: 'skill', id: skillIds[0] || 'purge', title: skillIds[0] ? `스킬: ${SKILLS[skillIds[0]].name}` : '스킬 강화: 정화', price: 50 }
+    { kind: 'card', id: TYPES.POWER_I, title: 'Buy Power I', price: 42 },
+    { kind: 'card', id: TYPES.MANA_T, title: 'Buy Mana T', price: 30 },
+    { kind: 'card', id: TYPES.PURGE_O, title: 'Buy Cleanse O', price: 46 },
+    { kind: 'hp', amount: 5, title: 'Max HP +5 rows', price: 55 },
+    { kind: 'skill', id: skillIds[0] || 'purge', title: skillIds[0] ? `Skill: ${SKILLS[skillIds[0]].name}` : 'Skill upgrade: Purge', price: 50 },
+    { kind: 'consumable', id: randomConsumable(), title: 'Consumable pack', price: 22 }
   ];
 }
 
@@ -77,7 +105,17 @@ export function applyReward(run, reward) {
     run.ownedSkills.push(reward.id);
     if (run.equippedSkills.length < 3) run.equippedSkills.push(reward.id);
   }
+  if (reward.kind === 'consumable') addConsumable(run, reward.id);
   if (reward.kind === 'hp') run.hpRows += reward.amount;
+}
+
+export function addConsumable(run, id) {
+  if (run.consumables.length < 3) run.consumables.push(id);
+}
+
+export function randomConsumable() {
+  const ids = Object.keys(CONSUMABLES);
+  return ids[Math.floor(Math.random() * ids.length)];
 }
 
 export function isShopRound(round) {

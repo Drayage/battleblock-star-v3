@@ -1,9 +1,11 @@
 import { Board } from './board.js';
-import { CARD_LIBRARY } from './constants.js';
+import { CARD_LIBRARY, COLORS } from './constants.js';
+import { Deck } from './deck.js';
 import { AI } from './ai.js';
 import { Renderer } from './renderer.js';
 import { InputController } from './input.js';
 import { SKILLS } from './skills.js';
+import { CONSUMABLES } from './consumables.js';
 import {
   RunState,
   applyReward,
@@ -15,6 +17,9 @@ import {
 } from './progression.js';
 
 window.BBS_SKILLS = SKILLS;
+window.BBS_CONSUMABLES = CONSUMABLES;
+
+const RECORD_KEY = 'battleBlockStar.records.v1';
 
 class Game {
   constructor() {
@@ -30,7 +35,9 @@ class Game {
     this.last = 0;
     this.fallTimer = 0;
     this.enemyTimer = 0;
+    this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
+    this.playerSlowTimer = 0;
     this.message = '';
     this.bindUi();
     this.refreshMenu();
@@ -64,6 +71,20 @@ class Game {
     document.getElementById('menuGold').textContent = this.run.gold;
     document.getElementById('menuHp').textContent = this.run.hpRows;
     document.getElementById('menuDeck').textContent = `${this.run.deckCount()} cards`;
+    this.renderRecords();
+  }
+
+  renderRecords() {
+    const el = document.getElementById('recordList');
+    const records = this.loadRecords();
+    const best = records.reduce((top, r) => Math.max(top, r.round), 0);
+    if (!records.length) {
+      el.innerHTML = '<span class="muted">No runs yet.</span>';
+      return;
+    }
+    el.innerHTML = `<strong>Best round ${best}</strong>` + records.slice(0, 5).map(r =>
+      `<span>R${r.round} · ${r.gold}G · ${r.result}</span>`
+    ).join('');
   }
 
   newRun() {
@@ -78,12 +99,18 @@ class Game {
     document.getElementById('mapTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('mapMeta').textContent = `Gold ${this.run.gold} · HP ${this.run.hpRows} · Deck ${this.run.deckCount()}`;
     document.getElementById('rewardPanel').classList.add('hidden');
+    this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
     wrap.innerHTML = '';
     for (const enemy of makeEnemyChoices(this.run.round)) {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type}`;
-      btn.innerHTML = `<strong>${enemy.name}</strong><span>${enemy.type.toUpperCase()} · reward ${enemy.rewardGold}G</span><small>Rows ${enemy.startingRows} · Garbage ${enemy.startingGarbage} · AI ${enemy.aiProfile}</small>`;
+      btn.innerHTML = `
+        <strong>${enemy.name}</strong>
+        <span>${enemy.type.toUpperCase()} · ${enemy.rewardGold}G · HP ${enemy.startingRows}</span>
+        <small>${enemy.style}</small>
+        <small>AI ${enemy.aiProfile} · Speed ${enemy.speed} · Garbage ${enemy.startingGarbage}</small>
+      `;
       btn.addEventListener('click', () => this.startBattle(enemy));
       wrap.appendChild(btn);
     }
@@ -99,9 +126,10 @@ class Game {
       const btn = document.createElement('button');
       btn.className = 'choice shop';
       btn.innerHTML = `<strong>${item.title}</strong><span>${item.price} Gold</span><small>${this.itemDesc(item)}</small>`;
-      btn.disabled = this.run.gold < item.price;
+      this.attachItemPreview(btn, item);
+      btn.disabled = this.run.gold < item.price || (item.kind === 'consumable' && this.run.consumables.length >= 3);
       btn.addEventListener('click', () => {
-        if (this.run.gold < item.price) return;
+        if (btn.disabled || this.run.gold < item.price) return;
         this.run.gold -= item.price;
         applyReward(this.run, item);
         this.normalizePersistentGrid();
@@ -111,31 +139,80 @@ class Game {
     }
   }
 
+  renderDeckViewer() {
+    const wrap = document.getElementById('deckList');
+    const counts = new Map();
+    for (const id of this.run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
+    for (const id of this.run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
+    for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
+    wrap.innerHTML = '';
+    [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
+      const card = CARD_LIBRARY[id];
+      const item = document.createElement('div');
+      item.className = 'deck-card';
+      item.appendChild(this.blockPreview(card, 7));
+      item.insertAdjacentHTML('beforeend', `<span>${card.name}</span><strong>x${count}</strong>`);
+      wrap.appendChild(item);
+    });
+  }
+
   itemDesc(item) {
     if (item.kind === 'card') return CARD_LIBRARY[item.id].name;
     if (item.kind === 'skill') return SKILLS[item.id].desc;
-    return `${item.amount}행만큼 버틸 공간이 늘어납니다.`;
+    if (item.kind === 'consumable') return CONSUMABLES[item.id].desc;
+    return `${item.amount} extra rows of survival space.`;
+  }
+
+  attachItemPreview(node, item) {
+    if (item.kind === 'card') node.appendChild(this.blockPreview(CARD_LIBRARY[item.id], 8));
+    if (item.kind === 'consumable') {
+      const chip = document.createElement('div');
+      chip.className = 'item-chip';
+      chip.textContent = CONSUMABLES[item.id].short;
+      node.appendChild(chip);
+    }
+  }
+
+  blockPreview(card, size = 8) {
+    const shape = card.shape[0];
+    const preview = document.createElement('div');
+    preview.className = 'block-preview';
+    preview.style.setProperty('--cell', `${size}px`);
+    preview.style.setProperty('--cols', String(shape[0].length));
+    for (const row of shape) {
+      for (const filled of row) {
+        const cell = document.createElement('i');
+        if (filled) cell.style.background = this.rendererColor(card.id);
+        preview.appendChild(cell);
+      }
+    }
+    return preview;
+  }
+
+  rendererColor(id) {
+    return COLORS[id] || '#8fb1ff';
   }
 
   startBattle(enemyCard) {
     this.enemyCard = enemyCard;
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
-    this.enemy = new Board({ rows: enemyCard.startingRows });
+    this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
     this.ai = new AI(enemyCard.aiProfile);
     this.fallTimer = 0;
     this.enemyTimer = 0;
+    this.enemyAbilityTimer = 0;
     this.message = 'Battle start';
     document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
-    this.renderTouchSkills();
+    this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
     this.show('gameScreen');
   }
 
-  renderTouchSkills() {
-    const wrap = document.getElementById('touchSkills');
-    wrap.innerHTML = '';
+  renderTouchSlots() {
+    const skillWrap = document.getElementById('touchSkills');
+    skillWrap.innerHTML = '';
     this.run.equippedSkills.forEach((id, i) => {
       const btn = document.createElement('button');
       btn.textContent = `${i + 1}. ${SKILLS[id].name}`;
@@ -143,7 +220,18 @@ class Game {
         e.preventDefault();
         this.useSkill(i);
       });
-      wrap.appendChild(btn);
+      skillWrap.appendChild(btn);
+    });
+    const consWrap = document.getElementById('touchConsumables');
+    consWrap.innerHTML = '';
+    this.run.consumables.forEach((id, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = `${i + 4}. ${CONSUMABLES[id].short}`;
+      btn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        this.useConsumable(i);
+      });
+      consWrap.appendChild(btn);
     });
   }
 
@@ -161,6 +249,7 @@ class Game {
     if (action === 'hold') this.player.hold();
     if (action === 'hard') this.resolve(this.player.hardDrop(), this.player);
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
+    if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
   }
 
   useSkill(index) {
@@ -172,10 +261,20 @@ class Game {
     this.message = `${skill.name} activated`;
   }
 
+  useConsumable(index) {
+    const id = this.run.consumables[index];
+    const item = CONSUMABLES[id];
+    if (!item) return;
+    this.run.consumables.splice(index, 1);
+    this.message = item.use({ game: this, player: this.player, enemy: this.enemy });
+    this.renderTouchSlots();
+  }
+
   resolve(result, attacker) {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
-    if (result.attack > 0) defender.receiveGarbage(result.attack);
+    const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    if (result.attack > 0) defender.receiveGarbage(result.attack * mult);
     if (this.player.defeated) return this.endRun(false);
     if (this.enemy.defeated) return this.winBattle();
   }
@@ -191,7 +290,7 @@ class Game {
   showRewards(rewards) {
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `Round ${this.run.round} Clear`;
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold · 보상을 하나 선택하세요`;
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold · choose one reward`;
     document.getElementById('enemyChoices').innerHTML = '';
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
@@ -201,6 +300,7 @@ class Game {
       const btn = document.createElement('button');
       btn.className = 'choice reward';
       btn.innerHTML = `<strong>${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         applyReward(this.run, reward);
         this.normalizePersistentGrid();
@@ -214,6 +314,7 @@ class Game {
   rewardName(reward) {
     if (reward.kind === 'card') return CARD_LIBRARY[reward.id].name;
     if (reward.kind === 'skill') return SKILLS[reward.id].name;
+    if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
     return `+${reward.amount} rows`;
   }
 
@@ -225,9 +326,29 @@ class Game {
   }
 
   endRun(win) {
+    this.saveRecord(win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
     document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} · Gold ${this.run.gold} · HP Rows ${this.run.hpRows}`;
+  }
+
+  saveRecord(win) {
+    const records = this.loadRecords();
+    records.unshift({
+      round: Math.min(this.run.round, 20),
+      gold: this.run.gold,
+      result: win ? 'win' : 'loss',
+      at: Date.now()
+    });
+    localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 5)));
+  }
+
+  loadRecords() {
+    try {
+      return JSON.parse(localStorage.getItem(RECORD_KEY) || '[]');
+    } catch {
+      return [];
+    }
   }
 
   loop(now) {
@@ -242,7 +363,8 @@ class Game {
     this.player.flash = Math.max(0, this.player.flash - dt);
     this.enemy.flash = Math.max(0, this.enemy.flash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
-    this.fallTimer += dt;
+    this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
+    this.fallTimer += this.playerSlowTimer > 0 ? dt * 0.55 : dt;
     if (this.fallTimer >= 760) {
       this.fallTimer = 0;
       if (!this.player.move(0, 1)) this.resolve(this.player.lock(), this.player);
@@ -253,6 +375,7 @@ class Game {
       this.enemyTimer = 0;
       this.resolve(this.ai.step(this.enemy), this.enemy);
     }
+    this.updateEnemyAbility(dt);
     if (this.enemy.defeated) this.winBattle();
     this.renderer.draw({
       player: this.player,
@@ -263,6 +386,25 @@ class Game {
       message: this.message
     });
     this.message = '';
+  }
+
+  updateEnemyAbility(dt) {
+    if (!this.enemyCard.ability) return;
+    this.enemyAbilityTimer += dt;
+    if (this.enemyAbilityTimer < 6500) return;
+    this.enemyAbilityTimer = 0;
+    if (this.enemyCard.ability === 'spike') {
+      this.player.receiveGarbage(1);
+      this.message = `${this.enemyCard.name} spikes garbage`;
+    }
+    if (this.enemyCard.ability === 'slowPlayer') {
+      this.playerSlowTimer = 3000;
+      this.message = `${this.enemyCard.name} slows gravity`;
+    }
+    if (this.enemyCard.ability === 'power') {
+      this.player.receiveGarbage(2);
+      this.message = `${this.enemyCard.name} fires a power burst`;
+    }
   }
 }
 
