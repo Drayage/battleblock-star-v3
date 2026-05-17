@@ -20,9 +20,9 @@ button{font:inherit}
 #gameScreen{max-width:none;width:100%;padding-bottom:138px}.hud{width:min(980px,100%);margin:0 auto 8px}
 #canvasWrap{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;min-height:420px}canvas{display:block;transform-origin:top center;image-rendering:pixelated}
 #mobilePad{position:fixed;left:0;right:0;bottom:0;display:none;grid-template-columns:58px 1fr 58px;gap:8px;padding:8px;background:rgba(7,9,18,.92);border-top:1px solid #1d2a49}
-#mobilePad button{min-height:48px;border:1px solid #2e4778;border-radius:7px;background:#121d35;color:#dbe8ff;font-weight:bold;touch-action:manipulation}
-.edge{font-size:11px;letter-spacing:0}
-.pad-center{display:grid;gap:6px}.pad-actions{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:6px}.pad-actions .big{font-size:15px}
+#mobilePad button{min-height:48px;border:1px solid #2e4778;border-radius:7px;background:#121d35;color:#dbe8ff;font-size:20px;font-weight:bold;line-height:1;touch-action:manipulation}
+.edge{font-size:24px}
+.pad-center{display:grid;gap:6px}.pad-actions{display:grid;grid-template-columns:1.15fr 1.15fr 1fr 1fr 1fr;gap:6px}.pad-actions .big{font-size:23px}
 .pad-skills{display:flex;gap:6px;align-items:stretch}.pad-skills button{flex:1;min-height:34px;font-size:10px;background:#16273a;border-color:#315775}
 @media (max-width:720px){
   #app{padding:10px;align-items:flex-start}.choice-grid{grid-template-columns:1fr}.topbar,.hud{padding:0 4px}#mobilePad{display:grid}
