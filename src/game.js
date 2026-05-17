@@ -63,6 +63,8 @@ class Game {
 
   show(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+    document.documentElement.classList.toggle('in-game', id === 'gameScreen');
+    document.body.classList.toggle('in-game', id === 'gameScreen');
     this.screen = id;
   }
 

@@ -10,9 +10,10 @@ export class Renderer {
     const mobile = window.innerWidth < 720;
     const rows = Math.max(playerRows, enemyRows);
     const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
+    const viewportH = Math.floor(window.visualViewport?.height || window.innerHeight);
     const mobileY = 52;
     const widthCell = Math.floor((mobileWidth - 44) / COLS);
-    const heightCell = Math.floor((window.innerHeight - 250) / playerRows);
+    const heightCell = Math.floor((viewportH - 228) / playerRows);
     const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
     const mobileBoardBottom = mobileY + playerRows * cell;
     this.layout = {
@@ -20,7 +21,7 @@ export class Renderer {
       cell,
       rows,
       w: mobile ? mobileWidth : 940,
-      h: mobile ? mobileBoardBottom + 176 : Math.max(590, rows * cell + 150),
+      h: mobile ? mobileBoardBottom + 160 : Math.max(590, rows * cell + 150),
       pX: mobile ? Math.floor((mobileWidth - COLS * cell) / 2) : 150,
       eX: mobile ? 272 : 600,
       y: mobile ? mobileY : 72
