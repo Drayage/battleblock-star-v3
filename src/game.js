@@ -1,20 +1,22 @@
-import { Board } from './board.js';
-import { CARD_LIBRARY, COLORS } from './constants.js';
-import { Deck } from './deck.js';
-import { AI } from './ai.js';
-import { Renderer } from './renderer.js';
-import { InputController } from './input.js';
-import { SKILLS } from './skills.js';
-import { CONSUMABLES } from './consumables.js';
+import { Board } from './board.js?v=20260518-event5';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-event5';
+import { Deck } from './deck.js?v=20260518-event5';
+import { AI } from './ai.js?v=20260518-event5';
+import { Renderer } from './renderer.js?v=20260518-event5';
+import { InputController } from './input.js?v=20260518-event5';
+import { SKILLS } from './skills.js?v=20260518-event5';
+import { CONSUMABLES } from './consumables.js?v=20260518-event5';
 import {
   RunState,
   applyReward,
   isRunComplete,
   isShopRound,
   makeEnemyChoices,
+  makeEventChoices,
   makeRewards,
-  makeShopItems
-} from './progression.js';
+  makeShopItems,
+  shouldShowEvent
+} from './progression.js?v=20260518-event5';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -25,7 +27,8 @@ const CARD_DESCRIPTIONS = {
   CROSS: 'Five-cell cross. Awkward shape, higher clear value.',
   BOMB: 'Clearing this block destroys nearby garbage.',
   MANA_T: 'Cleared cells grant bonus MP.',
-  PURGE_O: 'Clearing this block removes a garbage row.'
+  PURGE_O: 'Clearing this block removes a garbage row.',
+  HEAVY_JUNK: 'Awkward five-cell junk. Low attack, mostly a deck tax.'
 };
 
 class Game {
@@ -100,7 +103,13 @@ class Game {
 
   newRun() {
     this.run = new RunState();
-    this.showMap();
+    this.routeNextScreen();
+  }
+
+  routeNextScreen() {
+    const eventKey = shouldShowEvent(this.run);
+    if (eventKey) return this.showEvent(eventKey);
+    return this.showMap();
   }
 
   showMap() {
@@ -126,6 +135,84 @@ class Game {
       btn.addEventListener('click', () => this.startBattle(enemy));
       wrap.appendChild(btn);
     }
+  }
+
+  showEvent(eventKey) {
+    this.show('eventScreen');
+    const completed = this.run.round - 1;
+    document.getElementById('eventTitle').textContent = eventKey === 'start' ? 'Opening Event' : `After Round ${completed}`;
+    document.getElementById('eventMeta').textContent = `Gold ${this.run.gold} - HP ${this.run.hpRows} - choose one`;
+    const wrap = document.getElementById('eventChoices');
+    wrap.innerHTML = '';
+    let choices = [];
+    try {
+      choices = makeEventChoices(this.run, eventKey);
+    } catch (err) {
+      console.warn('Event choices failed', err);
+      choices = [];
+    }
+    if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: 'Loose Gold', desc: 'Take a small gold pouch and move on.' }];
+    for (const choice of choices) {
+      const btn = document.createElement('button');
+      btn.className = 'choice event';
+      btn.innerHTML = `<strong>${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      try {
+        this.attachEventPreview(btn, choice);
+      } catch {
+        btn.insertAdjacentHTML('beforeend', '<small>Preview unavailable.</small>');
+      }
+      btn.disabled = !this.canUseEvent(choice);
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        this.applyEventChoice(choice);
+        this.run.seenEvents.add(eventKey);
+        this.normalizePersistentGrid();
+        this.showMap();
+      });
+      wrap.appendChild(btn);
+    }
+  }
+
+  eventName(choice) {
+    if (choice.kind === 'removeCard') return `${choice.price}G - remove ${CARD_LIBRARY[choice.id].name}`;
+    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, add ${CARD_LIBRARY[choice.card].name}`;
+    if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
+    if (choice.kind === 'gold') return `Gain ${choice.amount}G`;
+    if (choice.kind === 'cleanup') return 'Clean carried garbage';
+    return 'Event';
+  }
+
+  attachEventPreview(node, choice) {
+    if (choice.kind === 'removeCard') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.id], 8));
+    if (choice.kind === 'hpForCurse') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.card], 8));
+    if (choice.kind === 'consumable') {
+      const chip = document.createElement('div');
+      chip.className = 'item-chip';
+      chip.textContent = CONSUMABLES[choice.id].short;
+      node.appendChild(chip);
+    }
+  }
+
+  canUseEvent(choice) {
+    if (choice.kind === 'removeCard') return this.run.gold >= choice.price;
+    if (choice.kind === 'consumable') return this.run.consumables.length < 3;
+    if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
+    return true;
+  }
+
+  applyEventChoice(choice) {
+    if (choice.kind === 'removeCard') {
+      this.run.gold -= choice.price;
+      this.run.deck.removeCard(choice.id);
+      this.run.deck.refill();
+    }
+    if (choice.kind === 'hpForCurse') {
+      this.run.hpRows += choice.amount;
+      this.run.deck.addCard(choice.card);
+    }
+    if (choice.kind === 'consumable') this.run.consumables.push(choice.id);
+    if (choice.kind === 'gold') this.run.gold += choice.amount;
+    if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
   }
 
   showShop() {
@@ -327,7 +414,7 @@ class Game {
         applyReward(this.run, reward);
         this.normalizePersistentGrid();
         this.run.round++;
-        this.showMap();
+        this.routeNextScreen();
       });
       wrap.appendChild(btn);
     });
@@ -344,6 +431,20 @@ class Game {
     if (!this.run.persistentGrid) return;
     while (this.run.persistentGrid.length < this.run.hpRows) {
       this.run.persistentGrid.unshift(Array.from({ length: 10 }, () => null));
+    }
+  }
+
+  hasCarriedGarbage() {
+    return !!this.run.persistentGrid?.some(row => row.some(cell => cell?.type === 'garbage'));
+  }
+
+  cleanCarriedGarbageRow() {
+    if (!this.run.persistentGrid) return;
+    for (let r = this.run.persistentGrid.length - 1; r >= 0; r--) {
+      if (this.run.persistentGrid[r].some(cell => cell?.type === 'garbage')) {
+        this.run.persistentGrid[r] = Array.from({ length: 10 }, () => null);
+        return;
+      }
     }
   }
 
@@ -450,6 +551,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-pwa3').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-event5').catch(() => {});
   });
 }

@@ -1,7 +1,7 @@
-import { DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js';
-import { Deck, shuffle } from './deck.js';
-import { SKILLS } from './skills.js';
-import { CONSUMABLES } from './consumables.js';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-event5';
+import { Deck, shuffle } from './deck.js?v=20260518-event5';
+import { SKILLS } from './skills.js?v=20260518-event5';
+import { CONSUMABLES } from './consumables.js?v=20260518-event5';
 
 export class RunState {
   constructor() {
@@ -15,6 +15,7 @@ export class RunState {
     this.consumables = [];
     this.relics = [];
     this.visitedShops = new Set();
+    this.seenEvents = new Set();
   }
 
   deckCount() {
@@ -98,6 +99,71 @@ export function makeShopItems(run) {
     { kind: 'skill', id: skillIds[0] || 'purge', title: skillIds[0] ? `Skill: ${SKILLS[skillIds[0]].name}` : 'Skill upgrade: Purge', price: 50 },
     { kind: 'consumable', id: randomConsumable(), title: 'Consumable pack', price: 22 }
   ];
+}
+
+export function shouldShowEvent(run) {
+  if (run.round === 1 && !run.seenEvents.has('start')) return 'start';
+  const completed = run.round - 1;
+  const key = `after-${completed}`;
+  if (completed > 0 && completed % 2 === 0 && !run.seenEvents.has(key)) return key;
+  return null;
+}
+
+export function makeEventChoices(run, eventKey) {
+  const choices = [];
+  const removable = removableDeckCards(run);
+  if (removable.length) {
+    const id = removable[0];
+    choices.push({
+      kind: 'removeCard',
+      id,
+      price: eventKey === 'start' ? 8 : 15,
+      title: 'Deck Surgery',
+      desc: `Pay gold to remove 1 ${CARD_LIBRARY[id].name} from your deck.`
+    });
+  }
+  choices.push({
+    kind: 'hpForCurse',
+    amount: eventKey === 'start' ? 2 : 3,
+    card: TYPES.HEAVY_JUNK,
+    title: 'Reinforced Field',
+    desc: `Gain max HP rows, but add ${CARD_LIBRARY[TYPES.HEAVY_JUNK].name}.`
+  });
+  choices.push({
+    kind: 'consumable',
+    id: randomConsumable(),
+    title: 'Supply Cache',
+    desc: 'Gain one consumable. Max 3 can be carried.'
+  });
+  if (eventKey !== 'start') {
+    choices.push({
+      kind: 'cleanup',
+      title: 'Field Sweep',
+      desc: 'Remove one bottom garbage row from your carried field.'
+    });
+  } else {
+    choices.push({
+      kind: 'gold',
+      amount: 12,
+      title: 'Loose Gold',
+      desc: 'Take a small gold pouch and move on.'
+    });
+  }
+  return shuffle(choices).slice(0, 3);
+}
+
+export function removableDeckCards(run) {
+  const counts = new Map();
+  for (const id of run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
+  for (const id of run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
+  for (const id of run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
+  return [...counts.keys()]
+    .filter(id => CARD_LIBRARY[id] && (run.deck.extraCards.includes(id) || BASE_TYPES.includes(id)))
+    .sort((a, b) => {
+      const ar = CARD_LIBRARY[a].rarity === 'base' ? 1 : 0;
+      const br = CARD_LIBRARY[b].rarity === 'base' ? 1 : 0;
+      return ar - br || CARD_LIBRARY[a].name.localeCompare(CARD_LIBRARY[b].name);
+    });
 }
 
 export function applyReward(run, reward) {

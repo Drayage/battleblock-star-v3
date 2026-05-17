@@ -16,7 +16,8 @@ export const TYPES = {
   CROSS: 'CROSS',
   BOMB: 'BOMB',
   MANA_T: 'MANA_T',
-  PURGE_O: 'PURGE_O'
+  PURGE_O: 'PURGE_O',
+  HEAVY_JUNK: 'HEAVY_JUNK'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -34,6 +35,7 @@ export const COLORS = {
   [TYPES.BOMB]: '#ff6a22',
   [TYPES.MANA_T]: '#45f0bd',
   [TYPES.PURGE_O]: '#f5f2ff',
+  [TYPES.HEAVY_JUNK]: '#6d5f73',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -100,6 +102,12 @@ export const SHAPES = {
   ],
   [TYPES.PURGE_O]: [
     [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
+  ],
+  [TYPES.HEAVY_JUNK]: [
+    [[1,1,1],[0,1,0],[0,1,0]],
+    [[0,0,1],[1,1,1],[0,0,1]],
+    [[0,1,0],[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1],[1,0,0]]
   ]
 };
 
@@ -115,5 +123,6 @@ export const CARD_LIBRARY = {
   [TYPES.CROSS]: { id: TYPES.CROSS, name: 'Cross Mino', shape: SHAPES[TYPES.CROSS], cellAttack: 0.16, traits: ['oddShape'], rarity: 'rare' },
   [TYPES.BOMB]: { id: TYPES.BOMB, name: 'Bomb O', shape: SHAPES[TYPES.BOMB], cellAttack: 0.1, traits: ['bomb'], rarity: 'uncommon' },
   [TYPES.MANA_T]: { id: TYPES.MANA_T, name: 'Mana T', shape: SHAPES[TYPES.MANA_T], cellAttack: 0.1, traits: ['manaBonus'], rarity: 'uncommon' },
-  [TYPES.PURGE_O]: { id: TYPES.PURGE_O, name: 'Cleanse O', shape: SHAPES[TYPES.PURGE_O], cellAttack: 0.1, traits: ['purgeGarbage'], rarity: 'rare' }
+  [TYPES.PURGE_O]: { id: TYPES.PURGE_O, name: 'Cleanse O', shape: SHAPES[TYPES.PURGE_O], cellAttack: 0.1, traits: ['purgeGarbage'], rarity: 'rare' },
+  [TYPES.HEAVY_JUNK]: { id: TYPES.HEAVY_JUNK, name: 'Heavy Junk', shape: SHAPES[TYPES.HEAVY_JUNK], cellAttack: 0.04, traits: ['curse'], rarity: 'curse' }
 };

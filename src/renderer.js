@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-event5';
 
 export class Renderer {
   constructor(canvas) {

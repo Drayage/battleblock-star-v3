@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-event5';
 
 export function shuffle(items) {
   const out = [...items];
@@ -12,13 +12,21 @@ export function shuffle(items) {
 export class Deck {
   constructor(extraCards = []) {
     this.extraCards = [...extraCards];
+    this.removedBase = [];
     this.draw = [];
     this.discard = [];
     this.refill();
   }
 
-  static makeBaseCycle() {
-    return [...shuffle(BASE_TYPES), ...shuffle(BASE_TYPES), ...shuffle(BASE_TYPES)];
+  static makeBaseCycle(removedBase = []) {
+    const removed = new Map();
+    for (const id of removedBase) removed.set(id, (removed.get(id) || 0) + 1);
+    const bags = [];
+    for (let i = 0; i < 3; i++) {
+      const bag = BASE_TYPES.filter(id => (removed.get(id) || 0) <= i);
+      bags.push(...shuffle(bag));
+    }
+    return bags;
   }
 
   size() {
@@ -30,8 +38,29 @@ export class Deck {
     this.discard.push(cardId);
   }
 
+  removeCard(cardId) {
+    const extraIndex = this.extraCards.indexOf(cardId);
+    if (extraIndex >= 0) {
+      this.extraCards.splice(extraIndex, 1);
+    } else if (BASE_TYPES.includes(cardId)) {
+      const removedCount = this.removedBase.filter(id => id === cardId).length;
+      if (removedCount >= 2) return false;
+      this.removedBase.push(cardId);
+    } else {
+      return false;
+    }
+
+    const drawIndex = this.draw.indexOf(cardId);
+    if (drawIndex >= 0) this.draw.splice(drawIndex, 1);
+    else {
+      const discardIndex = this.discard.indexOf(cardId);
+      if (discardIndex >= 0) this.discard.splice(discardIndex, 1);
+    }
+    return true;
+  }
+
   refill() {
-    const base = Deck.makeBaseCycle();
+    const base = Deck.makeBaseCycle(this.removedBase);
     const specials = shuffle(this.extraCards);
     const merged = [...base];
     for (const card of specials) {

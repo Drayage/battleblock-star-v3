@@ -3,7 +3,7 @@ import { Deck } from './src/deck.js';
 import { BASE_TYPES, TYPES } from './src/constants.js';
 import { Board } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
-import { makeEnemyChoices, makeRewards, RunState } from './src/progression.js';
+import { makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -36,6 +36,19 @@ assert.equal(persisted[19][0].type, TYPES.GARBAGE);
 
 assert.equal(makeEnemyChoices(1).every(enemy => enemy.startingRows === 15), true);
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
+
+const eventRun = new RunState();
+assert.equal(shouldShowEvent(eventRun), 'start');
+eventRun.seenEvents.add('start');
+assert.equal(shouldShowEvent(eventRun), null);
+eventRun.round = 3;
+assert.equal(shouldShowEvent(eventRun), 'after-2');
+assert.equal(makeEventChoices(eventRun, 'after-2').length, 3);
+
+const trimmedDeck = new Deck();
+assert.equal(trimmedDeck.removeCard(TYPES.I), true);
+trimmedDeck.refill();
+assert.equal(trimmedDeck.draw.filter(id => id === TYPES.I).length, 2);
 
 const itemBoard = new Board({ rows: 20 });
 itemBoard.receiveGarbage(4);

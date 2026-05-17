@@ -1,5 +1,5 @@
-import { Mino } from './board.js';
-import { COLS } from './constants.js';
+import { Mino } from './board.js?v=20260518-event5';
+import { COLS } from './constants.js?v=20260518-event5';
 
 function scoreGrid(grid) {
   const rows = grid.length;
