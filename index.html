@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Battle Block Star v3.0</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <main id="app">
+    <section id="menu" class="screen active">
+      <h1>Battle Block Star</h1>
+      <p class="subtitle">테트리스 로그라이크 1v1 대전 액션 v3.0</p>
+      <div class="panel">
+        <h2>Run Status</h2>
+        <div class="stat-grid">
+          <span>Round</span><strong id="menuRound">1 / 20</strong>
+          <span>Gold</span><strong id="menuGold">0</strong>
+          <span>HP Rows</span><strong id="menuHp">20</strong>
+          <span>Deck</span><strong id="menuDeck">21 cards</strong>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Controls</h2>
+        <div class="control-grid">
+          <span>← → ↓</span><span>이동 / 소프트 드롭</span>
+          <span>↑ / X / Z</span><span>회전</span>
+          <span>Space / C</span><span>하드 드롭 / 홀드</span>
+          <span>1 2 3</span><span>장착 스킬</span>
+        </div>
+      </div>
+      <button id="startRunBtn" class="primary">새 런 시작</button>
+    </section>
+
+    <section id="mapScreen" class="screen">
+      <header class="topbar">
+        <div>
+          <strong id="mapTitle">Round 1</strong>
+          <span id="mapMeta">적을 선택하세요</span>
+        </div>
+        <button id="openShopBtn" class="ghost">Shop</button>
+      </header>
+      <div id="enemyChoices" class="choice-grid"></div>
+      <div id="rewardPanel" class="panel hidden">
+        <h2>Reward</h2>
+        <div id="rewardChoices" class="choice-grid compact"></div>
+      </div>
+    </section>
+
+    <section id="shopScreen" class="screen">
+      <header class="topbar">
+        <div>
+          <strong>Checkpoint Shop</strong>
+          <span id="shopGold">Gold 0</span>
+        </div>
+        <button id="leaveShopBtn" class="ghost">Leave</button>
+      </header>
+      <div id="shopItems" class="choice-grid"></div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="hud">
+        <div><strong id="battleTitle">Battle</strong><span id="battleMeta"></span></div>
+        <button id="forfeitBtn" class="ghost danger">Forfeit</button>
+      </div>
+      <div id="canvasWrap"><canvas id="gameCanvas"></canvas></div>
+      <div id="mobilePad">
+        <div class="pad-left">
+          <button data-action="left">◀</button>
+          <button data-action="soft">▼</button>
+          <button data-action="right">▶</button>
+        </div>
+        <div class="pad-skills" id="touchSkills"></div>
+        <div class="pad-right">
+          <button class="big" data-action="rotate">↻</button>
+          <button data-action="hard">⬇</button>
+          <button data-action="hold">H</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="endScreen" class="screen">
+      <h1 id="endTitle">Run Complete</h1>
+      <p id="endSummary" class="subtitle"></p>
+      <button id="restartRunBtn" class="primary">다시 시작</button>
+    </section>
+  </main>
+
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>
