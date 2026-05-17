@@ -39,17 +39,21 @@ const ELITES = [
 
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
-  const choices = [];
+  const normalPool = shuffle(ENEMIES);
+  const elitePool = shuffle(ELITES);
   const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
+  const choices = [];
   for (let i = 0; i < count; i++) {
-    choices.push(makeEnemy(round, eliteSlot && i === count - 1));
+    const elite = eliteSlot && i === count - 1;
+    const base = elite ? elitePool.shift() : normalPool.shift();
+    choices.push(makeEnemy(round, elite, base));
   }
   return choices;
 }
 
-export function makeEnemy(round, elite = false) {
+export function makeEnemy(round, elite = false, selectedBase = null) {
   const pool = elite ? ELITES : ENEMIES;
-  const base = pool[Math.floor(Math.random() * pool.length)];
+  const base = selectedBase || pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
   const roundOneRows = round === 1 ? 15 : DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 6);
   return {
@@ -74,17 +78,14 @@ export function makeRewards(pool = 'normal') {
   const cards = pool === 'elite' ? eliteCards : normalCards;
   if (pool === 'elite') {
     const skillIds = Object.keys(SKILLS);
+    const rareCard = shuffle(cards)[0];
     return shuffle([
-      { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Rare block reward' },
+      { kind: 'card', id: rareCard, title: 'Rare block reward' },
       { kind: 'skill', id: skillIds[Math.floor(Math.random() * skillIds.length)], title: 'Special skill reward' },
       { kind: 'consumable', id: randomConsumable(), title: 'Elite consumable kit' }
     ]);
   }
-  return shuffle([
-    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Block reward' },
-    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Block reward' },
-    { kind: 'card', id: cards[Math.floor(Math.random() * cards.length)], title: 'Block reward' }
-  ]);
+  return shuffle(cards).slice(0, 3).map(id => ({ kind: 'card', id, title: 'Block reward' }));
 }
 
 export function makeShopItems(run) {

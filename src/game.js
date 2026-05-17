@@ -108,23 +108,24 @@ class Game {
     if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `Round ${this.run.round}`;
-    document.getElementById('mapMeta').textContent = `Gold ${this.run.gold} · HP ${this.run.hpRows} · Deck ${this.run.deckCount()}`;
+    document.getElementById('mapMeta').textContent = `Gold ${this.run.gold} - HP ${this.run.hpRows} - Deck ${this.run.deckCount()}`;
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
-    const enemies = makeEnemyChoices(this.run.round);
-    this.renderChoicePager(wrap, enemies, enemy => {
+    wrap.classList.remove('single-choice');
+    wrap.innerHTML = '';
+    for (const enemy of makeEnemyChoices(this.run.round)) {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type}`;
       btn.innerHTML = `
         <strong>${enemy.name}</strong>
-        <span>${enemy.type.toUpperCase()} · ${enemy.rewardGold}G · HP ${enemy.startingRows}</span>
+        <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
-        <small>AI ${enemy.aiProfile} · Speed ${enemy.speed} · Garbage ${enemy.startingGarbage}</small>
+        <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
       `;
       btn.addEventListener('click', () => this.startBattle(enemy));
-      return btn;
-    });
+      wrap.appendChild(btn);
+    }
   }
 
   showShop() {
@@ -310,12 +311,14 @@ class Game {
   showRewards(rewards) {
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `Round ${this.run.round} Clear`;
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold · choose one reward`;
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold - choose one reward`;
     document.getElementById('enemyChoices').innerHTML = '';
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
     panel.classList.remove('hidden');
-    this.renderChoicePager(wrap, rewards, reward => {
+    wrap.classList.remove('single-choice');
+    wrap.innerHTML = '';
+    rewards.forEach(reward => {
       const btn = document.createElement('button');
       btn.className = 'choice reward';
       btn.innerHTML = `<strong>${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
@@ -326,46 +329,8 @@ class Game {
         this.run.round++;
         this.showMap();
       });
-      return btn;
+      wrap.appendChild(btn);
     });
-  }
-
-  renderChoicePager(wrap, items, renderItem) {
-    let index = 0;
-    const render = () => {
-      wrap.innerHTML = '';
-      wrap.classList.add('single-choice');
-      const shell = document.createElement('div');
-      shell.className = 'choice-pager';
-      const stage = document.createElement('div');
-      stage.className = 'choice-stage';
-      stage.appendChild(renderItem(items[index], index));
-      const nav = document.createElement('div');
-      nav.className = 'choice-nav';
-      const prev = document.createElement('button');
-      prev.className = 'ghost';
-      prev.textContent = '<';
-      prev.disabled = items.length <= 1;
-      prev.addEventListener('click', () => {
-        index = (index + items.length - 1) % items.length;
-        render();
-      });
-      const count = document.createElement('span');
-      count.className = 'choice-count';
-      count.textContent = `${index + 1} / ${items.length}`;
-      const next = document.createElement('button');
-      next.className = 'ghost';
-      next.textContent = '>';
-      next.disabled = items.length <= 1;
-      next.addEventListener('click', () => {
-        index = (index + 1) % items.length;
-        render();
-      });
-      nav.append(prev, count, next);
-      shell.append(stage, nav);
-      wrap.appendChild(shell);
-    };
-    render();
   }
 
   rewardName(reward) {
@@ -485,6 +450,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-pwa2').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-pwa3').catch(() => {});
   });
 }
