@@ -10,17 +10,20 @@ export class Renderer {
     const mobile = window.innerWidth < 720;
     const rows = Math.max(playerRows, enemyRows);
     const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
-    const cell = mobile ? Math.max(16, Math.min(24, Math.floor((mobileWidth - 44) / COLS))) : 25;
-    const mobileBoardBottom = 72 + playerRows * cell;
+    const mobileY = 52;
+    const widthCell = Math.floor((mobileWidth - 44) / COLS);
+    const heightCell = Math.floor((window.innerHeight - 250) / playerRows);
+    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
+    const mobileBoardBottom = mobileY + playerRows * cell;
     this.layout = {
       mobile,
       cell,
       rows,
       w: mobile ? mobileWidth : 940,
-      h: mobile ? mobileBoardBottom + 290 : Math.max(590, rows * cell + 150),
+      h: mobile ? mobileBoardBottom + 176 : Math.max(590, rows * cell + 150),
       pX: mobile ? Math.floor((mobileWidth - COLS * cell) / 2) : 150,
       eX: mobile ? 272 : 600,
-      y: 72
+      y: mobile ? mobileY : 72
     };
     this.canvas.width = this.layout.w;
     this.canvas.height = this.layout.h;
@@ -54,7 +57,7 @@ export class Renderer {
       this.garbageMeter(enemy.garbageQueue, L.eX - 12, L.y, enemy.rows * L.cell);
       this.sidePanel(player, 20, L.y, L.cell, run);
     }
-    this.status(player, enemy, run, battle, message);
+    if (!L.mobile) this.status(player, enemy, run, battle, message);
   }
 
   board(board, ox, oy, cs, label) {

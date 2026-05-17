@@ -61,14 +61,21 @@ export class InputController {
       let timer = null;
       const action = btn.dataset.action;
       const repeatable = ['left', 'right', 'soft'].includes(action);
+      const firstDelay = action === 'soft' ? 120 : 240;
+      const repeatDelay = action === 'soft' ? 70 : 110;
       const fire = () => {
         this.game.action(action);
-        if (repeatable) timer = setTimeout(fire, 85);
       };
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         btn.setPointerCapture?.(e.pointerId);
         fire();
+        if (repeatable) {
+          timer = setTimeout(function repeat() {
+            fire();
+            timer = setTimeout(repeat, repeatDelay);
+          }, firstDelay);
+        }
       });
       btn.addEventListener('pointerup', () => { clearTimeout(timer); timer = null; });
       btn.addEventListener('pointercancel', () => { clearTimeout(timer); timer = null; });
