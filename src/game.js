@@ -38,6 +38,8 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
     this.playerSlowTimer = 0;
+    this.battleEndDelay = 0;
+    this.battleEndResult = null;
     this.message = '';
     this.bindUi();
     this.refreshMenu();
@@ -204,6 +206,8 @@ class Game {
     this.fallTimer = 0;
     this.enemyTimer = 0;
     this.enemyAbilityTimer = 0;
+    this.battleEndDelay = 0;
+    this.battleEndResult = null;
     this.message = 'Battle start';
     document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
@@ -277,8 +281,15 @@ class Game {
     const defender = attacker === this.player ? this.enemy : this.player;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
     if (result.attack > 0) defender.receiveGarbage(result.attack * mult);
-    if (this.player.defeated) return this.endRun(false);
-    if (this.enemy.defeated) return this.winBattle();
+    if (this.player.defeated) return this.queueBattleEnd('loss');
+    if (this.enemy.defeated) return this.queueBattleEnd('win');
+  }
+
+  queueBattleEnd(result) {
+    if (this.battleEndResult) return;
+    this.battleEndResult = result;
+    this.battleEndDelay = result === 'win' ? 850 : 1200;
+    this.message = result === 'win' ? 'Enemy defeated' : 'You were defeated';
   }
 
   winBattle() {
@@ -361,6 +372,22 @@ class Game {
   }
 
   updateBattle(dt, now) {
+    if (this.battleEndResult) {
+      this.battleEndDelay -= dt;
+      this.renderer.draw({
+        player: this.player,
+        enemy: this.enemy,
+        run: this.run,
+        battle: this.battleEndResult === 'win' ? 'VICTORY' : 'DEFEAT',
+        enemyCard: this.enemyCard,
+        message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated'
+      });
+      if (this.battleEndDelay <= 0) {
+        if (this.battleEndResult === 'win') this.winBattle();
+        else this.endRun(false);
+      }
+      return;
+    }
     this.input.update(now);
     this.player.flash = Math.max(0, this.player.flash - dt);
     this.enemy.flash = Math.max(0, this.enemy.flash - dt);
@@ -378,7 +405,7 @@ class Game {
       this.resolve(this.ai.step(this.enemy), this.enemy);
     }
     this.updateEnemyAbility(dt);
-    if (this.enemy.defeated) this.winBattle();
+    if (this.enemy.defeated) this.queueBattleEnd('win');
     this.renderer.draw({
       player: this.player,
       enemy: this.enemy,

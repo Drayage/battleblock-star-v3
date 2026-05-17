@@ -106,6 +106,15 @@ export class Renderer {
       ctx.fillStyle = `rgba(255,255,255,${Math.min(0.45, board.flash / 300)})`;
       ctx.fillRect(ox, oy, bw, bh);
     }
+    if (board.defeated) {
+      ctx.fillStyle = 'rgba(5,7,14,.72)';
+      ctx.fillRect(ox, oy, bw, bh);
+      ctx.fillStyle = '#ffcad5';
+      ctx.font = `bold ${Math.max(13, Math.floor(cs * 0.8))}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillText('DEFEATED', ox + bw / 2, oy + bh / 2);
+      ctx.textAlign = 'left';
+    }
   }
 
   cell(x, y, cs, type) {
