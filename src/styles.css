@@ -26,7 +26,7 @@ button{font:inherit}
 #canvasWrap{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;min-height:420px}canvas{display:block;transform-origin:top center;image-rendering:pixelated}
 #mobilePad{position:fixed;left:0;right:0;bottom:0;display:none;grid-template-rows:auto auto;gap:5px;padding:6px;background:rgba(7,9,18,.94);border-top:1px solid #1d2a49;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #mobilePad button{min-height:42px;border:1px solid #2e4778;border-radius:7px;background:#121d35;color:#dbe8ff;font-size:20px;font-weight:bold;line-height:1;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.pad-actions{display:grid;gap:5px}.pad-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.pad-actions .big{font-size:22px}
+.pad-actions{display:grid;gap:5px}.pad-row{display:grid;gap:5px}.pad-row-top{grid-template-columns:repeat(3,minmax(0,1fr));padding:0 10%}.pad-row-bottom{grid-template-columns:repeat(4,minmax(0,1fr))}.pad-actions .big{font-size:22px}
 .pad-slots{display:grid;grid-template-columns:1fr 1fr;gap:5px}.pad-skills{display:flex;gap:5px;align-items:stretch;min-height:28px}.pad-skills:empty{display:none}.pad-skills button{flex:1;min-height:28px;font-size:10px;background:#16273a;border-color:#315775}
 @media (max-width:720px){
   html.in-game,body.in-game{height:100dvh;overflow:hidden}
@@ -40,7 +40,9 @@ button{font:inherit}
   #mobilePad .pad-slots{position:absolute;left:6px;right:6px;bottom:106px;display:flex;gap:5px;pointer-events:auto}
   #mobilePad .pad-slots:empty{display:none}
   #mobilePad .pad-actions{display:grid!important;grid-template-columns:1fr!important;gap:5px;width:100%}
-  #mobilePad .pad-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  #mobilePad .pad-row{display:grid;gap:5px}
+  #mobilePad .pad-row-top{grid-template-columns:repeat(3,minmax(0,1fr));padding:0 9%}
+  #mobilePad .pad-row-bottom{grid-template-columns:repeat(4,minmax(0,1fr))}
   #mobilePad button{min-width:0;width:100%;min-height:46px;height:46px;padding:0;font-size:22px;line-height:1}
   #mobilePad .pad-actions .big{font-size:22px}
   #mobilePad .pad-skills{min-height:0}

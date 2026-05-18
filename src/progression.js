@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-autosave1';
-import { Deck, shuffle } from './deck.js?v=20260518-autosave1';
-import { SKILLS } from './skills.js?v=20260518-autosave1';
-import { CONSUMABLES } from './consumables.js?v=20260518-autosave1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-padfix1';
+import { Deck, shuffle } from './deck.js?v=20260518-padfix1';
+import { SKILLS } from './skills.js?v=20260518-padfix1';
+import { CONSUMABLES } from './consumables.js?v=20260518-padfix1';
 
 export const RELICS = {
   combo_amp: {

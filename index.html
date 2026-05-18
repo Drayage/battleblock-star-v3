@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#070912">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Battle Block Star v3.0</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260518-autosave1">
-  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260518-autosave1">
-  <link rel="icon" href="./assets/icon-192.png?v=20260518-autosave1">
-  <link rel="stylesheet" href="./src/styles.css?v=20260518-autosave1">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260518-padfix1">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260518-padfix1">
+  <link rel="icon" href="./assets/icon-192.png?v=20260518-padfix1">
+  <link rel="stylesheet" href="./src/styles.css?v=20260518-padfix1">
 </head>
 <body>
   <main id="app">
@@ -118,17 +118,16 @@
           <div class="pad-skills" id="touchConsumables"></div>
         </div>
         <div class="pad-actions" aria-label="Mobile controls">
-          <div class="pad-row">
-            <button data-action="left" aria-label="Move left">&larr;</button>
+          <div class="pad-row pad-row-top">
             <button class="big" data-action="ccw" aria-label="Rotate counterclockwise">&#8634;</button>
             <button data-action="soft" aria-label="Soft drop">&darr;</button>
-            <button data-action="hold" aria-label="Hold">H</button>
-          </div>
-          <div class="pad-row">
-            <button data-action="hard" aria-label="Hard drop">&#11015;</button>
             <button class="big" data-action="rotate" aria-label="Rotate clockwise">&#8635;</button>
+          </div>
+          <div class="pad-row pad-row-bottom">
+            <button data-action="left" aria-label="Move left">&larr;</button>
+            <button data-action="hold" aria-label="Hold">H</button>
+            <button data-action="hard" aria-label="Hard drop">&#11015;</button>
             <button data-action="right" aria-label="Move right">&rarr;</button>
-            <button data-action="pause" aria-label="Pause">&#10074;&#10074;</button>
           </div>
         </div>
       </div>
@@ -142,6 +141,6 @@
     </section>
   </main>
 
-  <script type="module" src="./src/game.js?v=20260518-autosave1"></script>
+  <script type="module" src="./src/game.js?v=20260518-padfix1"></script>
 </body>
 </html>
