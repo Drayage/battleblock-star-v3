@@ -72,9 +72,20 @@ assert.equal(blockedSpawnBoard.defeated, true);
 const stalledEnemyBoard = new Board({ rows: 20 });
 stalledEnemyBoard.grid[0] = Array.from({ length: 10 }, () => ({ type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] }));
 stalledEnemyBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 3, SPAWN_Y);
-const stalledResult = new AI('fast').step(stalledEnemyBoard);
+const stalledAi = new AI('fast');
+let stalledResult = null;
+for (let i = 0; i < 12 && !stalledResult; i++) stalledResult = stalledAi.step(stalledEnemyBoard);
 assert.equal(stalledResult.topOut, true);
 assert.equal(stalledEnemyBoard.defeated, true);
+
+const queuedMoveBoard = new Board({ rows: 20 });
+const queuedMoveAi = new AI('balanced');
+queuedMoveAi.lastPlanCard = `${queuedMoveBoard.current.card.id}-${queuedMoveBoard.current.x}-${queuedMoveBoard.current.y}`;
+queuedMoveAi.queue = ['left', 'hard'];
+const queuedMoveResult = queuedMoveAi.step(queuedMoveBoard);
+assert.equal(queuedMoveResult, null);
+assert.equal(queuedMoveBoard.current.x, 2);
+assert.equal(queuedMoveBoard.grid.some(row => row.some(Boolean)), false);
 
 const nearCeilingBoard = new Board({ rows: 20 });
 nearCeilingBoard.grid = Array.from({ length: 20 }, (_, r) => Array.from({ length: 10 }, (_, c) => r >= 2 && c !== 5 ? { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] } : null));

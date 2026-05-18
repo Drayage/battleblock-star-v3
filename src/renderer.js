@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-aisurvive1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-aimove1';
 
 export class Renderer {
   constructor(canvas) {
@@ -47,7 +47,7 @@ export class Renderer {
     ctx.fillText(`Round ${run.round} / 20`, L.w / 2, 26);
     ctx.font = '12px Courier New';
     ctx.fillStyle = '#7f8ca8';
-    ctx.fillText(`${enemyCard.name} 쨌 Gold ${run.gold} 쨌 HP ${run.hpRows}`, L.w / 2, 47);
+    ctx.fillText(`${enemyCard.name} 夷?Gold ${run.gold} 夷?HP ${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
     this.garbageMeter(player.garbageQueue, L.pX - 10, L.y, player.rows * L.cell);
