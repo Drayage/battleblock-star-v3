@@ -17,7 +17,9 @@ export const TYPES = {
   BOMB: 'BOMB',
   MANA_T: 'MANA_T',
   PURGE_O: 'PURGE_O',
-  HEAVY_JUNK: 'HEAVY_JUNK'
+  HEAVY_JUNK: 'HEAVY_JUNK',
+  POWER_CROSS: 'POWER_CROSS',
+  WIDE_JUNK: 'WIDE_JUNK'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -36,93 +38,172 @@ export const COLORS = {
   [TYPES.MANA_T]: '#45f0bd',
   [TYPES.PURGE_O]: '#f5f2ff',
   [TYPES.HEAVY_JUNK]: '#6d5f73',
+  [TYPES.POWER_CROSS]: '#ffb0d0',
+  [TYPES.WIDE_JUNK]: '#58515f',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
-export const SHAPES = {
-  [TYPES.I]: [
+export const SHAPE_LIBRARY = {
+  I: {
+    name: 'I Shape',
+    cells: 4,
+    shape: [
     [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
     [[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],
     [[0,0,0,0],[0,0,0,0],[1,1,1,1],[0,0,0,0]],
     [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]]
-  ],
-  [TYPES.J]: [
+    ]
+  },
+  J: {
+    name: 'J Shape',
+    cells: 4,
+    shape: [
     [[1,0,0],[1,1,1],[0,0,0]],
     [[0,1,1],[0,1,0],[0,1,0]],
     [[0,0,0],[1,1,1],[0,0,1]],
     [[0,1,0],[0,1,0],[1,1,0]]
-  ],
-  [TYPES.L]: [
+    ]
+  },
+  L: {
+    name: 'L Shape',
+    cells: 4,
+    shape: [
     [[0,0,1],[1,1,1],[0,0,0]],
     [[0,1,0],[0,1,0],[0,1,1]],
     [[0,0,0],[1,1,1],[1,0,0]],
     [[1,1,0],[0,1,0],[0,1,0]]
-  ],
-  [TYPES.O]: [
+    ]
+  },
+  O: {
+    name: 'O Shape',
+    cells: 4,
+    shape: [
     [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
-  ],
-  [TYPES.S]: [
+    ]
+  },
+  S: {
+    name: 'S Shape',
+    cells: 4,
+    shape: [
     [[0,1,1],[1,1,0],[0,0,0]],
     [[0,1,0],[0,1,1],[0,0,1]],
     [[0,0,0],[0,1,1],[1,1,0]],
     [[1,0,0],[1,1,0],[0,1,0]]
-  ],
-  [TYPES.T]: [
+    ]
+  },
+  T: {
+    name: 'T Shape',
+    cells: 4,
+    shape: [
     [[0,1,0],[1,1,1],[0,0,0]],
     [[0,1,0],[0,1,1],[0,1,0]],
     [[0,0,0],[1,1,1],[0,1,0]],
     [[0,1,0],[1,1,0],[0,1,0]]
-  ],
-  [TYPES.Z]: [
+    ]
+  },
+  Z: {
+    name: 'Z Shape',
+    cells: 4,
+    shape: [
     [[1,1,0],[0,1,1],[0,0,0]],
     [[0,0,1],[0,1,1],[0,1,0]],
     [[0,0,0],[1,1,0],[0,1,1]],
     [[0,1,0],[1,1,0],[1,0,0]]
-  ],
-  [TYPES.POWER_I]: [
-    [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
-    [[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],
-    [[0,0,0,0],[0,0,0,0],[1,1,1,1],[0,0,0,0]],
-    [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]]
-  ],
-  [TYPES.CROSS]: [
+    ]
+  },
+  CROSS5: {
+    name: 'Cross Shape',
+    cells: 5,
+    shape: [
     [[0,1,0],[1,1,1],[0,1,0]],
     [[0,1,0],[1,1,1],[0,1,0]],
     [[0,1,0],[1,1,1],[0,1,0]],
     [[0,1,0],[1,1,1],[0,1,0]]
-  ],
-  [TYPES.BOMB]: [
-    [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
-  ],
-  [TYPES.MANA_T]: [
-    [[0,1,0],[1,1,1],[0,0,0]],
-    [[0,1,0],[0,1,1],[0,1,0]],
-    [[0,0,0],[1,1,1],[0,1,0]],
-    [[0,1,0],[1,1,0],[0,1,0]]
-  ],
-  [TYPES.PURGE_O]: [
-    [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
-  ],
-  [TYPES.HEAVY_JUNK]: [
+    ]
+  },
+  HEAVY5: {
+    name: 'Heavy Shape',
+    cells: 5,
+    shape: [
     [[1,1,1],[0,1,0],[0,1,0]],
     [[0,0,1],[1,1,1],[0,0,1]],
     [[0,1,0],[0,1,0],[1,1,1]],
     [[1,0,0],[1,1,1],[1,0,0]]
-  ]
+    ]
+  },
+  WIDE6: {
+    name: 'Wide Shape',
+    cells: 6,
+    shape: [
+      [[1,1,1,1],[0,1,1,0]],
+      [[0,1],[1,1],[1,1],[0,1]],
+      [[0,1,1,0],[1,1,1,1]],
+      [[1,0],[1,1],[1,1],[1,0]]
+    ]
+  }
+};
+
+export const SHAPES = Object.fromEntries(Object.entries({
+  [TYPES.I]: 'I',
+  [TYPES.J]: 'J',
+  [TYPES.L]: 'L',
+  [TYPES.O]: 'O',
+  [TYPES.S]: 'S',
+  [TYPES.T]: 'T',
+  [TYPES.Z]: 'Z',
+  [TYPES.POWER_I]: 'I',
+  [TYPES.CROSS]: 'CROSS5',
+  [TYPES.BOMB]: 'O',
+  [TYPES.MANA_T]: 'T',
+  [TYPES.PURGE_O]: 'O',
+  [TYPES.HEAVY_JUNK]: 'HEAVY5',
+  [TYPES.POWER_CROSS]: 'CROSS5',
+  [TYPES.WIDE_JUNK]: 'WIDE6'
+}).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
+
+export const ABILITY_LIBRARY = {
+  none: { id: 'none', name: 'No ability', cellAttack: 0.1, traits: [], desc: 'Standard tetromino cell.' },
+  highPower: { id: 'highPower', name: 'High Power', cellAttack: 0.3, traits: ['highPower'], desc: 'Cleared cells deal 0.3 attack.' },
+  oddPower: { id: 'oddPower', name: 'Odd Power', cellAttack: 0.16, traits: ['oddShape'], desc: 'Larger awkward shape with higher return.' },
+  bomb: { id: 'bomb', name: 'Bomb', cellAttack: 0.1, traits: ['bomb'], desc: 'Clearing this block destroys nearby garbage.' },
+  manaBonus: { id: 'manaBonus', name: 'Mana', cellAttack: 0.1, traits: ['manaBonus'], desc: 'Cleared cells grant bonus MP.' },
+  purgeGarbage: { id: 'purgeGarbage', name: 'Cleanse', cellAttack: 0.1, traits: ['purgeGarbage'], desc: 'Clearing this block removes a garbage row.' },
+  curse: { id: 'curse', name: 'Burden', cellAttack: 0.04, traits: ['curse'], desc: 'Awkward junk with weak attack.' },
+  wideCurse: { id: 'wideCurse', name: 'Wide Burden', cellAttack: 0.03, traits: ['curse', 'wide'], desc: 'Six-cell obstruction that clogs the deck.' }
+};
+
+function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
+  const shape = SHAPE_LIBRARY[shapeId];
+  const ability = ABILITY_LIBRARY[abilityId];
+  return {
+    id,
+    name,
+    shapeId,
+    shapeName: shape.name,
+    abilityId,
+    abilityName: ability.name,
+    cellCount: shape.cells,
+    shape: shape.shape,
+    cellAttack: ability.cellAttack,
+    traits: [...ability.traits],
+    rarity
+  };
 };
 
 export const CARD_LIBRARY = {
-  [TYPES.I]: { id: TYPES.I, name: 'I Mino', shape: SHAPES[TYPES.I], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.J]: { id: TYPES.J, name: 'J Mino', shape: SHAPES[TYPES.J], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.L]: { id: TYPES.L, name: 'L Mino', shape: SHAPES[TYPES.L], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.O]: { id: TYPES.O, name: 'O Mino', shape: SHAPES[TYPES.O], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.S]: { id: TYPES.S, name: 'S Mino', shape: SHAPES[TYPES.S], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.T]: { id: TYPES.T, name: 'T Mino', shape: SHAPES[TYPES.T], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.Z]: { id: TYPES.Z, name: 'Z Mino', shape: SHAPES[TYPES.Z], cellAttack: 0.1, traits: [], rarity: 'base' },
-  [TYPES.POWER_I]: { id: TYPES.POWER_I, name: 'Power I', shape: SHAPES[TYPES.POWER_I], cellAttack: 0.3, traits: ['highPower'], rarity: 'rare' },
-  [TYPES.CROSS]: { id: TYPES.CROSS, name: 'Cross Mino', shape: SHAPES[TYPES.CROSS], cellAttack: 0.16, traits: ['oddShape'], rarity: 'rare' },
-  [TYPES.BOMB]: { id: TYPES.BOMB, name: 'Bomb O', shape: SHAPES[TYPES.BOMB], cellAttack: 0.1, traits: ['bomb'], rarity: 'uncommon' },
-  [TYPES.MANA_T]: { id: TYPES.MANA_T, name: 'Mana T', shape: SHAPES[TYPES.MANA_T], cellAttack: 0.1, traits: ['manaBonus'], rarity: 'uncommon' },
-  [TYPES.PURGE_O]: { id: TYPES.PURGE_O, name: 'Cleanse O', shape: SHAPES[TYPES.PURGE_O], cellAttack: 0.1, traits: ['purgeGarbage'], rarity: 'rare' },
-  [TYPES.HEAVY_JUNK]: { id: TYPES.HEAVY_JUNK, name: 'Heavy Junk', shape: SHAPES[TYPES.HEAVY_JUNK], cellAttack: 0.04, traits: ['curse'], rarity: 'curse' }
+  [TYPES.I]: blockCard(TYPES.I, 'I Mino', 'I'),
+  [TYPES.J]: blockCard(TYPES.J, 'J Mino', 'J'),
+  [TYPES.L]: blockCard(TYPES.L, 'L Mino', 'L'),
+  [TYPES.O]: blockCard(TYPES.O, 'O Mino', 'O'),
+  [TYPES.S]: blockCard(TYPES.S, 'S Mino', 'S'),
+  [TYPES.T]: blockCard(TYPES.T, 'T Mino', 'T'),
+  [TYPES.Z]: blockCard(TYPES.Z, 'Z Mino', 'Z'),
+  [TYPES.POWER_I]: blockCard(TYPES.POWER_I, 'Power I', 'I', 'highPower', 'rare'),
+  [TYPES.CROSS]: blockCard(TYPES.CROSS, 'Cross Mino', 'CROSS5', 'oddPower', 'rare'),
+  [TYPES.BOMB]: blockCard(TYPES.BOMB, 'Bomb O', 'O', 'bomb', 'uncommon'),
+  [TYPES.MANA_T]: blockCard(TYPES.MANA_T, 'Mana T', 'T', 'manaBonus', 'uncommon'),
+  [TYPES.PURGE_O]: blockCard(TYPES.PURGE_O, 'Cleanse O', 'O', 'purgeGarbage', 'rare'),
+  [TYPES.HEAVY_JUNK]: blockCard(TYPES.HEAVY_JUNK, 'Heavy Junk', 'HEAVY5', 'curse', 'curse'),
+  [TYPES.POWER_CROSS]: blockCard(TYPES.POWER_CROSS, 'Power Cross', 'CROSS5', 'highPower', 'rare'),
+  [TYPES.WIDE_JUNK]: blockCard(TYPES.WIDE_JUNK, 'Wide Junk', 'WIDE6', 'wideCurse', 'curse')
 };

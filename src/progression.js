@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-death1';
-import { Deck, shuffle } from './deck.js?v=20260518-death1';
-import { SKILLS } from './skills.js?v=20260518-death1';
-import { CONSUMABLES } from './consumables.js?v=20260518-death1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-blockmodel1';
+import { Deck, shuffle } from './deck.js?v=20260518-blockmodel1';
+import { SKILLS } from './skills.js?v=20260518-blockmodel1';
+import { CONSUMABLES } from './consumables.js?v=20260518-blockmodel1';
 
 export const RELICS = {
   combo_amp: {
@@ -98,7 +98,7 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
 
 export function makeRewards(pool = 'normal') {
   const normalCards = [TYPES.BOMB, TYPES.MANA_T, TYPES.POWER_I, TYPES.PURGE_O];
-  const eliteCards = [TYPES.POWER_I, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB];
+  const eliteCards = [TYPES.POWER_I, TYPES.POWER_CROSS, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB];
   const cards = pool === 'elite' ? eliteCards : normalCards;
   if (pool === 'elite') {
     const skillIds = Object.keys(SKILLS);
@@ -150,9 +150,9 @@ export function makeEventChoices(run, eventKey) {
   choices.push({
     kind: 'hpForCurse',
     amount: eventKey === 'start' ? 2 : 3,
-    card: TYPES.HEAVY_JUNK,
+    card: eventKey === 'start' ? TYPES.HEAVY_JUNK : TYPES.WIDE_JUNK,
     title: 'Reinforced Field',
-    desc: `Gain max HP rows, but add ${CARD_LIBRARY[TYPES.HEAVY_JUNK].name}.`
+    desc: 'Gain max HP rows, but add an awkward 5-6 cell burden block.'
   });
   choices.push({
     kind: 'consumable',

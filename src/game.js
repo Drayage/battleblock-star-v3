@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-death1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-death1';
-import { Deck } from './deck.js?v=20260518-death1';
-import { AI } from './ai.js?v=20260518-death1';
-import { Renderer } from './renderer.js?v=20260518-death1';
-import { InputController } from './input.js?v=20260518-death1';
-import { SKILLS } from './skills.js?v=20260518-death1';
-import { CONSUMABLES } from './consumables.js?v=20260518-death1';
+import { Board } from './board.js?v=20260518-blockmodel1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-blockmodel1';
+import { Deck } from './deck.js?v=20260518-blockmodel1';
+import { AI } from './ai.js?v=20260518-blockmodel1';
+import { Renderer } from './renderer.js?v=20260518-blockmodel1';
+import { InputController } from './input.js?v=20260518-blockmodel1';
+import { SKILLS } from './skills.js?v=20260518-blockmodel1';
+import { CONSUMABLES } from './consumables.js?v=20260518-blockmodel1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-death1';
+} from './progression.js?v=20260518-blockmodel1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -30,7 +30,9 @@ const CARD_DESCRIPTIONS = {
   BOMB: 'Clearing this block destroys nearby garbage.',
   MANA_T: 'Cleared cells grant bonus MP.',
   PURGE_O: 'Clearing this block removes a garbage row.',
-  HEAVY_JUNK: 'Awkward five-cell junk. Low attack, mostly a deck tax.'
+  HEAVY_JUNK: 'Five-cell burden shape. Low attack, mostly a deck tax.',
+  POWER_CROSS: 'Five-cell cross shape with high-power cells.',
+  WIDE_JUNK: 'Six-cell wide burden. Clogs the deck and attacks poorly.'
 };
 
 class Game {
@@ -307,7 +309,10 @@ class Game {
   }
 
   itemDesc(item) {
-    if (item.kind === 'card') return `${CARD_LIBRARY[item.id].name}: ${CARD_DESCRIPTIONS[item.id] || 'Adds this block to your deck.'}`;
+    if (item.kind === 'card') {
+      const card = CARD_LIBRARY[item.id];
+      return `${card.shapeName} + ${card.abilityName} (${card.cellCount} cells): ${CARD_DESCRIPTIONS[item.id] || 'Adds this shape and ability combo to your deck.'}`;
+    }
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return CONSUMABLES[item.id].desc;
     if (item.kind === 'relic') return RELICS[item.id].desc;
@@ -499,6 +504,10 @@ class Game {
     while (this.run.persistentGrid.length < this.run.hpRows) {
       this.run.persistentGrid.unshift(Array.from({ length: 10 }, () => null));
     }
+    while (this.run.persistentGrid.length > this.run.hpRows) this.run.persistentGrid.shift();
+    this.run.persistentGrid = this.run.persistentGrid.map(row =>
+      Array.from({ length: 10 }, (_, c) => row[c] ? { ...row[c], traits: [...row[c].traits] } : null)
+    );
   }
 
   hasCarriedGarbage() {
@@ -618,6 +627,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-death1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-blockmodel1').catch(() => {});
   });
 }

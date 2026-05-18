@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { BASE_TYPES, TYPES } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
 import { Board } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
@@ -36,6 +36,18 @@ const blockedSpawnBoard = new Board({ rows: 20 });
 blockedSpawnBoard.grid[1][3] = { type: TYPES.I, attack: 0.1, traits: [] };
 blockedSpawnBoard.spawn();
 assert.equal(blockedSpawnBoard.defeated, true);
+
+const expandedPersist = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+expandedPersist[19][0] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+const expandedBoard = new Board({ rows: 25, persistentGrid: expandedPersist });
+assert.equal(expandedBoard.rows, 25);
+assert.equal(expandedBoard.grid.length, 25);
+assert.equal(expandedBoard.grid[24][0].type, TYPES.GARBAGE);
+assert.equal(expandedBoard.defeated, false);
+
+assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].shapeId, 'CROSS5');
+assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].abilityId, 'highPower');
+assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
 
 const run = new RunState();
 const persistBoard = new Board({ rows: 20, deck: run.deck });

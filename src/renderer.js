@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-death1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-blockmodel1';
 
 export class Renderer {
   constructor(canvas) {
@@ -142,7 +142,13 @@ export class Renderer {
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
-      const mark = type === TYPES.BOMB ? 'B' : type === TYPES.POWER_I ? 'P' : type === TYPES.CROSS ? '+' : type === TYPES.MANA_T ? 'M' : type === TYPES.PURGE_O ? 'C' : '';
+      const mark = type === TYPES.BOMB ? 'B'
+        : type === TYPES.POWER_I || type === TYPES.POWER_CROSS ? 'P'
+        : type === TYPES.CROSS ? '+'
+        : type === TYPES.MANA_T ? 'M'
+        : type === TYPES.PURGE_O ? 'C'
+        : type === TYPES.HEAVY_JUNK || type === TYPES.WIDE_JUNK ? '!'
+        : '';
       if (mark) {
         ctx.fillStyle = '#06101d';
         ctx.font = `bold ${Math.floor(cs * 0.48)}px Courier New`;

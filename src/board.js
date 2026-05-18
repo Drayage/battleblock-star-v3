@@ -1,10 +1,19 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-death1';
-import { Deck } from './deck.js?v=20260518-death1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-blockmodel1';
+import { Deck } from './deck.js?v=20260518-blockmodel1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 
 function emptyRow() {
   return Array.from({ length: COLS }, () => null);
+}
+
+function normalizeGrid(source, rows) {
+  const grid = source
+    ? source.map(row => Array.from({ length: COLS }, (_, c) => row[c] ? { ...row[c], traits: [...row[c].traits] } : null))
+    : [];
+  while (grid.length < rows) grid.unshift(emptyRow());
+  while (grid.length > rows) grid.shift();
+  return grid;
 }
 
 function cell(card) {
@@ -46,7 +55,7 @@ export class Board {
     this.rows = rows;
     this.cols = COLS;
     this.deck = deck;
-    this.grid = persistentGrid ? persistentGrid.map(r => [...r]) : Array.from({ length: rows }, emptyRow);
+    this.grid = normalizeGrid(persistentGrid, rows);
     this.current = null;
     this.held = null;
     this.holdUsed = false;
