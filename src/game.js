@@ -253,6 +253,40 @@ class Game {
       item.insertAdjacentHTML('beforeend', `<span>${card.name}</span><strong>x${count}</strong>`);
       wrap.appendChild(item);
     });
+    this.renderLoadoutViewer();
+  }
+
+  renderLoadoutViewer() {
+    const skillWrap = document.getElementById('skillList');
+    const consumableWrap = document.getElementById('consumableList');
+    skillWrap.innerHTML = '';
+    consumableWrap.innerHTML = '';
+
+    if (!this.run.equippedSkills.length) {
+      skillWrap.innerHTML = '<span class="muted">No skills equipped.</span>';
+    } else {
+      this.run.equippedSkills.forEach((id, index) => {
+        const skill = SKILLS[id];
+        if (!skill) return;
+        const item = document.createElement('div');
+        item.className = 'loadout-card';
+        item.innerHTML = `<span class="item-chip">${index + 1}</span><span><strong>${skill.name}</strong><small>${skill.desc}</small><small class="cost">${skill.cost} MP</small></span>`;
+        skillWrap.appendChild(item);
+      });
+    }
+
+    if (!this.run.consumables.length) {
+      consumableWrap.innerHTML = '<span class="muted">No consumables held.</span>';
+    } else {
+      this.run.consumables.forEach((id, index) => {
+        const itemDef = CONSUMABLES[id];
+        if (!itemDef) return;
+        const item = document.createElement('div');
+        item.className = 'loadout-card';
+        item.innerHTML = `<span class="item-chip">${itemDef.short}</span><span><strong>${index + 4}. ${itemDef.name}</strong><small>${itemDef.desc}</small></span>`;
+        consumableWrap.appendChild(item);
+      });
+    }
   }
 
   itemDesc(item) {
@@ -551,6 +585,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-event5').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-event6').catch(() => {});
   });
 }

@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#070912">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Battle Block Star v3.0</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260518-event5">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260518-event6">
   <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260518-pwa1">
   <link rel="icon" href="./assets/icon-192.png?v=20260518-pwa1">
-  <link rel="stylesheet" href="./src/styles.css?v=20260518-event5">
+  <link rel="stylesheet" href="./src/styles.css?v=20260518-event6">
 </head>
 <body>
   <main id="app">
@@ -53,8 +53,19 @@
         </div>
       </header>
       <details id="deckViewer" class="panel deck-view">
-        <summary>View Deck</summary>
-        <div id="deckList" class="deck-list"></div>
+        <summary>View Deck / Skills / Items</summary>
+        <div class="deck-section">
+          <h3>Deck</h3>
+          <div id="deckList" class="deck-list"></div>
+        </div>
+        <div class="deck-section">
+          <h3>Skills</h3>
+          <div id="skillList" class="loadout-list"></div>
+        </div>
+        <div class="deck-section">
+          <h3>Consumables</h3>
+          <div id="consumableList" class="loadout-list"></div>
+        </div>
       </details>
       <div id="enemyChoices" class="choice-grid"></div>
       <div id="rewardPanel" class="panel hidden">
@@ -115,6 +126,6 @@
     </section>
   </main>
 
-  <script type="module" src="./src/game.js?v=20260518-event5"></script>
+  <script type="module" src="./src/game.js?v=20260518-event6"></script>
 </body>
 </html>
