@@ -1,7 +1,7 @@
-import { Mino } from './board.js?v=20260518-aifaildrop1';
-import { COLS } from './constants.js?v=20260518-aifaildrop1';
+import { Mino } from './board.js?v=20260518-aiprofiles1';
+import { COLS } from './constants.js?v=20260518-aiprofiles1';
 
-function scoreGrid(grid) {
+function analyzeGrid(grid) {
   const rows = grid.length;
   const heights = Array(COLS).fill(0);
   for (let c = 0; c < COLS; c++) {
@@ -24,10 +24,31 @@ function scoreGrid(grid) {
   for (let c = 0; c < COLS - 1; c++) bump += Math.abs(heights[c] - heights[c + 1]);
   let lines = 0;
   for (const row of grid) if (row.every(Boolean)) lines++;
-  return lines * 8 - holes * 2.8 - heights.reduce((a, b) => a + b, 0) * 0.35 - bump * 0.55;
+  const totalHeight = heights.reduce((a, b) => a + b, 0);
+  const rightWell = Math.max(0, Math.min(...heights.slice(0, -1)) - heights[COLS - 1]);
+  const garbage = grid.reduce((sum, row) => sum + row.filter(c => c?.type === 'garbage').length, 0);
+  return { heights, totalHeight, holes, bump, lines, rightWell, garbage };
 }
 
-function simulate(board, mino) {
+function scoreGrid(grid, cleared, profile) {
+  const ev = analyzeGrid(grid);
+  const p = {
+    balanced: { line: 8, hole: -2.8, height: -0.35, bump: -0.55, well: 0.15, garbage: -0.12 },
+    fast: { line: 7.5, hole: -2.1, height: -0.26, bump: -0.35, well: 0.05, garbage: -0.06 },
+    opener: { line: 11, hole: -1.7, height: -0.2, bump: -0.25, well: 0.1, garbage: -0.04 },
+    stride: { line: 13, hole: -3.1, height: -0.32, bump: -0.42, well: 1.4, garbage: -0.08 },
+    plonk: { line: 15, hole: -1.3, height: 0.12, bump: -0.18, well: 0.9, garbage: 0.04 },
+    infds: { line: 6.5, hole: -4.2, height: -0.62, bump: -0.85, well: 0.25, garbage: -0.55 },
+    stacker: { line: 8.5, hole: -3.7, height: -0.48, bump: -0.8, well: 0.5, garbage: -0.25 },
+    elite: { line: 12, hole: -2.8, height: -0.22, bump: -0.4, well: 0.8, garbage: -0.08 }
+  }[profile] || {
+    line: 8, hole: -2.8, height: -0.35, bump: -0.55, well: 0.15, garbage: -0.12
+  };
+  const burst = cleared >= 4 ? 18 : cleared >= 2 ? 5 : 0;
+  return cleared * p.line + burst + ev.holes * p.hole + ev.totalHeight * p.height + ev.bump * p.bump + ev.rightWell * p.well + ev.garbage * p.garbage;
+}
+
+function simulate(board, mino, profile) {
   const grid = board.grid.map(r => [...r]);
   const test = mino.clone();
   const fits = candidate => candidate.cells.every(({ x, y }) => x >= 0 && x < COLS && y < board.rows && (y < 0 || !grid[y][x]));
@@ -40,7 +61,16 @@ function simulate(board, mino) {
   for (const { x, y } of test.cells) {
     if (y >= 0 && y < board.rows) grid[y][x] = { type: test.card.id, attack: test.card.cellAttack, traits: [] };
   }
-  return scoreGrid(grid);
+  let cleared = 0;
+  for (let r = grid.length - 1; r >= 0; r--) {
+    if (grid[r].every(Boolean)) {
+      grid.splice(r, 1);
+      grid.unshift(Array.from({ length: COLS }, () => null));
+      cleared++;
+      r++;
+    }
+  }
+  return scoreGrid(grid, cleared, profile);
 }
 
 export class AI {
@@ -62,7 +92,7 @@ export class AI {
         const m = new Mino(board.current.card, x, board.current.y);
         m.rot = rot;
         if (!board.ok(m)) continue;
-        const s = simulate(board, m) + (this.profile === 'elite' ? Math.random() * 2 : 0);
+        const s = simulate(board, m, this.profile) + (this.profile === 'elite' ? Math.random() * 2 : 0);
         if (s > bestScore) {
           bestScore = s;
           best = { x, rot };

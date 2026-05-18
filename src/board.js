@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-aifaildrop1';
-import { Deck } from './deck.js?v=20260518-aifaildrop1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-aiprofiles1';
+import { Deck } from './deck.js?v=20260518-aiprofiles1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;

@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-aifaildrop1';
-import { Deck, shuffle } from './deck.js?v=20260518-aifaildrop1';
-import { SKILLS } from './skills.js?v=20260518-aifaildrop1';
-import { CONSUMABLES } from './consumables.js?v=20260518-aifaildrop1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-aiprofiles1';
+import { Deck, shuffle } from './deck.js?v=20260518-aiprofiles1';
+import { SKILLS } from './skills.js?v=20260518-aiprofiles1';
+import { CONSUMABLES } from './consumables.js?v=20260518-aiprofiles1';
 
 export const RELICS = {
   combo_amp: {
@@ -59,7 +59,11 @@ export class RunState {
 const ENEMIES = [
   { name: 'Soft Starter', style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, rewardBonus: 0, openingRows: 13 },
   { name: 'Line Hunter', style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 },
-  { name: 'Speed Drone', style: 'Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -8, speed: 365, garbage: 0, risk: 1.55, rewardBonus: 6, openingRows: 12 },
+  { name: 'Speed Drone', style: 'Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 },
+  { name: 'Opener Script', style: 'OPENER pattern: explosive prepared starts, tiny HP pool.', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] },
+  { name: 'Stride Engine', style: 'STRIDE pattern: steady quad and spin pressure over time.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] },
+  { name: 'Plonk Gambler', style: 'PLONK pattern: accepts pressure, then looks for burst damage.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I] },
+  { name: 'Inf DS Shell', style: 'INF DS pattern: defensive downstacking and field cleanup.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] },
   { name: 'Bomb Adept', style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
   { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
   { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
@@ -68,13 +72,16 @@ const ENEMIES = [
 const ELITES = [
   { name: 'Elite: Ceiling Press', style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, risk: 1.85, rewardBonus: 9, ability: 'spike' },
   { name: 'Elite: Power Core', style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
-  { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' }
+  { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
+  { name: 'Elite: Opener Lab', style: 'OPENER elite: very low HP, extremely fast early burst.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
+  { name: 'Elite: Plonk Vault', style: 'PLONK elite: survives pressure and swings back hard.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I], ability: 'spike' }
 ];
 
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
-  const normalPool = shuffle(round <= 2 ? ENEMIES.slice(0, 3) : round <= 5 ? ENEMIES.slice(0, 4) : ENEMIES);
-  const elitePool = shuffle(ELITES);
+  const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
+  const normalPool = shuffle(round <= 2 ? unlocked.filter(enemy => ['Soft Starter', 'Line Hunter', 'Speed Drone'].includes(enemy.name)) : round <= 5 ? unlocked.filter(enemy => !['Mana Thief', 'Cleanse Warden'].includes(enemy.name)) : unlocked);
+  const elitePool = shuffle(ELITES.filter(enemy => !enemy.minRound || round >= enemy.minRound));
   const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
   const choices = [];
   for (let i = 0; i < count; i++) {
@@ -107,7 +114,7 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
     aiProfile: base.profile,
     rewardGold,
     rewardPool: elite ? 'elite' : 'normal',
-    startingRows: elite ? Math.max(18, eliteRows) : Math.max(12, normalRows),
+    startingRows: elite ? Math.max(18, eliteRows) : Math.max(round === 1 ? 10 : 12, normalRows),
     startingGarbage,
     speed,
     deckExtras: base.deckExtras || [],

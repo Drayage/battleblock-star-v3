@@ -142,6 +142,15 @@ const speedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile
 const lineHunter = makeEnemy(1, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 });
 assert.equal(speedDrone.startingRows < lineHunter.startingRows, true);
 assert.equal(speedDrone.rewardGold > lineHunter.rewardGold, true);
+const tunedSpeedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 });
+assert.equal(tunedSpeedDrone.startingRows, 11);
+assert.equal(tunedSpeedDrone.speed < speedDrone.speed, true);
+const openerEnemy = makeEnemy(3, false, { name: 'Opener Script', style: '', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] });
+assert.equal(openerEnemy.aiProfile, 'opener');
+assert.equal(openerEnemy.speed < lineHunter.speed, true);
+const strideEnemy = makeEnemy(6, false, { name: 'Stride Engine', style: '', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] });
+assert.equal(strideEnemy.aiProfile, 'stride');
+assert.equal(strideEnemy.rewardGold > lineHunter.rewardGold, true);
 assert.equal(makeEnemy(6, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows > makeEnemy(5, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows, true);
 assert.equal(makeEnemy(11, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage > makeEnemy(10, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage, true);
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
