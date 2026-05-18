@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
 import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
+import { AI } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { RELICS, applyReward, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
@@ -67,6 +68,13 @@ blockedSpawnBoard.spawn();
 const topOut = blockedSpawnBoard.lock();
 assert.equal(topOut.topOut, true);
 assert.equal(blockedSpawnBoard.defeated, true);
+
+const stalledEnemyBoard = new Board({ rows: 20 });
+stalledEnemyBoard.grid[0] = Array.from({ length: 10 }, () => ({ type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] }));
+stalledEnemyBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 3, SPAWN_Y);
+const stalledResult = new AI('fast').step(stalledEnemyBoard);
+assert.equal(stalledResult.topOut, true);
+assert.equal(stalledEnemyBoard.defeated, true);
 
 const expandedPersist = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
 expandedPersist[19][0] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };

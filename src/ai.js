@@ -1,5 +1,5 @@
-import { Mino } from './board.js?v=20260518-lethalqueue1';
-import { COLS } from './constants.js?v=20260518-lethalqueue1';
+import { Mino } from './board.js?v=20260518-aifaildrop1';
+import { COLS } from './constants.js?v=20260518-aifaildrop1';
 
 function scoreGrid(grid) {
   const rows = grid.length;
@@ -59,7 +59,7 @@ export class AI {
     let bestScore = -Infinity;
     for (let rot = 0; rot < 4; rot++) {
       for (let x = -2; x < COLS + 2; x++) {
-        const m = new Mino(board.current.card, x, 0);
+        const m = new Mino(board.current.card, x, board.current.y);
         m.rot = rot;
         if (!board.ok(m)) continue;
         const s = simulate(board, m) + (this.profile === 'elite' ? Math.random() * 2 : 0);
@@ -85,6 +85,7 @@ export class AI {
     if (action === 'right') board.move(1, 0);
     if (action === 'rotate') board.rotate(1);
     if (action === 'hard') return board.hardDrop();
+    if (board.current && !board.defeated) return board.hardDrop();
     return null;
   }
 }
