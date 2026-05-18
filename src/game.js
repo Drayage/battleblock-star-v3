@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-lockdelay1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-lockdelay1';
-import { Deck } from './deck.js?v=20260518-lockdelay1';
-import { AI } from './ai.js?v=20260518-lockdelay1';
-import { Renderer } from './renderer.js?v=20260518-lockdelay1';
-import { InputController } from './input.js?v=20260518-lockdelay1';
-import { SKILLS } from './skills.js?v=20260518-lockdelay1';
-import { CONSUMABLES } from './consumables.js?v=20260518-lockdelay1';
+import { Board } from './board.js?v=20260518-floatlock1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-floatlock1';
+import { Deck } from './deck.js?v=20260518-floatlock1';
+import { AI } from './ai.js?v=20260518-floatlock1';
+import { Renderer } from './renderer.js?v=20260518-floatlock1';
+import { InputController } from './input.js?v=20260518-floatlock1';
+import { SKILLS } from './skills.js?v=20260518-floatlock1';
+import { CONSUMABLES } from './consumables.js?v=20260518-floatlock1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-lockdelay1';
+} from './progression.js?v=20260518-floatlock1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -54,6 +54,7 @@ class Game {
     this.fallTimer = 0;
     this.lockTimer = 0;
     this.lockResets = 0;
+    this.groundTouched = false;
     this.enemyTimer = 0;
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
@@ -371,6 +372,7 @@ class Game {
     this.fallTimer = 0;
     this.lockTimer = 0;
     this.lockResets = 0;
+    this.groundTouched = false;
     this.enemyTimer = 0;
     this.enemyAbilityTimer = 0;
     this.battleEndDelay = 0;
@@ -446,6 +448,10 @@ class Game {
 
   currentLockDelay() {
     return Math.max(LOCK_DELAY_MIN, LOCK_DELAY_START - this.lockResets * LOCK_DELAY_STEP);
+  }
+
+  currentFallInterval() {
+    return this.groundTouched ? this.currentLockDelay() : 760;
   }
 
   useSkill(index) {
@@ -633,20 +639,21 @@ class Game {
   updatePlayerGravity(dt) {
     if (!this.player?.current || this.player.defeated) return;
     if (this.isPlayerGrounded()) {
+      this.groundTouched = true;
       this.lockTimer += dt;
       this.fallTimer = 0;
       if (this.lockTimer >= this.currentLockDelay()) {
         this.lockTimer = 0;
         this.lockResets = 0;
+        this.groundTouched = false;
         this.resolve(this.player.lock(), this.player);
       }
       return;
     }
 
     this.lockTimer = 0;
-    this.lockResets = 0;
     this.fallTimer += dt;
-    if (this.fallTimer >= 760) {
+    if (this.fallTimer >= this.currentFallInterval()) {
       this.fallTimer = 0;
       if (this.player.move(0, 1) && this.isPlayerGrounded()) this.resetLockDelay();
     }
@@ -676,6 +683,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-lockdelay1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-floatlock1').catch(() => {});
   });
 }
