@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-padfix1';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-blocks1';
 
 export function shuffle(items) {
   const out = [...items];
@@ -66,6 +66,12 @@ export class Deck {
       const discardIndex = this.discard.indexOf(cardId);
       if (discardIndex >= 0) this.discard.splice(discardIndex, 1);
     }
+    return true;
+  }
+
+  replaceCard(fromId, toId) {
+    if (!CARD_LIBRARY[toId] || !this.removeCard(fromId)) return false;
+    this.addCard(toId);
     return true;
   }
 

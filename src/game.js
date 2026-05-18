@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-padfix1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-padfix1';
-import { Deck } from './deck.js?v=20260518-padfix1';
-import { AI } from './ai.js?v=20260518-padfix1';
-import { Renderer } from './renderer.js?v=20260518-padfix1';
-import { InputController } from './input.js?v=20260518-padfix1';
-import { SKILLS } from './skills.js?v=20260518-padfix1';
-import { CONSUMABLES } from './consumables.js?v=20260518-padfix1';
+import { Board } from './board.js?v=20260518-blocks1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-blocks1';
+import { Deck } from './deck.js?v=20260518-blocks1';
+import { AI } from './ai.js?v=20260518-blocks1';
+import { Renderer } from './renderer.js?v=20260518-blocks1';
+import { InputController } from './input.js?v=20260518-blocks1';
+import { SKILLS } from './skills.js?v=20260518-blocks1';
+import { CONSUMABLES } from './consumables.js?v=20260518-blocks1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-padfix1';
+} from './progression.js?v=20260518-blocks1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -31,10 +31,15 @@ const LOCK_DELAY_MIN = 120;
 
 const CARD_DESCRIPTIONS = {
   POWER_I: 'High-power cells. Each cleared cell deals 0.3 attack.',
+  POWER_T: 'T shape with high-power cells. Strong for T-spin style clears.',
+  POWER_S: 'S shape with high-power cells. Harder to place, stronger clears.',
   CROSS: 'Five-cell cross. Awkward shape, higher clear value.',
   BOMB: 'Clearing this block destroys nearby garbage.',
+  BOMB_I: 'I shape that also destroys nearby garbage when cleared.',
   MANA_T: 'Cleared cells grant bonus MP.',
+  MANA_L: 'L shape that grants bonus MP when cleared.',
   PURGE_O: 'Clearing this block removes a garbage row.',
+  CLEANSE_J: 'J shape that removes a garbage row when cleared.',
   HEAVY_JUNK: 'Five-cell burden shape. Low attack, mostly a deck tax.',
   POWER_CROSS: 'Five-cell cross shape with high-power cells.',
   WIDE_JUNK: 'Six-cell wide burden. Clogs the deck and attacks poorly.'
@@ -197,6 +202,7 @@ class Game {
 
   eventName(choice) {
     if (choice.kind === 'removeCard') return `${choice.price}G - remove ${CARD_LIBRARY[choice.id].name}`;
+    if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} -> ${CARD_LIBRARY[choice.to].name}`;
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, add ${CARD_LIBRARY[choice.card].name}`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
     if (choice.kind === 'gold') return `Gain ${choice.amount}G`;
@@ -206,6 +212,10 @@ class Game {
 
   attachEventPreview(node, choice) {
     if (choice.kind === 'removeCard') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.id], 8));
+    if (choice.kind === 'upgradeCard') {
+      node.appendChild(this.blockPreview(CARD_LIBRARY[choice.from], 8));
+      node.appendChild(this.blockPreview(CARD_LIBRARY[choice.to], 8));
+    }
     if (choice.kind === 'hpForCurse') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.card], 8));
     if (choice.kind === 'consumable') {
       const chip = document.createElement('div');
@@ -217,6 +227,7 @@ class Game {
 
   canUseEvent(choice) {
     if (choice.kind === 'removeCard') return this.run.gold >= choice.price;
+    if (choice.kind === 'upgradeCard') return true;
     if (choice.kind === 'consumable') return this.run.consumables.length < 3;
     if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
     return true;
@@ -226,6 +237,10 @@ class Game {
     if (choice.kind === 'removeCard') {
       this.run.gold -= choice.price;
       this.run.deck.removeCard(choice.id);
+      this.run.deck.refill();
+    }
+    if (choice.kind === 'upgradeCard') {
+      this.run.deck.replaceCard(choice.from, choice.to);
       this.run.deck.refill();
     }
     if (choice.kind === 'hpForCurse') {
@@ -846,6 +861,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-padfix1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-blocks1').catch(() => {});
   });
 }

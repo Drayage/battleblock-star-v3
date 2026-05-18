@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-padfix1';
-import { Deck, shuffle } from './deck.js?v=20260518-padfix1';
-import { SKILLS } from './skills.js?v=20260518-padfix1';
-import { CONSUMABLES } from './consumables.js?v=20260518-padfix1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-blocks1';
+import { Deck, shuffle } from './deck.js?v=20260518-blocks1';
+import { SKILLS } from './skills.js?v=20260518-blocks1';
+import { CONSUMABLES } from './consumables.js?v=20260518-blocks1';
 
 export const RELICS = {
   combo_amp: {
@@ -24,6 +24,16 @@ export const RELICS = {
     name: 'Hold Cache',
     desc: 'Start each battle with +15 MP if your hold slot is empty.'
   }
+};
+
+export const BLOCK_UPGRADES = {
+  [TYPES.I]: TYPES.POWER_I,
+  [TYPES.J]: TYPES.CLEANSE_J,
+  [TYPES.L]: TYPES.MANA_L,
+  [TYPES.O]: TYPES.BOMB,
+  [TYPES.S]: TYPES.POWER_S,
+  [TYPES.T]: TYPES.POWER_T,
+  [TYPES.Z]: TYPES.MANA_T
 };
 
 export class RunState {
@@ -50,14 +60,14 @@ const ENEMIES = [
   { name: 'Soft Starter', style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -5, speed: 520, garbage: 0 },
   { name: 'Line Hunter', style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -4, speed: 470, garbage: 0 },
   { name: 'Speed Drone', style: 'Fast drops, messy board, low defense.', profile: 'fast', rows: -3, speed: 390, garbage: 0 },
-  { name: 'Bomb Adept', style: 'Adds Bomb O blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, deckExtras: [TYPES.BOMB] },
-  { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, ability: 'slowPlayer' },
-  { name: 'Cleanse Warden', style: 'Uses Cleanse O and resists garbage pressure.', profile: 'tetris', rows: 2, speed: 380, garbage: 2, deckExtras: [TYPES.PURGE_O] }
+  { name: 'Bomb Adept', style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
+  { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
+  { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'tetris', rows: 2, speed: 380, garbage: 2, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
 ];
 
 const ELITES = [
   { name: 'Elite: Ceiling Press', style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, ability: 'spike' },
-  { name: 'Elite: Power Core', style: 'Uses Power I and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, deckExtras: [TYPES.POWER_I, TYPES.POWER_I], ability: 'power' },
+  { name: 'Elite: Power Core', style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
   { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, deckExtras: [TYPES.CROSS], ability: 'spike' }
 ];
 
@@ -97,8 +107,8 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
 }
 
 export function makeRewards(pool = 'normal') {
-  const normalCards = [TYPES.BOMB, TYPES.MANA_T, TYPES.POWER_I, TYPES.PURGE_O];
-  const eliteCards = [TYPES.POWER_I, TYPES.POWER_CROSS, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB];
+  const normalCards = [TYPES.BOMB, TYPES.MANA_T, TYPES.MANA_L, TYPES.POWER_I, TYPES.POWER_S, TYPES.PURGE_O, TYPES.CLEANSE_J];
+  const eliteCards = [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S, TYPES.POWER_CROSS, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB_I, TYPES.CLEANSE_J];
   const cards = pool === 'elite' ? eliteCards : normalCards;
   if (pool === 'elite') {
     const skillIds = Object.keys(SKILLS);
@@ -118,7 +128,9 @@ export function makeShopItems(run) {
   const skillIds = Object.keys(SKILLS).filter(id => !run.ownedSkills.includes(id));
   return [
     { kind: 'card', id: TYPES.POWER_I, title: 'Buy Power I', price: 42 },
+    { kind: 'card', id: TYPES.POWER_T, title: 'Buy Power T', price: 44 },
     { kind: 'card', id: TYPES.MANA_T, title: 'Buy Mana T', price: 30 },
+    { kind: 'card', id: TYPES.MANA_L, title: 'Buy Mana L', price: 32 },
     { kind: 'card', id: TYPES.PURGE_O, title: 'Buy Cleanse O', price: 46 },
     { kind: 'hp', amount: 5, title: 'Max HP +5 rows', price: 55 },
     { kind: 'skill', id: skillIds[0] || 'purge', title: skillIds[0] ? `Skill: ${SKILLS[skillIds[0]].name}` : 'Skill upgrade: Purge', price: 50 },
@@ -136,6 +148,7 @@ export function shouldShowEvent(run) {
 
 export function makeEventChoices(run, eventKey) {
   const choices = [];
+  const sideChoices = [];
   const removable = removableDeckCards(run);
   if (removable.length) {
     const id = removable[0];
@@ -147,34 +160,44 @@ export function makeEventChoices(run, eventKey) {
       desc: `Pay gold to remove 1 ${CARD_LIBRARY[id].name} from your deck.`
     });
   }
-  choices.push({
+  const upgrade = upgradeDeckCards(run)[0];
+  if (upgrade) {
+    choices.push({
+      kind: 'upgradeCard',
+      from: upgrade.from,
+      to: upgrade.to,
+      title: 'Block Infusion',
+      desc: `Upgrade 1 ${CARD_LIBRARY[upgrade.from].name} into ${CARD_LIBRARY[upgrade.to].name}.`
+    });
+  }
+  sideChoices.push({
     kind: 'hpForCurse',
     amount: eventKey === 'start' ? 2 : 3,
     card: eventKey === 'start' ? TYPES.HEAVY_JUNK : TYPES.WIDE_JUNK,
     title: 'Reinforced Field',
     desc: 'Gain max HP rows, but add an awkward 5-6 cell burden block.'
   });
-  choices.push({
+  sideChoices.push({
     kind: 'consumable',
     id: randomConsumable(),
     title: 'Supply Cache',
     desc: 'Gain one consumable. Max 3 can be carried.'
   });
   if (eventKey !== 'start') {
-    choices.push({
+    sideChoices.push({
       kind: 'cleanup',
       title: 'Field Sweep',
       desc: 'Remove one bottom garbage row from your carried field.'
     });
   } else {
-    choices.push({
+    sideChoices.push({
       kind: 'gold',
       amount: 12,
       title: 'Loose Gold',
       desc: 'Take a small gold pouch and move on.'
     });
   }
-  return shuffle(choices).slice(0, 3);
+  return [...choices, ...shuffle(sideChoices)].slice(0, 3);
 }
 
 export function removableDeckCards(run) {
@@ -185,10 +208,28 @@ export function removableDeckCards(run) {
   return [...counts.keys()]
     .filter(id => CARD_LIBRARY[id] && (run.deck.extraCards.includes(id) || BASE_TYPES.includes(id)))
     .sort((a, b) => {
-      const ar = CARD_LIBRARY[a].rarity === 'base' ? 1 : 0;
-      const br = CARD_LIBRARY[b].rarity === 'base' ? 1 : 0;
-      return ar - br || CARD_LIBRARY[a].name.localeCompare(CARD_LIBRARY[b].name);
+      const score = id => {
+        const card = CARD_LIBRARY[id];
+        if (card.traits.includes('curse')) return 0;
+        if (run.deck.extraCards.includes(id) && card.rarity !== 'base') return 1;
+        if ([TYPES.S, TYPES.Z].includes(id)) return 2;
+        if ([TYPES.J, TYPES.L].includes(id)) return 3;
+        if ([TYPES.O, TYPES.T].includes(id)) return 4;
+        if (id === TYPES.I) return 5;
+        return 6;
+      };
+      return score(a) - score(b) || CARD_LIBRARY[a].name.localeCompare(CARD_LIBRARY[b].name);
     });
+}
+
+export function upgradeDeckCards(run) {
+  const counts = new Map();
+  for (const id of run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
+  for (const id of run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
+  return BASE_TYPES
+    .filter(id => (counts.get(id) || 0) > 0 && BLOCK_UPGRADES[id])
+    .map(id => ({ from: id, to: BLOCK_UPGRADES[id] }))
+    .sort((a, b) => CARD_LIBRARY[a.from].name.localeCompare(CARD_LIBRARY[b.from].name));
 }
 
 export function applyReward(run, reward) {

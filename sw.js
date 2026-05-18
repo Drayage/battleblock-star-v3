@@ -1,4 +1,4 @@
-const CACHE_NAME = 'battle-block-star-v3-padfix1';
+const CACHE_NAME = 'battle-block-star-v3-blocks1';
 const APP_SHELL = [
   './',
   './index.html',

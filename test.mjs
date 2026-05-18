@@ -3,7 +3,7 @@ import { Deck } from './src/deck.js';
 import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
-import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
+import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -67,6 +67,9 @@ assert.equal(expandedBoard.defeated, false);
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].shapeId, 'CROSS5');
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
+assert.equal(CARD_LIBRARY[TYPES.POWER_T].abilityId, 'highPower');
+assert.equal(CARD_LIBRARY[TYPES.BOMB_I].shapeId, 'I');
+assert.equal(CARD_LIBRARY[TYPES.CLEANSE_J].abilityId, 'purgeGarbage');
 
 const tetrisBoard = new Board({ rows: 20 });
 tetrisBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
@@ -112,6 +115,13 @@ assert.equal(RELICS.combo_amp.name, 'Combo Amplifier');
 
 const eventRun = new RunState();
 assert.equal(shouldShowEvent(eventRun), 'start');
+eventRun.deck.addCard(TYPES.HEAVY_JUNK);
+assert.equal(removableDeckCards(eventRun)[0], TYPES.HEAVY_JUNK);
+assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.I && upgrade.to === TYPES.POWER_I), true);
+assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
+
+const baseRemoveRun = new RunState();
+assert.notEqual(removableDeckCards(baseRemoveRun)[0], TYPES.I);
 eventRun.seenEvents.add('start');
 assert.equal(shouldShowEvent(eventRun), null);
 eventRun.round = 3;
