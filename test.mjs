@@ -3,7 +3,7 @@ import { Deck } from './src/deck.js';
 import { BASE_TYPES, TYPES } from './src/constants.js';
 import { Board } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
-import { makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
+import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -18,6 +18,7 @@ board.grid[19][0] = { type: TYPES.POWER_I, attack: 0.3, traits: ['highPower'] };
 const clear = board.clearLines();
 assert.equal(clear.cleared, 1);
 assert.equal(clear.attack, 1.2);
+assert.equal(clear.mana, 0.5);
 
 const garbageBoard = new Board({ rows: 20 });
 for (let r = 17; r < 20; r++) {
@@ -36,6 +37,12 @@ assert.equal(persisted[19][0].type, TYPES.GARBAGE);
 
 assert.equal(makeEnemyChoices(1).every(enemy => enemy.startingRows === 15), true);
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
+assert.equal(makeRewards('elite').some(reward => reward.kind === 'relic'), true);
+
+const relicRun = new RunState();
+applyReward(relicRun, { kind: 'relic', id: 'combo_amp' });
+assert.equal(relicRun.relics.includes('combo_amp'), true);
+assert.equal(RELICS.combo_amp.name, 'Combo Amplifier');
 
 const eventRun = new RunState();
 assert.equal(shouldShowEvent(eventRun), 'start');

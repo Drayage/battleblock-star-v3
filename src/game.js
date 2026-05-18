@@ -1,13 +1,14 @@
-import { Board } from './board.js?v=20260518-event5';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-event5';
-import { Deck } from './deck.js?v=20260518-event5';
-import { AI } from './ai.js?v=20260518-event5';
-import { Renderer } from './renderer.js?v=20260518-event5';
-import { InputController } from './input.js?v=20260518-event5';
-import { SKILLS } from './skills.js?v=20260518-event5';
-import { CONSUMABLES } from './consumables.js?v=20260518-event5';
+import { Board } from './board.js?v=20260518-relic1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-relic1';
+import { Deck } from './deck.js?v=20260518-relic1';
+import { AI } from './ai.js?v=20260518-relic1';
+import { Renderer } from './renderer.js?v=20260518-relic1';
+import { InputController } from './input.js?v=20260518-relic1';
+import { SKILLS } from './skills.js?v=20260518-relic1';
+import { CONSUMABLES } from './consumables.js?v=20260518-relic1';
 import {
   RunState,
+  RELICS,
   applyReward,
   isRunComplete,
   isShopRound,
@@ -16,10 +17,11 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-event5';
+} from './progression.js?v=20260518-relic1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
+window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const CARD_DESCRIPTIONS = {
@@ -259,8 +261,10 @@ class Game {
   renderLoadoutViewer() {
     const skillWrap = document.getElementById('skillList');
     const consumableWrap = document.getElementById('consumableList');
+    const relicWrap = document.getElementById('relicList');
     skillWrap.innerHTML = '';
     consumableWrap.innerHTML = '';
+    relicWrap.innerHTML = '';
 
     if (!this.run.equippedSkills.length) {
       skillWrap.innerHTML = '<span class="muted">No skills equipped.</span>';
@@ -287,12 +291,26 @@ class Game {
         consumableWrap.appendChild(item);
       });
     }
+
+    if (!this.run.relics.length) {
+      relicWrap.innerHTML = '<span class="muted">No relics owned.</span>';
+    } else {
+      this.run.relics.forEach(id => {
+        const relic = RELICS[id];
+        if (!relic) return;
+        const item = document.createElement('div');
+        item.className = 'loadout-card';
+        item.innerHTML = `<span class="item-chip">R</span><span><strong>${relic.name}</strong><small>${relic.desc}</small></span>`;
+        relicWrap.appendChild(item);
+      });
+    }
   }
 
   itemDesc(item) {
     if (item.kind === 'card') return `${CARD_LIBRARY[item.id].name}: ${CARD_DESCRIPTIONS[item.id] || 'Adds this block to your deck.'}`;
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return CONSUMABLES[item.id].desc;
+    if (item.kind === 'relic') return RELICS[item.id].desc;
     return `${item.amount} extra rows of survival space.`;
   }
 
@@ -302,6 +320,12 @@ class Game {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
       chip.textContent = CONSUMABLES[item.id].short;
+      node.appendChild(chip);
+    }
+    if (item.kind === 'relic') {
+      const chip = document.createElement('div');
+      chip.className = 'item-chip';
+      chip.textContent = 'R';
       node.appendChild(chip);
     }
   }
@@ -331,6 +355,7 @@ class Game {
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
+    if (this.run.relics.includes('hold_cache') && !this.player.held) this.player.mp = Math.min(100, this.player.mp + 15);
     this.ai = new AI(enemyCard.aiProfile);
     this.fallTimer = 0;
     this.enemyTimer = 0;
@@ -409,7 +434,14 @@ class Game {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
-    if (result.attack > 0) defender.receiveGarbage(result.attack * mult);
+    if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
+      this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
+    }
+    if (result.attack > 0) {
+      const attack = result.attack * mult;
+      const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
+      defender.receiveGarbage(buffered);
+    }
     if (this.player.defeated) return this.queueBattleEnd('loss');
     if (this.enemy.defeated) return this.queueBattleEnd('win');
   }
@@ -458,6 +490,7 @@ class Game {
     if (reward.kind === 'card') return CARD_LIBRARY[reward.id].name;
     if (reward.kind === 'skill') return SKILLS[reward.id].name;
     if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
+    if (reward.kind === 'relic') return RELICS[reward.id].name;
     return `+${reward.amount} rows`;
   }
 
@@ -585,6 +618,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-event6').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-relic1').catch(() => {});
   });
 }

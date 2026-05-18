@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-event5';
-import { Deck } from './deck.js?v=20260518-event5';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-relic1';
+import { Deck } from './deck.js?v=20260518-relic1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 
@@ -188,7 +188,7 @@ export class Board {
       if (this.grid[r].every(Boolean)) {
         const row = this.grid[r];
         attack += row.reduce((sum, c) => sum + c.attack, 0);
-        mana += row.length * 1.5 + row.filter(c => c.traits.includes('manaBonus')).length * 8;
+        mana += row.length * 0.05 + row.filter(c => c.traits.includes('manaBonus')).length * 8;
         if (row.some(c => c.traits.includes('bomb'))) bombRows.push(r);
         if (row.some(c => c.traits.includes('purgeGarbage'))) purge = true;
         this.grid.splice(r, 1);
@@ -199,7 +199,7 @@ export class Board {
     }
     for (const r of bombRows) this.clearGarbageAround(r);
     if (purge) this.purgeGarbageRows(1);
-    return { cleared, attack: Number(attack.toFixed(2)), mana: Math.round(mana), bombRows, purge };
+    return { cleared, attack: Number(attack.toFixed(2)), mana: Number(mana.toFixed(2)), bombRows, purge };
   }
 
   clearGarbageAround(row) {

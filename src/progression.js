@@ -1,7 +1,30 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-event5';
-import { Deck, shuffle } from './deck.js?v=20260518-event5';
-import { SKILLS } from './skills.js?v=20260518-event5';
-import { CONSUMABLES } from './consumables.js?v=20260518-event5';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-relic1';
+import { Deck, shuffle } from './deck.js?v=20260518-relic1';
+import { SKILLS } from './skills.js?v=20260518-relic1';
+import { CONSUMABLES } from './consumables.js?v=20260518-relic1';
+
+export const RELICS = {
+  combo_amp: {
+    id: 'combo_amp',
+    name: 'Combo Amplifier',
+    desc: 'At 2+ combo, your attacks deal 25% more damage.'
+  },
+  mana_lens: {
+    id: 'mana_lens',
+    name: 'Mana Lens',
+    desc: 'Line clears restore 35% more MP after the base gain.'
+  },
+  garbage_buffer: {
+    id: 'garbage_buffer',
+    name: 'Garbage Buffer',
+    desc: 'Enemy attacks send 1 less garbage whenever they hit you.'
+  },
+  hold_cache: {
+    id: 'hold_cache',
+    name: 'Hold Cache',
+    desc: 'Start each battle with +15 MP if your hold slot is empty.'
+  }
+};
 
 export class RunState {
   constructor() {
@@ -79,10 +102,12 @@ export function makeRewards(pool = 'normal') {
   const cards = pool === 'elite' ? eliteCards : normalCards;
   if (pool === 'elite') {
     const skillIds = Object.keys(SKILLS);
+    const relicIds = Object.keys(RELICS);
     const rareCard = shuffle(cards)[0];
     return shuffle([
       { kind: 'card', id: rareCard, title: 'Rare block reward' },
       { kind: 'skill', id: skillIds[Math.floor(Math.random() * skillIds.length)], title: 'Special skill reward' },
+      { kind: 'relic', id: relicIds[Math.floor(Math.random() * relicIds.length)], title: 'Elite relic reward' },
       { kind: 'consumable', id: randomConsumable(), title: 'Elite consumable kit' }
     ]);
   }
@@ -174,6 +199,7 @@ export function applyReward(run, reward) {
   }
   if (reward.kind === 'consumable') addConsumable(run, reward.id);
   if (reward.kind === 'hp') run.hpRows += reward.amount;
+  if (reward.kind === 'relic' && !run.relics.includes(reward.id)) run.relics.push(reward.id);
 }
 
 export function addConsumable(run, id) {
