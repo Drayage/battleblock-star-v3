@@ -76,6 +76,15 @@ const stalledResult = new AI('fast').step(stalledEnemyBoard);
 assert.equal(stalledResult.topOut, true);
 assert.equal(stalledEnemyBoard.defeated, true);
 
+const nearCeilingBoard = new Board({ rows: 20 });
+nearCeilingBoard.grid = Array.from({ length: 20 }, (_, r) => Array.from({ length: 10 }, (_, c) => r >= 2 && c !== 5 ? { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] } : null));
+nearCeilingBoard.current = new Mino(CARD_LIBRARY[TYPES.I], 3, SPAWN_Y);
+const survivalAi = new AI('plonk');
+let nearCeilingResult = null;
+for (let i = 0; i < 12 && !nearCeilingResult; i++) nearCeilingResult = survivalAi.step(nearCeilingBoard);
+assert.notEqual(nearCeilingResult?.topOut, true);
+assert.equal(nearCeilingBoard.defeated, false);
+
 const expandedPersist = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
 expandedPersist[19][0] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
 const expandedBoard = new Board({ rows: 25, persistentGrid: expandedPersist });

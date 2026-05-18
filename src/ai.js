@@ -1,5 +1,5 @@
-import { Mino } from './board.js?v=20260518-aiprofiles1';
-import { COLS } from './constants.js?v=20260518-aiprofiles1';
+import { Mino } from './board.js?v=20260518-aisurvive1';
+import { COLS } from './constants.js?v=20260518-aisurvive1';
 
 function analyzeGrid(grid) {
   const rows = grid.length;
@@ -25,9 +25,11 @@ function analyzeGrid(grid) {
   let lines = 0;
   for (const row of grid) if (row.every(Boolean)) lines++;
   const totalHeight = heights.reduce((a, b) => a + b, 0);
+  const maxHeight = Math.max(...heights);
+  const topCells = grid.slice(0, 3).reduce((sum, row) => sum + row.filter(Boolean).length, 0);
   const rightWell = Math.max(0, Math.min(...heights.slice(0, -1)) - heights[COLS - 1]);
   const garbage = grid.reduce((sum, row) => sum + row.filter(c => c?.type === 'garbage').length, 0);
-  return { heights, totalHeight, holes, bump, lines, rightWell, garbage };
+  return { rows, heights, totalHeight, maxHeight, topCells, holes, bump, lines, rightWell, garbage };
 }
 
 function scoreGrid(grid, cleared, profile) {
@@ -45,7 +47,9 @@ function scoreGrid(grid, cleared, profile) {
     line: 8, hole: -2.8, height: -0.35, bump: -0.55, well: 0.15, garbage: -0.12
   };
   const burst = cleared >= 4 ? 18 : cleared >= 2 ? 5 : 0;
-  return cleared * p.line + burst + ev.holes * p.hole + ev.totalHeight * p.height + ev.bump * p.bump + ev.rightWell * p.well + ev.garbage * p.garbage;
+  const dangerRows = Math.max(0, ev.maxHeight - (ev.rows - 5));
+  const survival = dangerRows * -24 + ev.topCells * -10;
+  return cleared * p.line + burst + ev.holes * p.hole + ev.totalHeight * p.height + ev.bump * p.bump + ev.rightWell * p.well + ev.garbage * p.garbage + survival;
 }
 
 function simulate(board, mino, profile) {
@@ -59,6 +63,7 @@ function simulate(board, mino, profile) {
     test.y++;
   }
   for (const { x, y } of test.cells) {
+    if (y < 0) return -1e9;
     if (y >= 0 && y < board.rows) grid[y][x] = { type: test.card.id, attack: test.card.cellAttack, traits: [] };
   }
   let cleared = 0;

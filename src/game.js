@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-aiprofiles1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-aiprofiles1';
-import { Deck } from './deck.js?v=20260518-aiprofiles1';
-import { AI } from './ai.js?v=20260518-aiprofiles1';
-import { Renderer } from './renderer.js?v=20260518-aiprofiles1';
-import { InputController } from './input.js?v=20260518-aiprofiles1';
-import { SKILLS } from './skills.js?v=20260518-aiprofiles1';
-import { CONSUMABLES } from './consumables.js?v=20260518-aiprofiles1';
+import { Board } from './board.js?v=20260518-aisurvive1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-aisurvive1';
+import { Deck } from './deck.js?v=20260518-aisurvive1';
+import { AI } from './ai.js?v=20260518-aisurvive1';
+import { Renderer } from './renderer.js?v=20260518-aisurvive1';
+import { InputController } from './input.js?v=20260518-aisurvive1';
+import { SKILLS } from './skills.js?v=20260518-aisurvive1';
+import { CONSUMABLES } from './consumables.js?v=20260518-aisurvive1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-aiprofiles1';
+} from './progression.js?v=20260518-aisurvive1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -122,7 +122,7 @@ class Game {
       return;
     }
     el.innerHTML = `<strong>Best round ${best}</strong>` + records.slice(0, 5).map(r =>
-      `<span>R${r.round} · ${r.gold}G · ${r.result}</span>`
+      `<span>R${r.round} 쨌 ${r.gold}G 쨌 ${r.result}</span>`
     ).join('');
   }
 
@@ -604,7 +604,7 @@ class Game {
     this.deleteSave(true);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
-    document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} · Gold ${this.run.gold} · HP Rows ${this.run.hpRows}`;
+    document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} 쨌 Gold ${this.run.gold} 쨌 HP Rows ${this.run.hpRows}`;
   }
 
   saveRecord(win) {
@@ -861,6 +861,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-aiprofiles1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-aisurvive1').catch(() => {});
   });
 }

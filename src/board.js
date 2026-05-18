@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-aiprofiles1';
-import { Deck } from './deck.js?v=20260518-aiprofiles1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-aisurvive1';
+import { Deck } from './deck.js?v=20260518-aisurvive1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -188,7 +188,7 @@ export class Board {
     this.current.card = {
       ...CARD_LIBRARY[TYPES.O],
       id: 'SHARD',
-      name: '긴급 조각',
+      name: '湲닿툒 議곌컖',
       cellAttack: 0.05,
       traits: ['shard'],
       shape: [[[1]], [[1]], [[1]], [[1]]]

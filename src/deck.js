@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-aiprofiles1';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-aisurvive1';
 
 export function shuffle(items) {
   const out = [...items];
