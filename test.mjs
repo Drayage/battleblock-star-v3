@@ -27,6 +27,16 @@ for (let r = 17; r < 20; r++) {
 assert.equal(garbageBoard.purgeGarbageRows(3), 3);
 assert.equal(garbageBoard.grid.slice(17).some(row => row.some(Boolean)), false);
 
+const survivalBoard = new Board({ rows: 20 });
+survivalBoard.grid[0][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+survivalBoard.applyGarbage(1);
+assert.equal(survivalBoard.defeated, false);
+
+const blockedSpawnBoard = new Board({ rows: 20 });
+blockedSpawnBoard.grid[1][3] = { type: TYPES.I, attack: 0.1, traits: [] };
+blockedSpawnBoard.spawn();
+assert.equal(blockedSpawnBoard.defeated, true);
+
 const run = new RunState();
 const persistBoard = new Board({ rows: 20, deck: run.deck });
 persistBoard.grid[18][0] = { type: TYPES.I, attack: 0.1, traits: [] };

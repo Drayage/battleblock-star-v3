@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-relic1';
-import { Deck } from './deck.js?v=20260518-relic1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-death1';
+import { Deck } from './deck.js?v=20260518-death1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 
@@ -216,10 +216,6 @@ export class Board {
 
   applyGarbage(lines) {
     for (let i = 0; i < lines; i++) {
-      if (this.grid[0].some(Boolean)) {
-        this.defeated = true;
-        return;
-      }
       this.grid.shift();
       const hole = Math.floor(Math.random() * this.cols);
       this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] }));

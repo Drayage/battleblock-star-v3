@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-relic1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-death1';
 
 export class Renderer {
   constructor(canvas) {
