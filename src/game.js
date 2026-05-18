@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-overflow1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-overflow1';
-import { Deck } from './deck.js?v=20260518-overflow1';
-import { AI } from './ai.js?v=20260518-overflow1';
-import { Renderer } from './renderer.js?v=20260518-overflow1';
-import { InputController } from './input.js?v=20260518-overflow1';
-import { SKILLS } from './skills.js?v=20260518-overflow1';
-import { CONSUMABLES } from './consumables.js?v=20260518-overflow1';
+import { Board } from './board.js?v=20260518-savepause1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-savepause1';
+import { Deck } from './deck.js?v=20260518-savepause1';
+import { AI } from './ai.js?v=20260518-savepause1';
+import { Renderer } from './renderer.js?v=20260518-savepause1';
+import { InputController } from './input.js?v=20260518-savepause1';
+import { SKILLS } from './skills.js?v=20260518-savepause1';
+import { CONSUMABLES } from './consumables.js?v=20260518-savepause1';
 import {
   RunState,
   RELICS,
@@ -17,13 +17,14 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-overflow1';
+} from './progression.js?v=20260518-savepause1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
 window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
+const SAVE_KEY = 'battleBlockStar.save.v1';
 const LOCK_DELAY_START = 520;
 const LOCK_DELAY_STEP = 55;
 const LOCK_DELAY_MIN = 120;
@@ -61,6 +62,7 @@ class Game {
     this.playerSlowTimer = 0;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
+    this.paused = false;
     this.message = '';
     this.bindUi();
     this.refreshMenu();
@@ -69,6 +71,8 @@ class Game {
 
   bindUi() {
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
+    document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
+    document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
     document.getElementById('restartRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('mainMenuBtn').addEventListener('click', () => {
       this.refreshMenu();
@@ -79,6 +83,8 @@ class Game {
       this.showMap();
     });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
+    document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
+    document.getElementById('saveRunBtn').addEventListener('click', () => this.saveGame());
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
     });
@@ -96,6 +102,8 @@ class Game {
     document.getElementById('menuGold').textContent = this.run.gold;
     document.getElementById('menuHp').textContent = this.run.hpRows;
     document.getElementById('menuDeck').textContent = `${this.run.deckCount()} cards`;
+    document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
+    document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
   }
 
@@ -377,6 +385,7 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
+    this.paused = false;
     this.message = 'Battle start';
     document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
@@ -416,6 +425,8 @@ class Game {
 
   action(action) {
     if (!this.inBattle()) return;
+    if (action === 'pause') return this.togglePause();
+    if (this.paused) return;
     if (action === 'left') this.groundAdjust(() => this.player.move(-1, 0));
     if (action === 'right') this.groundAdjust(() => this.player.move(1, 0));
     if (action === 'soft') {
@@ -455,6 +466,7 @@ class Game {
   }
 
   useSkill(index) {
+    if (this.paused) return;
     const id = this.run.equippedSkills[index];
     const skill = SKILLS[id];
     if (!skill || this.player.mp < skill.cost) return;
@@ -464,6 +476,7 @@ class Game {
   }
 
   useConsumable(index) {
+    if (this.paused) return;
     const id = this.run.consumables[index];
     const item = CONSUMABLES[id];
     if (!item) return;
@@ -587,6 +600,122 @@ class Game {
     }
   }
 
+  runToState() {
+    return {
+      round: this.run.round,
+      gold: this.run.gold,
+      hpRows: this.run.hpRows,
+      deck: this.run.deck.toState(),
+      persistentGrid: this.run.persistentGrid,
+      ownedSkills: [...this.run.ownedSkills],
+      equippedSkills: [...this.run.equippedSkills],
+      consumables: [...this.run.consumables],
+      relics: [...this.run.relics],
+      visitedShops: [...this.run.visitedShops],
+      seenEvents: [...this.run.seenEvents]
+    };
+  }
+
+  restoreRun(state = {}) {
+    const run = new RunState();
+    run.round = state.round || 1;
+    run.gold = state.gold || 0;
+    run.hpRows = state.hpRows || run.hpRows;
+    run.deck = Deck.fromState(state.deck);
+    run.persistentGrid = state.persistentGrid || null;
+    run.ownedSkills = [...(state.ownedSkills || [])];
+    run.equippedSkills = [...(state.equippedSkills || [])];
+    run.consumables = [...(state.consumables || [])];
+    run.relics = [...(state.relics || [])];
+    run.visitedShops = new Set(state.visitedShops || []);
+    run.seenEvents = new Set(state.seenEvents || []);
+    return run;
+  }
+
+  saveGame() {
+    const state = {
+      version: 1,
+      savedAt: Date.now(),
+      screen: this.screen,
+      run: this.runToState(),
+      battle: this.player && this.enemy ? {
+        player: this.player.toState(),
+        enemy: this.enemy.toState(),
+        enemyCard: this.enemyCard,
+        fallTimer: this.fallTimer,
+        lockTimer: this.lockTimer,
+        lockResets: this.lockResets,
+        groundTouched: this.groundTouched,
+        enemyTimer: this.enemyTimer,
+        enemyAbilityTimer: this.enemyAbilityTimer,
+        enemySlowTimer: this.enemySlowTimer,
+        playerSlowTimer: this.playerSlowTimer,
+        battleEndDelay: this.battleEndDelay,
+        battleEndResult: this.battleEndResult,
+        paused: this.paused,
+        message: this.message
+      } : null
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    this.message = 'Saved';
+    this.refreshMenu();
+  }
+
+  loadGame() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    try {
+      const state = JSON.parse(raw);
+      this.run = this.restoreRun(state.run);
+      if (state.battle && state.screen === 'gameScreen') {
+        this.player = Board.fromState(state.battle.player);
+        this.enemy = Board.fromState(state.battle.enemy);
+        this.enemyCard = state.battle.enemyCard;
+        this.ai = new AI(this.enemyCard?.aiProfile || 'balanced');
+        this.fallTimer = state.battle.fallTimer || 0;
+        this.lockTimer = state.battle.lockTimer || 0;
+        this.lockResets = state.battle.lockResets || 0;
+        this.groundTouched = !!state.battle.groundTouched;
+        this.enemyTimer = state.battle.enemyTimer || 0;
+        this.enemyAbilityTimer = state.battle.enemyAbilityTimer || 0;
+        this.enemySlowTimer = state.battle.enemySlowTimer || 0;
+        this.playerSlowTimer = state.battle.playerSlowTimer || 0;
+        this.battleEndDelay = state.battle.battleEndDelay || 0;
+        this.battleEndResult = state.battle.battleEndResult || null;
+        this.paused = state.battle.paused ?? true;
+        this.message = state.battle.message || 'Loaded';
+        document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
+        document.getElementById('battleMeta').textContent = this.enemyCard?.name || 'Enemy';
+        this.renderTouchSlots();
+        this.renderer.resize(this.player.rows, this.enemy.rows);
+        this.show('gameScreen');
+      } else {
+        this.player = null;
+        this.enemy = null;
+        this.enemyCard = null;
+        this.ai = null;
+        this.paused = false;
+        this.routeNextScreen();
+      }
+      this.refreshMenu();
+    } catch (err) {
+      console.warn('Save load failed', err);
+      this.deleteSave();
+    }
+  }
+
+  deleteSave() {
+    localStorage.removeItem(SAVE_KEY);
+    this.refreshMenu();
+  }
+
+  togglePause() {
+    if (!this.inBattle() || this.battleEndResult) return;
+    this.paused = !this.paused;
+    document.getElementById('pauseBtn').textContent = this.paused ? 'Resume' : 'Pause';
+    this.message = this.paused ? 'Paused' : 'Resumed';
+  }
+
   loop(now) {
     const dt = Math.min(50, now - (this.last || now));
     this.last = now;
@@ -595,6 +724,7 @@ class Game {
   }
 
   updateBattle(dt, now) {
+    document.getElementById('pauseBtn').textContent = this.paused ? 'Resume' : 'Pause';
     if (this.battleEndResult) {
       this.battleEndDelay -= dt;
       this.renderer.draw({
@@ -609,6 +739,17 @@ class Game {
         if (this.battleEndResult === 'win') this.winBattle();
         else this.endRun(false);
       }
+      return;
+    }
+    if (this.paused) {
+      this.renderer.draw({
+        player: this.player,
+        enemy: this.enemy,
+        run: this.run,
+        battle: 'PAUSED',
+        enemyCard: this.enemyCard,
+        message: 'Paused'
+      });
       return;
     }
     this.input.update(now);
@@ -683,6 +824,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-overflow1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-savepause1').catch(() => {});
   });
 }

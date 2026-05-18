@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-overflow1';
-import { Deck } from './deck.js?v=20260518-overflow1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-savepause1';
+import { Deck } from './deck.js?v=20260518-savepause1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -49,6 +49,10 @@ export class Mino {
     m.rot = this.rot;
     return m;
   }
+
+  toState() {
+    return { cardId: this.card.id, x: this.x, y: this.y, rot: this.rot };
+  }
 }
 
 export class Board {
@@ -71,6 +75,34 @@ export class Board {
     this.flash = 0;
     this.fillQueue();
     this.spawn();
+  }
+
+  static fromState(state = {}) {
+    const board = Object.create(Board.prototype);
+    board.rows = state.rows || DEFAULT_ROWS;
+    board.cols = COLS;
+    board.deck = Deck.fromState(state.deck);
+    board.grid = normalizeGrid(state.grid, board.rows);
+    board.current = state.current ? Board.minoFromState(state.current) : null;
+    board.held = state.held ? CARD_LIBRARY[state.held] : null;
+    board.holdUsed = !!state.holdUsed;
+    board.holdLocked = !!state.holdLocked;
+    board.nextQueue = (state.nextQueue || []).map(id => CARD_LIBRARY[id]).filter(Boolean);
+    board.garbageQueue = state.garbageQueue || 0;
+    board.mp = state.mp || 0;
+    board.combo = state.combo || 0;
+    board.defeated = !!state.defeated;
+    board.lastAttack = state.lastAttack || 0;
+    board.lastMoveWasRotate = !!state.lastMoveWasRotate;
+    board.flash = state.flash || 0;
+    board.fillQueue();
+    return board;
+  }
+
+  static minoFromState(state) {
+    const mino = new Mino(CARD_LIBRARY[state.cardId] || CARD_LIBRARY[TYPES.I], state.x, state.y);
+    mino.rot = state.rot || 0;
+    return mino;
   }
 
   fillQueue() {
@@ -285,5 +317,25 @@ export class Board {
       for (let r = 0; r < this.rows; r++) if (this.grid[r][c]) stack.push(this.grid[r][c]);
       for (let r = this.rows - 1; r >= 0; r--) this.grid[r][c] = stack.pop() || null;
     }
+  }
+
+  toState() {
+    return {
+      rows: this.rows,
+      grid: this.grid.map(row => row.map(c => c ? { ...c, traits: [...c.traits] } : null)),
+      deck: this.deck.toState(),
+      current: this.current?.toState() || null,
+      held: this.held?.id || null,
+      holdUsed: this.holdUsed,
+      holdLocked: this.holdLocked,
+      nextQueue: this.nextQueue.map(card => card.id),
+      garbageQueue: this.garbageQueue,
+      mp: this.mp,
+      combo: this.combo,
+      defeated: this.defeated,
+      lastAttack: this.lastAttack,
+      lastMoveWasRotate: this.lastMoveWasRotate,
+      flash: this.flash
+    };
   }
 }

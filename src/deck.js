@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-overflow1';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-savepause1';
 
 export function shuffle(items) {
   const out = [...items];
@@ -16,6 +16,16 @@ export class Deck {
     this.draw = [];
     this.discard = [];
     this.refill();
+  }
+
+  static fromState(state = {}) {
+    const deck = Object.create(Deck.prototype);
+    deck.extraCards = [...(state.extraCards || [])];
+    deck.removedBase = [...(state.removedBase || [])];
+    deck.draw = [...(state.draw || [])];
+    deck.discard = [...(state.discard || [])];
+    if (!deck.draw.length && !deck.discard.length) deck.refill();
+    return deck;
   }
 
   static makeBaseCycle(removedBase = []) {
@@ -81,5 +91,14 @@ export class Deck {
   preview(n = 3) {
     while (this.draw.length < n) this.refill();
     return this.draw.slice(0, n).map(id => CARD_LIBRARY[id]);
+  }
+
+  toState() {
+    return {
+      extraCards: [...this.extraCards],
+      removedBase: [...this.removedBase],
+      draw: [...this.draw],
+      discard: [...this.discard]
+    };
   }
 }

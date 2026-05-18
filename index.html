@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#070912">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Battle Block Star v3.0</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260518-overflow1">
-  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260518-overflow1">
-  <link rel="icon" href="./assets/icon-192.png?v=20260518-overflow1">
-  <link rel="stylesheet" href="./src/styles.css?v=20260518-overflow1">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260518-savepause1">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260518-savepause1">
+  <link rel="icon" href="./assets/icon-192.png?v=20260518-savepause1">
+  <link rel="stylesheet" href="./src/styles.css?v=20260518-savepause1">
 </head>
 <body>
   <main id="app">
@@ -43,6 +43,10 @@
         <div id="recordList" class="record-list"></div>
       </div>
       <button id="startRunBtn" class="primary">Start Run</button>
+      <div class="menu-actions">
+        <button id="loadRunBtn" class="ghost">Load Save</button>
+        <button id="deleteSaveBtn" class="ghost danger">Delete Save</button>
+      </div>
     </section>
 
     <section id="mapScreen" class="screen">
@@ -102,7 +106,11 @@
     <section id="gameScreen" class="screen">
       <div class="hud">
         <div><strong id="battleTitle">Battle</strong><span id="battleMeta"></span></div>
-        <button id="forfeitBtn" class="ghost danger">Forfeit</button>
+        <div class="hud-actions">
+          <button id="pauseBtn" class="ghost">Pause</button>
+          <button id="saveRunBtn" class="ghost">Save</button>
+          <button id="forfeitBtn" class="ghost danger">Forfeit</button>
+        </div>
       </div>
       <div id="canvasWrap"><canvas id="gameCanvas"></canvas></div>
       <div id="mobilePad">
@@ -110,14 +118,19 @@
           <div class="pad-skills" id="touchSkills"></div>
           <div class="pad-skills" id="touchConsumables"></div>
         </div>
-        <div class="pad-actions">
-          <button data-action="left" aria-label="Move left">&larr;</button>
-          <button class="big" data-action="ccw" aria-label="Rotate counterclockwise">&#8634;</button>
-          <button data-action="soft" aria-label="Soft drop">&darr;</button>
-          <button data-action="hold" aria-label="Hold">H</button>
-          <button data-action="hard" aria-label="Hard drop">&#11015;</button>
-          <button class="big" data-action="rotate" aria-label="Rotate clockwise">&#8635;</button>
-          <button data-action="right" aria-label="Move right">&rarr;</button>
+        <div class="pad-actions" aria-label="Mobile controls">
+          <div class="pad-row">
+            <button data-action="left" aria-label="Move left">&larr;</button>
+            <button class="big" data-action="ccw" aria-label="Rotate counterclockwise">&#8634;</button>
+            <button data-action="soft" aria-label="Soft drop">&darr;</button>
+            <button data-action="hold" aria-label="Hold">H</button>
+          </div>
+          <div class="pad-row">
+            <button data-action="hard" aria-label="Hard drop">&#11015;</button>
+            <button class="big" data-action="rotate" aria-label="Rotate clockwise">&#8635;</button>
+            <button data-action="right" aria-label="Move right">&rarr;</button>
+            <button data-action="pause" aria-label="Pause">&#10074;&#10074;</button>
+          </div>
         </div>
       </div>
     </section>
@@ -130,6 +143,6 @@
     </section>
   </main>
 
-  <script type="module" src="./src/game.js?v=20260518-overflow1"></script>
+  <script type="module" src="./src/game.js?v=20260518-savepause1"></script>
 </body>
 </html>

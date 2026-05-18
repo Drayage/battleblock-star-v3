@@ -123,6 +123,15 @@ assert.equal(trimmedDeck.removeCard(TYPES.I), true);
 trimmedDeck.refill();
 assert.equal(trimmedDeck.draw.filter(id => id === TYPES.I).length, 2);
 
+const savedDeck = Deck.fromState(trimmedDeck.toState());
+assert.deepEqual(savedDeck.draw, trimmedDeck.draw);
+assert.deepEqual(savedDeck.removedBase, trimmedDeck.removedBase);
+
+const savedBoard = Board.fromState(tetrisBoard.toState());
+assert.equal(savedBoard.rows, tetrisBoard.rows);
+assert.equal(savedBoard.current.card.id, tetrisBoard.current.card.id);
+assert.equal(savedBoard.deck.draw.length, tetrisBoard.deck.draw.length);
+
 const itemBoard = new Board({ rows: 20 });
 itemBoard.receiveGarbage(4);
 CONSUMABLES.shield.use({ player: itemBoard });

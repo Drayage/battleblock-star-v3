@@ -11,6 +11,7 @@ button{font:inherit}
 .stat-grid,.control-grid{display:grid;grid-template-columns:1fr auto;gap:8px 14px;font-size:12px}.control-grid{grid-template-columns:auto 1fr}.stat-grid span,.control-grid span:nth-child(even){color:#7b879f}.stat-grid strong{color:#dce7ff}
 .primary,.ghost,.choice{border:1px solid #38568f;background:#15213c;color:#dce8ff;border-radius:8px;cursor:pointer;touch-action:manipulation}
 .primary{width:100%;padding:15px;font-size:18px;background:#1c3671}.primary:active,.choice:active,.ghost:active{transform:translateY(1px);filter:brightness(1.18)}
+.menu-actions,.hud-actions{display:flex;gap:8px}.menu-actions{margin-top:10px}.menu-actions .ghost{flex:1}
 .wide{width:100%;margin-top:10px}
 .topbar,.hud{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}.topbar strong,.hud strong{display:block;color:#e2ecff}.topbar span,.hud span{display:block;color:#7e8aa3;font-size:12px;margin-top:3px}
 .ghost{padding:9px 12px;background:#0d1324;color:#b7c8e8}.danger{border-color:#704052;color:#ffb8c4}
@@ -21,24 +22,26 @@ button{font:inherit}
 .deck-card .block-preview,.choice .block-preview{margin-top:10px}.deck-card .block-preview{margin-top:0}.item-chip{display:inline-grid;place-items:center;width:34px;height:34px;margin-top:10px;border:1px solid #45699f;border-radius:7px;background:#13233c;color:#dce8ff;font-weight:bold}.loadout-card .item-chip{margin-top:0}
 .choice.elite{border-color:#8f5b24;background:#251a12}.choice.shop{border-color:#35624c;background:#101f1b}.choice.reward{border-color:#6451a6;background:#17142b}.choice.event{border-color:#47618c;background:#121a2c}.choice:disabled{opacity:.35;cursor:not-allowed}
 .hidden{display:none!important}
-#gameScreen{max-width:none;width:100%;padding-bottom:68px}.hud{width:min(980px,100%);margin:0 auto 8px}
+#gameScreen{max-width:none;width:100%;padding-bottom:112px}.hud{width:min(980px,100%);margin:0 auto 8px}
 #canvasWrap{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;min-height:420px}canvas{display:block;transform-origin:top center;image-rendering:pixelated}
 #mobilePad{position:fixed;left:0;right:0;bottom:0;display:none;grid-template-rows:auto auto;gap:5px;padding:6px;background:rgba(7,9,18,.94);border-top:1px solid #1d2a49;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #mobilePad button{min-height:42px;border:1px solid #2e4778;border-radius:7px;background:#121d35;color:#dbe8ff;font-size:20px;font-weight:bold;line-height:1;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.pad-actions{display:grid;grid-template-columns:1.12fr 1fr 1fr 1fr 1.12fr 1fr 1.12fr;gap:5px}.pad-actions .big{font-size:22px}
+.pad-actions{display:grid;gap:5px}.pad-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.pad-actions .big{font-size:22px}
 .pad-slots{display:grid;grid-template-columns:1fr 1fr;gap:5px}.pad-skills{display:flex;gap:5px;align-items:stretch;min-height:28px}.pad-skills:empty{display:none}.pad-skills button{flex:1;min-height:28px;font-size:10px;background:#16273a;border-color:#315775}
 @media (max-width:720px){
   html.in-game,body.in-game{height:100dvh;overflow:hidden}
   html.in-game #app,body.in-game #app{height:100dvh;min-height:0;overflow:hidden;padding:6px}
   #app{padding:6px;align-items:flex-start}
   .choice-grid{grid-template-columns:1fr}.topbar,.hud{padding:0 4px;margin-bottom:4px}
-  #gameScreen{height:100dvh;overflow:hidden;padding-bottom:60px}
-  #canvasWrap{min-height:0;max-height:calc(100dvh - 70px)}
-  #mobilePad{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto!important;gap:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));max-height:58px}
-  #mobilePad .pad-slots{position:absolute;left:6px;right:6px;bottom:58px;display:flex;gap:5px;pointer-events:auto}
+  .hud-actions{gap:5px}.hud-actions .ghost{padding:7px 8px;font-size:11px}
+  #gameScreen{height:100dvh;overflow:hidden;padding-bottom:108px}
+  #canvasWrap{min-height:0;max-height:calc(100dvh - 118px)}
+  #mobilePad{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto!important;gap:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));max-height:106px}
+  #mobilePad .pad-slots{position:absolute;left:6px;right:6px;bottom:106px;display:flex;gap:5px;pointer-events:auto}
   #mobilePad .pad-slots:empty{display:none}
-  #mobilePad .pad-actions{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:5px;width:100%}
-  #mobilePad button{min-width:0;width:100%;min-height:44px;height:44px;padding:0;font-size:20px;line-height:1}
+  #mobilePad .pad-actions{display:grid!important;grid-template-columns:1fr!important;gap:5px;width:100%}
+  #mobilePad .pad-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  #mobilePad button{min-width:0;width:100%;min-height:46px;height:46px;padding:0;font-size:22px;line-height:1}
   #mobilePad .pad-actions .big{font-size:22px}
   #mobilePad .pad-skills{min-height:0}
   #mobilePad .pad-skills button{min-height:26px;height:26px;font-size:10px}
