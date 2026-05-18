@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-aimove1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-aimove1';
-import { Deck } from './deck.js?v=20260518-aimove1';
-import { AI } from './ai.js?v=20260518-aimove1';
-import { Renderer } from './renderer.js?v=20260518-aimove1';
-import { InputController } from './input.js?v=20260518-aimove1';
-import { SKILLS } from './skills.js?v=20260518-aimove1';
-import { CONSUMABLES } from './consumables.js?v=20260518-aimove1';
+import { Board } from './board.js?v=20260518-polish1';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260518-polish1';
+import { Deck } from './deck.js?v=20260518-polish1';
+import { AI } from './ai.js?v=20260518-polish1';
+import { Renderer } from './renderer.js?v=20260518-polish1';
+import { InputController } from './input.js?v=20260518-polish1';
+import { SKILLS } from './skills.js?v=20260518-polish1';
+import { CONSUMABLES } from './consumables.js?v=20260518-polish1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-aimove1';
+} from './progression.js?v=20260518-polish1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -25,10 +25,6 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
-const LOCK_DELAY_START = 520;
-const LOCK_DELAY_STEP = 55;
-const LOCK_DELAY_MIN = 120;
-
 const CARD_DESCRIPTIONS = {
   POWER_I: 'High-power cells. Each cleared cell deals 0.3 attack.',
   POWER_T: 'T shape with high-power cells. Strong for T-spin style clears.',
@@ -69,6 +65,8 @@ class Game {
     this.battleEndResult = null;
     this.paused = false;
     this.autoSaveTimer = 0;
+    this.skillCooldowns = {};
+    this.battleTimeouts = new Set();
     this.message = '';
     this.bindUi();
     this.refreshMenu();
@@ -122,7 +120,7 @@ class Game {
       return;
     }
     el.innerHTML = `<strong>Best round ${best}</strong>` + records.slice(0, 5).map(r =>
-      `<span>R${r.round} 夷?${r.gold}G 夷?${r.result}</span>`
+      `<span>R${r.round} - ${r.gold}G - ${r.result}</span>`
     ).join('');
   }
 
@@ -390,6 +388,7 @@ class Game {
   }
 
   startBattle(enemyCard) {
+    this.clearBattleTimeouts();
     this.enemyCard = enemyCard;
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
@@ -406,6 +405,7 @@ class Game {
     this.battleEndResult = null;
     this.paused = false;
     this.autoSaveTimer = 0;
+    this.skillCooldowns = {};
     this.message = 'Battle start';
     document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
@@ -452,7 +452,7 @@ class Game {
     if (action === 'right') this.groundAdjust(() => this.player.move(1, 0));
     if (action === 'soft') {
       if (this.player.move(0, 1)) this.resetLockDelay();
-      else this.lockTimer += 90;
+      else this.message = 'Grounded';
     }
     if (action === 'rotate') this.groundAdjust(() => this.player.rotate(1));
     if (action === 'ccw') this.groundAdjust(() => this.player.rotate(-1));
@@ -479,11 +479,11 @@ class Game {
   }
 
   currentLockDelay() {
-    return Math.max(LOCK_DELAY_MIN, LOCK_DELAY_START - this.lockResets * LOCK_DELAY_STEP);
+    return Math.max(GAME_TIMING.LOCK_DELAY_MIN, GAME_TIMING.LOCK_DELAY_START - this.lockResets * GAME_TIMING.LOCK_DELAY_STEP);
   }
 
   currentFallInterval() {
-    return this.groundTouched ? this.currentLockDelay() : 760;
+    return this.groundTouched ? this.currentLockDelay() : GAME_TIMING.PLAYER_FALL_INTERVAL;
   }
 
   useSkill(index) {
@@ -491,8 +491,17 @@ class Game {
     const id = this.run.equippedSkills[index];
     const skill = SKILLS[id];
     if (!skill || this.player.mp < skill.cost) return;
+    if ((this.skillCooldowns[id] || 0) > 0) {
+      this.message = `${skill.name} cooling down`;
+      return;
+    }
+    const ok = skill.activate({ game: this, player: this.player, enemy: this.enemy, resolve: (result, attacker) => this.resolve(result, attacker) }) !== false;
+    if (!ok) {
+      this.message = `${skill.name} failed`;
+      return;
+    }
     this.player.mp -= skill.cost;
-    skill.activate({ game: this, player: this.player, enemy: this.enemy, resolve: (result, attacker) => this.resolve(result, attacker) });
+    this.skillCooldowns[id] = skill.cooldown || 0;
     this.message = `${skill.name} activated`;
   }
 
@@ -510,6 +519,7 @@ class Game {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    if (result.comboBreak && attacker === this.player) this.message = `Combo ${result.comboBreak} ended`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
     }
@@ -526,9 +536,24 @@ class Game {
   queueBattleEnd(result) {
     if (this.battleEndResult) return;
     this.battleEndResult = result;
-    this.battleEndDelay = result === 'win' ? 1400 : 1200;
+    this.clearBattleTimeouts();
+    this.battleEndDelay = result === 'win' ? GAME_TIMING.BATTLE_WIN_DELAY : GAME_TIMING.BATTLE_LOSS_DELAY;
     this.message = result === 'win' ? 'Enemy defeated' : 'You were defeated';
     this.autoSave();
+  }
+
+  scheduleBattleTimeout(fn, delay) {
+    const id = setTimeout(() => {
+      this.battleTimeouts.delete(id);
+      fn();
+    }, delay);
+    this.battleTimeouts.add(id);
+    return id;
+  }
+
+  clearBattleTimeouts() {
+    for (const id of this.battleTimeouts) clearTimeout(id);
+    this.battleTimeouts.clear();
   }
 
   winBattle() {
@@ -600,11 +625,12 @@ class Game {
   }
 
   endRun(win) {
+    this.clearBattleTimeouts();
     this.saveRecord(win);
     this.deleteSave(true);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
-    document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} 夷?Gold ${this.run.gold} 夷?HP Rows ${this.run.hpRows}`;
+    document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} - Gold ${this.run.gold} - HP Rows ${this.run.hpRows}`;
   }
 
   saveRecord(win) {
@@ -682,6 +708,7 @@ class Game {
         playerSlowTimer: this.playerSlowTimer,
         battleEndDelay: this.battleEndDelay,
         battleEndResult: this.battleEndResult,
+        skillCooldowns: { ...this.skillCooldowns },
         paused: this.paused,
         message: this.message
       } : null
@@ -695,7 +722,9 @@ class Game {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return;
     try {
+      this.clearBattleTimeouts();
       const state = JSON.parse(raw);
+      if (!this.isValidSaveState(state)) throw new Error('Invalid save data');
       this.run = this.restoreRun(state.run);
       if (state.battle && state.screen === 'gameScreen') {
         this.player = Board.fromState(state.battle.player);
@@ -713,6 +742,7 @@ class Game {
         this.autoSaveTimer = 0;
         this.battleEndDelay = state.battle.battleEndDelay || 0;
         this.battleEndResult = state.battle.battleEndResult || null;
+        this.skillCooldowns = { ...(state.battle.skillCooldowns || {}) };
         this.paused = state.battle.paused ?? true;
         this.message = state.battle.message || 'Loaded';
         document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
@@ -733,6 +763,21 @@ class Game {
       console.warn('Save load failed', err);
       this.deleteSave();
     }
+  }
+
+  isValidSaveState(state) {
+    if (!state || state.version !== 1 || !state.run) return false;
+    const run = state.run;
+    if (!Number.isFinite(run.round) || run.round < 1 || run.round > 21) return false;
+    if (!Number.isFinite(run.gold) || run.gold < 0) return false;
+    if (!Number.isFinite(run.hpRows) || run.hpRows < 10 || run.hpRows > 40) return false;
+    if (!run.deck || !Array.isArray(run.deck.draw) || !Array.isArray(run.deck.discard)) return false;
+    if (run.persistentGrid && (!Array.isArray(run.persistentGrid) || run.persistentGrid.some(row => !Array.isArray(row)))) return false;
+    if (state.battle) {
+      if (!state.battle.player || !state.battle.enemy || !state.battle.enemyCard) return false;
+      if (!Array.isArray(state.battle.player.grid) || !Array.isArray(state.battle.enemy.grid)) return false;
+    }
+    return true;
   }
 
   deleteSave(silent = false) {
@@ -785,18 +830,23 @@ class Game {
       return;
     }
     this.autoSaveTimer += dt;
-    if (this.autoSaveTimer >= 5000) {
+    if (this.autoSaveTimer >= GAME_TIMING.AUTO_SAVE_INTERVAL) {
       this.autoSaveTimer = 0;
       this.autoSave();
     }
     this.input.update(now);
     this.player.flash = Math.max(0, this.player.flash - dt);
     this.enemy.flash = Math.max(0, this.enemy.flash - dt);
+    this.player.comboBreakFlash = Math.max(0, this.player.comboBreakFlash - dt);
+    this.enemy.comboBreakFlash = Math.max(0, this.enemy.comboBreakFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
-    this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * 0.55 : dt);
+    Object.keys(this.skillCooldowns).forEach(id => {
+      this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
+    });
+    this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * GAME_TIMING.PLAYER_SLOW_FACTOR : dt);
     this.enemyTimer += dt;
-    const enemyDelay = this.enemySlowTimer > 0 ? this.enemyCard.speed * 2.8 : this.enemyCard.speed;
+    const enemyDelay = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
     if (this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
       this.resolve(this.ai.step(this.enemy), this.enemy);
@@ -840,7 +890,7 @@ class Game {
   updateEnemyAbility(dt) {
     if (!this.enemyCard.ability) return;
     this.enemyAbilityTimer += dt;
-    if (this.enemyAbilityTimer < 6500) return;
+    if (this.enemyAbilityTimer < GAME_TIMING.ENEMY_ABILITY_INTERVAL) return;
     this.enemyAbilityTimer = 0;
     if (this.enemyCard.ability === 'spike') {
       this.player.receiveGarbage(1);
@@ -861,6 +911,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-aimove1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-polish1').catch(() => {});
   });
 }

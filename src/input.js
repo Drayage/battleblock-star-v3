@@ -1,33 +1,40 @@
+import { GAME_TIMING } from './constants.js?v=20260518-polish1';
+
 export class InputController {
   constructor(game) {
     this.game = game;
     this.keys = new Set();
     this.repeat = new Map();
+    this.cleanups = [];
     this.bindKeys();
     this.bindTouch();
   }
 
   bindKeys() {
-    window.addEventListener('keydown', e => {
+    const down = e => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'Space'].includes(e.code)) e.preventDefault();
       if (this.keys.has(e.code)) return;
       this.keys.add(e.code);
       this.handleKey(e.code);
       if (['ArrowLeft', 'ArrowRight', 'ArrowDown'].includes(e.code)) {
-        this.repeat.set(e.code, { next: performance.now() + 180, count: 0 });
+        this.repeat.set(e.code, { next: performance.now() + GAME_TIMING.KEY_REPEAT_FIRST_DELAY, count: 0 });
       }
-    });
-    window.addEventListener('keyup', e => {
+    };
+    const up = e => {
       this.keys.delete(e.code);
       this.repeat.delete(e.code);
-    });
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    this.cleanups.push(() => window.removeEventListener('keydown', down));
+    this.cleanups.push(() => window.removeEventListener('keyup', up));
   }
 
   update(now) {
     for (const [code, rep] of this.repeat.entries()) {
       if (now < rep.next) continue;
       rep.count++;
-      rep.next = now + (rep.count < 4 ? 90 : 45);
+      rep.next = now + (rep.count < 4 ? GAME_TIMING.KEY_REPEAT_DELAY : GAME_TIMING.KEY_REPEAT_FAST_DELAY);
       this.handleKey(code, true);
     }
   }
@@ -61,20 +68,24 @@ export class InputController {
   bindTouch() {
     const pad = document.getElementById('mobilePad');
     if (pad) {
-      pad.addEventListener('contextmenu', e => e.preventDefault());
-      pad.addEventListener('selectstart', e => e.preventDefault());
-      pad.addEventListener('dragstart', e => e.preventDefault());
+      const prevent = e => e.preventDefault();
+      pad.addEventListener('contextmenu', prevent);
+      pad.addEventListener('selectstart', prevent);
+      pad.addEventListener('dragstart', prevent);
+      this.cleanups.push(() => pad.removeEventListener('contextmenu', prevent));
+      this.cleanups.push(() => pad.removeEventListener('selectstart', prevent));
+      this.cleanups.push(() => pad.removeEventListener('dragstart', prevent));
     }
     document.querySelectorAll('[data-action]').forEach(btn => {
       let timer = null;
       const action = btn.dataset.action;
       const repeatable = ['left', 'right', 'soft'].includes(action);
-      const firstDelay = action === 'soft' ? 120 : 240;
-      const repeatDelay = action === 'soft' ? 70 : 110;
+      const firstDelay = action === 'soft' ? GAME_TIMING.TOUCH_SOFT_FIRST_DELAY : GAME_TIMING.TOUCH_FIRST_DELAY;
+      const repeatDelay = action === 'soft' ? GAME_TIMING.TOUCH_SOFT_REPEAT_DELAY : GAME_TIMING.TOUCH_REPEAT_DELAY;
       const fire = () => {
         this.game.action(action);
       };
-      btn.addEventListener('pointerdown', e => {
+      const down = e => {
         e.preventDefault();
         btn.setPointerCapture?.(e.pointerId);
         fire();
@@ -84,9 +95,20 @@ export class InputController {
             timer = setTimeout(repeat, repeatDelay);
           }, firstDelay);
         }
-      });
-      btn.addEventListener('pointerup', () => { clearTimeout(timer); timer = null; });
-      btn.addEventListener('pointercancel', () => { clearTimeout(timer); timer = null; });
+      };
+      const stop = () => { clearTimeout(timer); timer = null; };
+      btn.addEventListener('pointerdown', down);
+      btn.addEventListener('pointerup', stop);
+      btn.addEventListener('pointercancel', stop);
+      this.cleanups.push(() => btn.removeEventListener('pointerdown', down));
+      this.cleanups.push(() => btn.removeEventListener('pointerup', stop));
+      this.cleanups.push(() => btn.removeEventListener('pointercancel', stop));
     });
+  }
+
+  dispose() {
+    for (const cleanup of this.cleanups.splice(0)) cleanup();
+    this.repeat.clear();
+    this.keys.clear();
   }
 }

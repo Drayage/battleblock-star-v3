@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-aimove1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-polish1';
 
 export class Renderer {
   constructor(canvas) {
@@ -121,6 +121,14 @@ export class Renderer {
     if (board.flash > 0) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
       ctx.fillRect(ox, oy, bw, bh);
+    }
+    if (board.combo >= 2 || board.comboBreakFlash > 0) {
+      ctx.textAlign = 'center';
+      ctx.font = `bold ${Math.max(11, Math.floor(cs * 0.55))}px Courier New`;
+      ctx.fillStyle = board.comboBreakFlash > 0 ? '#ffcad5' : '#ffe082';
+      const label = board.comboBreakFlash > 0 ? 'COMBO BREAK' : `COMBO x${board.combo - 1}`;
+      ctx.fillText(label, ox + bw / 2, oy + Math.max(18, cs));
+      ctx.textAlign = 'left';
     }
     if (board.defeated) {
       ctx.fillStyle = 'rgba(5,7,14,.72)';
@@ -271,9 +279,15 @@ export class Renderer {
     ctx.fillStyle = '#080a10';
     ctx.fillRect(ox, oy, 7, h);
     const cells = Math.min(Math.ceil(amount), Math.floor(h / 8));
+    const cap = Math.floor(h / 8);
     for (let i = 0; i < cells; i++) {
       ctx.fillStyle = amount >= 8 ? '#ff335f' : amount >= 4 ? '#ff9f2f' : '#d7c64a';
       ctx.fillRect(ox + 1, oy + h - 7 - i * 8, 5, 6);
+    }
+    if (amount > cap) {
+      ctx.fillStyle = '#ffcad5';
+      ctx.font = 'bold 9px Courier New';
+      ctx.fillText(`+${Math.ceil(amount)}`, ox - 2, oy - 4);
     }
     ctx.strokeStyle = '#29344f';
     ctx.strokeRect(ox, oy, 7, h);

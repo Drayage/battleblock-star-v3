@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-aimove1';
-import { Deck } from './deck.js?v=20260518-aimove1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260518-polish1';
+import { Deck } from './deck.js?v=20260518-polish1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -69,6 +69,7 @@ export class Board {
     this.garbageQueue = 0;
     this.mp = 0;
     this.combo = 0;
+    this.comboBreakFlash = 0;
     this.defeated = false;
     this.lastAttack = 0;
     this.lastMoveWasRotate = false;
@@ -91,6 +92,7 @@ export class Board {
     board.garbageQueue = state.garbageQueue || 0;
     board.mp = state.mp || 0;
     board.combo = state.combo || 0;
+    board.comboBreakFlash = state.comboBreakFlash || 0;
     board.defeated = !!state.defeated;
     board.lastAttack = state.lastAttack || 0;
     board.lastMoveWasRotate = !!state.lastMoveWasRotate;
@@ -188,7 +190,7 @@ export class Board {
     this.current.card = {
       ...CARD_LIBRARY[TYPES.O],
       id: 'SHARD',
-      name: '湲닿툒 議곌컖',
+      name: 'Emergency Shard',
       cellAttack: 0.05,
       traits: ['shard'],
       shape: [[[1]], [[1]], [[1]], [[1]]]
@@ -219,11 +221,14 @@ export class Board {
       result.attack += Math.max(0, this.combo - 1) * 0.3;
       this.mp = Math.min(100, this.mp + result.mana);
       this.flash = 180;
+      this.comboBreakFlash = 0;
       const cancel = Math.min(this.garbageQueue, Math.floor(result.attack));
       this.garbageQueue -= cancel;
       result.attack = Math.max(0, result.attack - cancel);
     } else {
+      if (this.combo > 1) result.comboBreak = this.combo;
       this.combo = 0;
+      this.comboBreakFlash = result.comboBreak ? GAME_TIMING.COMBO_BREAK_FLASH : 0;
     }
     if (this.garbageQueue > 0) {
       this.applyGarbage(this.garbageQueue);
@@ -342,6 +347,7 @@ export class Board {
       garbageQueue: this.garbageQueue,
       mp: this.mp,
       combo: this.combo,
+      comboBreakFlash: this.comboBreakFlash,
       defeated: this.defeated,
       lastAttack: this.lastAttack,
       lastMoveWasRotate: this.lastMoveWasRotate,

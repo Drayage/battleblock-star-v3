@@ -4,6 +4,7 @@ import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
+import { SKILLS } from './src/skills.js';
 import { RELICS, applyReward, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
@@ -136,6 +137,14 @@ assert.equal(tSpinClear.cleared, 1);
 assert.equal(tSpinClear.tSpin, true);
 assert.equal(tSpinClear.attack, 1.2);
 
+const comboBreakBoard = new Board({ rows: 20 });
+comboBreakBoard.combo = 3;
+comboBreakBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, 0);
+const comboBreak = comboBreakBoard.lock();
+assert.equal(comboBreak.comboBreak, 3);
+assert.equal(comboBreakBoard.combo, 0);
+assert.equal(comboBreakBoard.comboBreakFlash > 0, true);
+
 const queuedGarbageBoard = new Board({ rows: 20 });
 queuedGarbageBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
 queuedGarbageBoard.grid[0][0] = { type: TYPES.I, attack: 0.1, traits: [] };
@@ -214,5 +223,21 @@ const itemBoard = new Board({ rows: 20 });
 itemBoard.receiveGarbage(4);
 CONSUMABLES.shield.use({ player: itemBoard });
 assert.equal(itemBoard.garbageQueue, 0);
+
+const emptyPurgeBoard = new Board({ rows: 20 });
+assert.equal(SKILLS.purge.activate({ player: emptyPurgeBoard }), false);
+const holdEnemy = { holdLocked: false };
+let scheduled = null;
+const fakeGame = {
+  enemy: holdEnemy,
+  scheduleBattleTimeout(fn) {
+    scheduled = fn;
+  }
+};
+assert.equal(SKILLS.hold_lock.activate({ game: fakeGame, enemy: holdEnemy }), true);
+assert.equal(holdEnemy.holdLocked, true);
+fakeGame.enemy = {};
+scheduled();
+assert.equal(holdEnemy.holdLocked, true);
 
 console.log('All Battle Block Star v3.0 checks passed.');
