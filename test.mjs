@@ -42,6 +42,18 @@ garbageSurvivalBoard.applyGarbage(1);
 assert.equal(garbageSurvivalBoard.defeated, false);
 assert.equal(survivalBoard.defeated, false);
 
+const lethalQueuedBoard = new Board({ rows: 20 });
+lethalQueuedBoard.grid[4][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+lethalQueuedBoard.receiveGarbage(5);
+assert.equal(lethalQueuedBoard.garbageQueue, 0);
+assert.equal(lethalQueuedBoard.defeated, true);
+
+const nonlethalQueuedBoard = new Board({ rows: 20 });
+nonlethalQueuedBoard.grid[4][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+nonlethalQueuedBoard.receiveGarbage(4);
+assert.equal(nonlethalQueuedBoard.garbageQueue, 4);
+assert.equal(nonlethalQueuedBoard.defeated, false);
+
 const spawnBufferBoard = new Board({ rows: 20 });
 assert.equal(spawnBufferBoard.current.y, SPAWN_Y);
 assert.equal(spawnBufferBoard.defeated, false);

@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-scale1';
-import { Deck } from './deck.js?v=20260518-scale1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-lethalqueue1';
+import { Deck } from './deck.js?v=20260518-lethalqueue1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -278,6 +278,15 @@ export class Board {
 
   receiveGarbage(amount) {
     this.garbageQueue += Math.max(0, Math.ceil(amount));
+    if (this.wouldOverflowGarbage(this.garbageQueue)) {
+      this.applyGarbage(this.garbageQueue);
+      this.garbageQueue = 0;
+    }
+  }
+
+  wouldOverflowGarbage(lines) {
+    const n = Math.max(0, Math.ceil(lines));
+    return this.grid.slice(0, Math.min(n, this.rows)).some(row => row.some(Boolean));
   }
 
   applyGarbage(lines) {
