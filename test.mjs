@@ -123,6 +123,9 @@ const tetrisClear = tetrisBoard.lock();
 assert.equal(tetrisClear.cleared, 4);
 assert.equal(tetrisClear.tetris, true);
 assert.equal(tetrisClear.attack, 6);
+assert.equal(tetrisClear.clearText, 'QUAD');
+assert.equal(tetrisBoard.clearText, 'QUAD');
+assert.equal(tetrisBoard.clearTextFlash > 0, true);
 
 const tSpinBoard = new Board({ rows: 20 });
 tSpinBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
@@ -136,6 +139,7 @@ const tSpinClear = tSpinBoard.lock();
 assert.equal(tSpinClear.cleared, 1);
 assert.equal(tSpinClear.tSpin, true);
 assert.equal(tSpinClear.attack, 1.2);
+assert.equal(tSpinClear.clearText, 'T-SPIN');
 
 const comboBreakBoard = new Board({ rows: 20 });
 comboBreakBoard.combo = 3;

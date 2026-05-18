@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-polish1';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260518-clearfx1';
 
 export class Renderer {
   constructor(canvas) {
@@ -47,7 +47,7 @@ export class Renderer {
     ctx.fillText(`Round ${run.round} / 20`, L.w / 2, 26);
     ctx.font = '12px Courier New';
     ctx.fillStyle = '#7f8ca8';
-    ctx.fillText(`${enemyCard.name} 夷?Gold ${run.gold} 夷?HP ${run.hpRows}`, L.w / 2, 47);
+    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
     this.garbageMeter(player.garbageQueue, L.pX - 10, L.y, player.rows * L.cell);
@@ -128,6 +128,20 @@ export class Renderer {
       ctx.fillStyle = board.comboBreakFlash > 0 ? '#ffcad5' : '#ffe082';
       const label = board.comboBreakFlash > 0 ? 'COMBO BREAK' : `COMBO x${board.combo - 1}`;
       ctx.fillText(label, ox + bw / 2, oy + Math.max(18, cs));
+      ctx.textAlign = 'left';
+    }
+    if (board.clearTextFlash > 0 && board.clearText) {
+      const alpha = Math.min(1, board.clearTextFlash / 280);
+      const lift = (1 - board.clearTextFlash / GAME_TIMING.CLEAR_FEEDBACK_FLASH) * cs * 1.2;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = Math.max(0.25, alpha);
+      ctx.fillStyle = board.clearText.includes('T-SPIN') ? '#d8b4ff' : '#8dffcc';
+      ctx.font = `bold ${Math.max(15, Math.floor(cs * 0.82))}px Courier New`;
+      ctx.fillText(board.clearText, ox + bw / 2, oy + Math.max(cs * 2.1, 38) - lift);
+      ctx.font = `bold ${Math.max(10, Math.floor(cs * 0.45))}px Courier New`;
+      ctx.fillStyle = '#f4f8ff';
+      ctx.fillText(`+${board.lastAttack.toFixed(1)}`, ox + bw / 2, oy + Math.max(cs * 3.0, 58) - lift);
+      ctx.globalAlpha = 1;
       ctx.textAlign = 'left';
     }
     if (board.defeated) {

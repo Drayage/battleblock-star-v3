@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-polish1';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260518-polish1';
-import { Deck } from './deck.js?v=20260518-polish1';
-import { AI } from './ai.js?v=20260518-polish1';
-import { Renderer } from './renderer.js?v=20260518-polish1';
-import { InputController } from './input.js?v=20260518-polish1';
-import { SKILLS } from './skills.js?v=20260518-polish1';
-import { CONSUMABLES } from './consumables.js?v=20260518-polish1';
+import { Board } from './board.js?v=20260518-clearfx1';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260518-clearfx1';
+import { Deck } from './deck.js?v=20260518-clearfx1';
+import { AI } from './ai.js?v=20260518-clearfx1';
+import { Renderer } from './renderer.js?v=20260518-clearfx1';
+import { InputController } from './input.js?v=20260518-clearfx1';
+import { SKILLS } from './skills.js?v=20260518-clearfx1';
+import { CONSUMABLES } from './consumables.js?v=20260518-clearfx1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-polish1';
+} from './progression.js?v=20260518-clearfx1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -125,6 +125,7 @@ class Game {
   }
 
   newRun() {
+    document.getElementById('endScreen').classList.remove('run-clear');
     this.run = new RunState();
     this.routeNextScreen();
     this.autoSave();
@@ -628,6 +629,7 @@ class Game {
     this.clearBattleTimeouts();
     this.saveRecord(win);
     this.deleteSave(true);
+    document.getElementById('endScreen').classList.toggle('run-clear', win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
     document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} - Gold ${this.run.gold} - HP Rows ${this.run.hpRows}`;
@@ -839,6 +841,8 @@ class Game {
     this.enemy.flash = Math.max(0, this.enemy.flash - dt);
     this.player.comboBreakFlash = Math.max(0, this.player.comboBreakFlash - dt);
     this.enemy.comboBreakFlash = Math.max(0, this.enemy.comboBreakFlash - dt);
+    this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
+    this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
     Object.keys(this.skillCooldowns).forEach(id => {
@@ -911,6 +915,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-polish1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-clearfx1').catch(() => {});
   });
 }

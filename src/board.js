@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260518-polish1';
-import { Deck } from './deck.js?v=20260518-polish1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260518-clearfx1';
+import { Deck } from './deck.js?v=20260518-clearfx1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -70,6 +70,8 @@ export class Board {
     this.mp = 0;
     this.combo = 0;
     this.comboBreakFlash = 0;
+    this.clearText = '';
+    this.clearTextFlash = 0;
     this.defeated = false;
     this.lastAttack = 0;
     this.lastMoveWasRotate = false;
@@ -93,6 +95,8 @@ export class Board {
     board.mp = state.mp || 0;
     board.combo = state.combo || 0;
     board.comboBreakFlash = state.comboBreakFlash || 0;
+    board.clearText = state.clearText || '';
+    board.clearTextFlash = state.clearTextFlash || 0;
     board.defeated = !!state.defeated;
     board.lastAttack = state.lastAttack || 0;
     board.lastMoveWasRotate = !!state.lastMoveWasRotate;
@@ -215,6 +219,7 @@ export class Board {
     if (result.cleared > 0) {
       result.tSpin = wasTSpin;
       result.tetris = result.cleared === 4;
+      result.clearText = this.clearLabel(result);
       const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
       this.combo++;
@@ -222,6 +227,8 @@ export class Board {
       this.mp = Math.min(100, this.mp + result.mana);
       this.flash = 180;
       this.comboBreakFlash = 0;
+      this.clearText = result.clearText;
+      this.clearTextFlash = result.clearText ? GAME_TIMING.CLEAR_FEEDBACK_FLASH : 0;
       const cancel = Math.min(this.garbageQueue, Math.floor(result.attack));
       this.garbageQueue -= cancel;
       result.attack = Math.max(0, result.attack - cancel);
@@ -229,6 +236,7 @@ export class Board {
       if (this.combo > 1) result.comboBreak = this.combo;
       this.combo = 0;
       this.comboBreakFlash = result.comboBreak ? GAME_TIMING.COMBO_BREAK_FLASH : 0;
+      this.clearTextFlash = 0;
     }
     if (this.garbageQueue > 0) {
       this.applyGarbage(this.garbageQueue);
@@ -262,6 +270,16 @@ export class Board {
     for (const r of bombRows) this.clearGarbageAround(r);
     if (purge) this.purgeGarbageRows(1);
     return { cleared, attack: Number(attack.toFixed(2)), mana: Number(mana.toFixed(2)), bombRows, purge, tetris: false, tSpin: false };
+  }
+
+  clearLabel(result) {
+    const parts = [];
+    if (result.tSpin) parts.push('T-SPIN');
+    if (result.cleared === 4) parts.push('QUAD');
+    else if (result.cleared === 3) parts.push('TRIPLE');
+    else if (result.cleared === 2) parts.push('DOUBLE');
+    if (!parts.length && result.cleared === 1) parts.push('SINGLE');
+    return parts.join(' ');
   }
 
   isTSpin() {
@@ -348,6 +366,8 @@ export class Board {
       mp: this.mp,
       combo: this.combo,
       comboBreakFlash: this.comboBreakFlash,
+      clearText: this.clearText,
+      clearTextFlash: this.clearTextFlash,
       defeated: this.defeated,
       lastAttack: this.lastAttack,
       lastMoveWasRotate: this.lastMoveWasRotate,
