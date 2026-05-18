@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-blockmodel1';
-import { Deck } from './deck.js?v=20260518-blockmodel1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-clears1';
+import { Deck } from './deck.js?v=20260518-clears1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 
@@ -66,6 +66,7 @@ export class Board {
     this.combo = 0;
     this.defeated = false;
     this.lastAttack = 0;
+    this.lastMoveWasRotate = false;
     this.flash = 0;
     this.fillQueue();
     this.spawn();
@@ -85,6 +86,7 @@ export class Board {
     this.fillQueue();
     this.current = new Mino(card, 3, 0);
     this.holdUsed = false;
+    this.lastMoveWasRotate = false;
     if (!this.ok(this.current)) this.defeated = true;
   }
 
@@ -101,6 +103,7 @@ export class Board {
     if (!this.ok(this.current, dx, dy)) return false;
     this.current.x += dx;
     this.current.y += dy;
+    this.lastMoveWasRotate = false;
     return true;
   }
 
@@ -112,6 +115,7 @@ export class Board {
         this.current.x += kx;
         this.current.y += ky;
         this.current.rot = nextRot;
+        this.lastMoveWasRotate = true;
         return true;
       }
     }
@@ -127,6 +131,7 @@ export class Board {
       const old = this.held;
       this.held = this.current.card;
       this.current = new Mino(old, 3, 0);
+      this.lastMoveWasRotate = false;
     }
     this.holdUsed = true;
     return true;
@@ -141,7 +146,7 @@ export class Board {
 
   hardDrop() {
     if (!this.current || this.defeated) return null;
-    while (this.move(0, 1)) {}
+    while (this.ok(this.current, 0, 1)) this.current.y++;
     return this.lock();
   }
 
@@ -161,6 +166,7 @@ export class Board {
 
   lock() {
     const placed = [];
+    const wasTSpin = this.isTSpin();
     for (const pos of this.current.cells) {
       if (pos.y < 0) continue;
       this.grid[pos.y][pos.x] = cell(this.current.card);
@@ -168,6 +174,10 @@ export class Board {
     }
     const result = this.clearLines();
     if (result.cleared > 0) {
+      result.tSpin = wasTSpin;
+      result.tetris = result.cleared === 4;
+      const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
+      result.attack = Number((result.attack * multiplier).toFixed(2));
       this.combo++;
       result.attack += Math.max(0, this.combo - 1) * 0.3;
       this.mp = Math.min(100, this.mp + result.mana);
@@ -208,7 +218,16 @@ export class Board {
     }
     for (const r of bombRows) this.clearGarbageAround(r);
     if (purge) this.purgeGarbageRows(1);
-    return { cleared, attack: Number(attack.toFixed(2)), mana: Number(mana.toFixed(2)), bombRows, purge };
+    return { cleared, attack: Number(attack.toFixed(2)), mana: Number(mana.toFixed(2)), bombRows, purge, tetris: false, tSpin: false };
+  }
+
+  isTSpin() {
+    if (!this.current || !this.lastMoveWasRotate || this.current.card.shapeId !== 'T') return false;
+    const cx = this.current.x + 1;
+    const cy = this.current.y + 1;
+    const corners = [[cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1], [cx + 1, cy + 1]];
+    const blocked = corners.filter(([x, y]) => x < 0 || x >= this.cols || y < 0 || y >= this.rows || !!this.grid[y][x]).length;
+    return blocked >= 3;
   }
 
   clearGarbageAround(row) {

@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-blockmodel1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-clears1';
 
 export class Renderer {
   constructor(canvas) {

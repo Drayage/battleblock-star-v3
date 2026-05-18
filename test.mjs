@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
 import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
-import { Board } from './src/board.js';
+import { Board, Mino } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
 
@@ -34,6 +34,7 @@ assert.equal(survivalBoard.defeated, false);
 
 const blockedSpawnBoard = new Board({ rows: 20 });
 blockedSpawnBoard.grid[1][3] = { type: TYPES.I, attack: 0.1, traits: [] };
+blockedSpawnBoard.nextQueue = [CARD_LIBRARY[TYPES.O]];
 blockedSpawnBoard.spawn();
 assert.equal(blockedSpawnBoard.defeated, true);
 
@@ -48,6 +49,31 @@ assert.equal(expandedBoard.defeated, false);
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].shapeId, 'CROSS5');
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
+
+const tetrisBoard = new Board({ rows: 20 });
+tetrisBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+for (let r = 16; r < 20; r++) {
+  tetrisBoard.grid[r] = Array.from({ length: 10 }, (_, c) => c === 5 ? null : { type: TYPES.I, attack: 0.1, traits: [] });
+}
+tetrisBoard.current = new Mino(CARD_LIBRARY[TYPES.I], 3, 16);
+tetrisBoard.current.rot = 1;
+const tetrisClear = tetrisBoard.lock();
+assert.equal(tetrisClear.cleared, 4);
+assert.equal(tetrisClear.tetris, true);
+assert.equal(tetrisClear.attack, 6);
+
+const tSpinBoard = new Board({ rows: 20 });
+tSpinBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+tSpinBoard.grid[19] = Array.from({ length: 10 }, (_, c) => [4, 5, 6].includes(c) ? null : { type: TYPES.I, attack: 0.1, traits: [] });
+tSpinBoard.grid[18][4] = { type: TYPES.I, attack: 0.1, traits: [] };
+tSpinBoard.grid[18][6] = { type: TYPES.I, attack: 0.1, traits: [] };
+tSpinBoard.grid[19][4] = { type: TYPES.I, attack: 0.1, traits: [] };
+tSpinBoard.current = new Mino(CARD_LIBRARY[TYPES.T], 4, 18);
+tSpinBoard.lastMoveWasRotate = true;
+const tSpinClear = tSpinBoard.lock();
+assert.equal(tSpinClear.cleared, 1);
+assert.equal(tSpinClear.tSpin, true);
+assert.equal(tSpinClear.attack, 1.2);
 
 const run = new RunState();
 const persistBoard = new Board({ rows: 20, deck: run.deck });
