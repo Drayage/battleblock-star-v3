@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-blocks1';
-import { Deck } from './deck.js?v=20260518-blocks1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-garbageflush1';
+import { Deck } from './deck.js?v=20260518-garbageflush1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -224,12 +224,13 @@ export class Board {
       result.attack = Math.max(0, result.attack - cancel);
     } else {
       this.combo = 0;
-      if (this.garbageQueue > 0) {
-        this.applyGarbage(this.garbageQueue);
-        this.garbageQueue = 0;
-      }
+    }
+    if (this.garbageQueue > 0) {
+      this.applyGarbage(this.garbageQueue);
+      this.garbageQueue = 0;
     }
     this.lastAttack = result.attack;
+    if (this.defeated) return result;
     this.spawn();
     return result;
   }

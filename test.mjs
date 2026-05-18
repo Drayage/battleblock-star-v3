@@ -96,6 +96,17 @@ assert.equal(tSpinClear.cleared, 1);
 assert.equal(tSpinClear.tSpin, true);
 assert.equal(tSpinClear.attack, 1.2);
 
+const queuedGarbageBoard = new Board({ rows: 20 });
+queuedGarbageBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+queuedGarbageBoard.grid[0][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+queuedGarbageBoard.grid[19] = Array.from({ length: 10 }, (_, c) => [4, 5].includes(c) ? null : { type: TYPES.I, attack: 0.1, traits: [] });
+queuedGarbageBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, 18);
+queuedGarbageBoard.garbageQueue = 3;
+const queuedClear = queuedGarbageBoard.lock();
+assert.equal(queuedClear.cleared, 1);
+assert.equal(queuedGarbageBoard.garbageQueue, 0);
+assert.equal(queuedGarbageBoard.defeated, true);
+
 const run = new RunState();
 const persistBoard = new Board({ rows: 20, deck: run.deck });
 persistBoard.grid[18][0] = { type: TYPES.I, attack: 0.1, traits: [] };
