@@ -1,7 +1,8 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-floatlock1';
-import { Deck } from './deck.js?v=20260518-floatlock1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, SHAPES, TYPES } from './constants.js?v=20260518-spawnbuffer1';
+import { Deck } from './deck.js?v=20260518-spawnbuffer1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
+export const SPAWN_Y = -2;
 
 function emptyRow() {
   return Array.from({ length: COLS }, () => null);
@@ -84,7 +85,7 @@ export class Board {
   spawn() {
     const card = this.nextQueue.shift();
     this.fillQueue();
-    this.current = new Mino(card, 3, 0);
+    this.current = new Mino(card, 3, SPAWN_Y);
     this.holdUsed = false;
     this.lastMoveWasRotate = false;
     if (!this.ok(this.current)) this.defeated = true;
@@ -130,7 +131,7 @@ export class Board {
     } else {
       const old = this.held;
       this.held = this.current.card;
-      this.current = new Mino(old, 3, 0);
+      this.current = new Mino(old, 3, SPAWN_Y);
       this.lastMoveWasRotate = false;
     }
     this.holdUsed = true;
@@ -167,8 +168,12 @@ export class Board {
   lock() {
     const placed = [];
     const wasTSpin = this.isTSpin();
-    for (const pos of this.current.cells) {
-      if (pos.y < 0) continue;
+    const cells = this.current.cells;
+    if (cells.some(pos => pos.y < 0) || !cells.some(pos => pos.y >= 0)) {
+      this.defeated = true;
+      return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, tetris: false, tSpin: false, topOut: true };
+    }
+    for (const pos of cells) {
       this.grid[pos.y][pos.x] = cell(this.current.card);
       placed.push({ ...pos, card: this.current.card });
     }

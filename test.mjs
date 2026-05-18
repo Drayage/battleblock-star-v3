@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
 import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
-import { Board, Mino } from './src/board.js';
+import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, RunState, shouldShowEvent } from './src/progression.js';
 
@@ -32,10 +32,18 @@ survivalBoard.grid[0][0] = { type: TYPES.I, attack: 0.1, traits: [] };
 survivalBoard.applyGarbage(1);
 assert.equal(survivalBoard.defeated, false);
 
+const spawnBufferBoard = new Board({ rows: 20 });
+assert.equal(spawnBufferBoard.current.y, SPAWN_Y);
+assert.equal(spawnBufferBoard.defeated, false);
+assert.equal(spawnBufferBoard.move(0, 1), true);
+assert.equal(spawnBufferBoard.move(0, 1), true);
+assert.equal(spawnBufferBoard.current.y, 0);
+
 const blockedSpawnBoard = new Board({ rows: 20 });
-blockedSpawnBoard.grid[1][3] = { type: TYPES.I, attack: 0.1, traits: [] };
 blockedSpawnBoard.nextQueue = [CARD_LIBRARY[TYPES.O]];
 blockedSpawnBoard.spawn();
+const topOut = blockedSpawnBoard.lock();
+assert.equal(topOut.topOut, true);
 assert.equal(blockedSpawnBoard.defeated, true);
 
 const expandedPersist = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
