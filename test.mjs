@@ -29,7 +29,17 @@ assert.equal(garbageBoard.grid.slice(17).some(row => row.some(Boolean)), false);
 
 const survivalBoard = new Board({ rows: 20 });
 survivalBoard.grid[0][0] = { type: TYPES.I, attack: 0.1, traits: [] };
-survivalBoard.applyGarbage(1);
+assert.equal(survivalBoard.defeated, false);
+
+const garbageOverflowBoard = new Board({ rows: 20 });
+garbageOverflowBoard.grid[0][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+garbageOverflowBoard.applyGarbage(1);
+assert.equal(garbageOverflowBoard.defeated, true);
+
+const garbageSurvivalBoard = new Board({ rows: 20 });
+garbageSurvivalBoard.grid[1][0] = { type: TYPES.I, attack: 0.1, traits: [] };
+garbageSurvivalBoard.applyGarbage(1);
+assert.equal(garbageSurvivalBoard.defeated, false);
 assert.equal(survivalBoard.defeated, false);
 
 const spawnBufferBoard = new Board({ rows: 20 });

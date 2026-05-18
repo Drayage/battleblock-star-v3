@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-spawnbuffer1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-spawnbuffer1';
-import { Deck } from './deck.js?v=20260518-spawnbuffer1';
-import { AI } from './ai.js?v=20260518-spawnbuffer1';
-import { Renderer } from './renderer.js?v=20260518-spawnbuffer1';
-import { InputController } from './input.js?v=20260518-spawnbuffer1';
-import { SKILLS } from './skills.js?v=20260518-spawnbuffer1';
-import { CONSUMABLES } from './consumables.js?v=20260518-spawnbuffer1';
+import { Board } from './board.js?v=20260518-overflow1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-overflow1';
+import { Deck } from './deck.js?v=20260518-overflow1';
+import { AI } from './ai.js?v=20260518-overflow1';
+import { Renderer } from './renderer.js?v=20260518-overflow1';
+import { InputController } from './input.js?v=20260518-overflow1';
+import { SKILLS } from './skills.js?v=20260518-overflow1';
+import { CONSUMABLES } from './consumables.js?v=20260518-overflow1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-spawnbuffer1';
+} from './progression.js?v=20260518-overflow1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -683,6 +683,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-spawnbuffer1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-overflow1').catch(() => {});
   });
 }
