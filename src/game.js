@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-clears1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-clears1';
-import { Deck } from './deck.js?v=20260518-clears1';
-import { AI } from './ai.js?v=20260518-clears1';
-import { Renderer } from './renderer.js?v=20260518-clears1';
-import { InputController } from './input.js?v=20260518-clears1';
-import { SKILLS } from './skills.js?v=20260518-clears1';
-import { CONSUMABLES } from './consumables.js?v=20260518-clears1';
+import { Board } from './board.js?v=20260518-lockdelay1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-lockdelay1';
+import { Deck } from './deck.js?v=20260518-lockdelay1';
+import { AI } from './ai.js?v=20260518-lockdelay1';
+import { Renderer } from './renderer.js?v=20260518-lockdelay1';
+import { InputController } from './input.js?v=20260518-lockdelay1';
+import { SKILLS } from './skills.js?v=20260518-lockdelay1';
+import { CONSUMABLES } from './consumables.js?v=20260518-lockdelay1';
 import {
   RunState,
   RELICS,
@@ -17,13 +17,17 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-clears1';
+} from './progression.js?v=20260518-lockdelay1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
 window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
+const LOCK_DELAY_START = 520;
+const LOCK_DELAY_STEP = 55;
+const LOCK_DELAY_MIN = 120;
+
 const CARD_DESCRIPTIONS = {
   POWER_I: 'High-power cells. Each cleared cell deals 0.3 attack.',
   CROSS: 'Five-cell cross. Awkward shape, higher clear value.',
@@ -48,6 +52,8 @@ class Game {
     this.ai = null;
     this.last = 0;
     this.fallTimer = 0;
+    this.lockTimer = 0;
+    this.lockResets = 0;
     this.enemyTimer = 0;
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
@@ -363,6 +369,8 @@ class Game {
     if (this.run.relics.includes('hold_cache') && !this.player.held) this.player.mp = Math.min(100, this.player.mp + 15);
     this.ai = new AI(enemyCard.aiProfile);
     this.fallTimer = 0;
+    this.lockTimer = 0;
+    this.lockResets = 0;
     this.enemyTimer = 0;
     this.enemyAbilityTimer = 0;
     this.battleEndDelay = 0;
@@ -406,15 +414,38 @@ class Game {
 
   action(action) {
     if (!this.inBattle()) return;
-    if (action === 'left') this.player.move(-1, 0);
-    if (action === 'right') this.player.move(1, 0);
-    if (action === 'soft' && !this.player.move(0, 1)) this.resolve(this.player.lock(), this.player);
-    if (action === 'rotate') this.player.rotate(1);
-    if (action === 'ccw') this.player.rotate(-1);
+    if (action === 'left') this.groundAdjust(() => this.player.move(-1, 0));
+    if (action === 'right') this.groundAdjust(() => this.player.move(1, 0));
+    if (action === 'soft') {
+      if (this.player.move(0, 1)) this.resetLockDelay();
+      else this.lockTimer += 90;
+    }
+    if (action === 'rotate') this.groundAdjust(() => this.player.rotate(1));
+    if (action === 'ccw') this.groundAdjust(() => this.player.rotate(-1));
     if (action === 'hold') this.player.hold();
     if (action === 'hard') this.resolve(this.player.hardDrop(), this.player);
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
+  }
+
+  groundAdjust(fn) {
+    const wasGrounded = this.isPlayerGrounded();
+    const changed = fn();
+    if (changed && (wasGrounded || this.isPlayerGrounded())) this.resetLockDelay(true);
+    return changed;
+  }
+
+  isPlayerGrounded() {
+    return !!this.player?.current && !this.player.ok(this.player.current, 0, 1);
+  }
+
+  resetLockDelay(countReset = false) {
+    this.lockTimer = 0;
+    if (countReset) this.lockResets++;
+  }
+
+  currentLockDelay() {
+    return Math.max(LOCK_DELAY_MIN, LOCK_DELAY_START - this.lockResets * LOCK_DELAY_STEP);
   }
 
   useSkill(index) {
@@ -579,11 +610,7 @@ class Game {
     this.enemy.flash = Math.max(0, this.enemy.flash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
-    this.fallTimer += this.playerSlowTimer > 0 ? dt * 0.55 : dt;
-    if (this.fallTimer >= 760) {
-      this.fallTimer = 0;
-      if (!this.player.move(0, 1)) this.resolve(this.player.lock(), this.player);
-    }
+    this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * 0.55 : dt);
     this.enemyTimer += dt;
     const enemyDelay = this.enemySlowTimer > 0 ? this.enemyCard.speed * 2.8 : this.enemyCard.speed;
     if (this.enemyTimer >= enemyDelay) {
@@ -601,6 +628,28 @@ class Game {
       message: this.message
     });
     this.message = '';
+  }
+
+  updatePlayerGravity(dt) {
+    if (!this.player?.current || this.player.defeated) return;
+    if (this.isPlayerGrounded()) {
+      this.lockTimer += dt;
+      this.fallTimer = 0;
+      if (this.lockTimer >= this.currentLockDelay()) {
+        this.lockTimer = 0;
+        this.lockResets = 0;
+        this.resolve(this.player.lock(), this.player);
+      }
+      return;
+    }
+
+    this.lockTimer = 0;
+    this.lockResets = 0;
+    this.fallTimer += dt;
+    if (this.fallTimer >= 760) {
+      this.fallTimer = 0;
+      if (this.player.move(0, 1) && this.isPlayerGrounded()) this.resetLockDelay();
+    }
   }
 
   updateEnemyAbility(dt) {
@@ -627,6 +676,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-clears1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-lockdelay1').catch(() => {});
   });
 }
