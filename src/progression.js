@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-mana1';
-import { Deck, shuffle } from './deck.js?v=20260518-mana1';
-import { SKILLS } from './skills.js?v=20260518-mana1';
-import { CONSUMABLES } from './consumables.js?v=20260518-mana1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-copyfx1';
+import { Deck, shuffle } from './deck.js?v=20260518-copyfx1';
+import { SKILLS } from './skills.js?v=20260518-copyfx1';
+import { CONSUMABLES } from './consumables.js?v=20260518-copyfx1';
 
 export const RELICS = {
   combo_amp: {
@@ -62,7 +62,7 @@ const ENEMIES = [
   { name: 'Speed Drone', style: 'Fast drops, messy board, low defense.', profile: 'fast', rows: -3, speed: 390, garbage: 0 },
   { name: 'Bomb Adept', style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
   { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
-  { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'tetris', rows: 2, speed: 380, garbage: 2, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
+  { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
 ];
 
 const ELITES = [

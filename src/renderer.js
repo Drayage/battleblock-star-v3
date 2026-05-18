@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-mana1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-copyfx1';
 
 export class Renderer {
   constructor(canvas) {
@@ -119,7 +119,7 @@ export class Renderer {
       for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id);
     }
     if (board.flash > 0) {
-      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.45, board.flash / 300)})`;
+      ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
       ctx.fillRect(ox, oy, bw, bh);
     }
     if (board.defeated) {
@@ -138,7 +138,7 @@ export class Renderer {
     const pad = Math.max(1, Math.floor(cs * 0.08));
     ctx.fillStyle = COLORS[type] || '#d9e0ef';
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2);
-    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.fillStyle = 'rgba(255,255,255,.16)';
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
