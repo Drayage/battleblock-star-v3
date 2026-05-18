@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-copyfx1';
-import { Deck, shuffle } from './deck.js?v=20260518-copyfx1';
-import { SKILLS } from './skills.js?v=20260518-copyfx1';
-import { CONSUMABLES } from './consumables.js?v=20260518-copyfx1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-scale1';
+import { Deck, shuffle } from './deck.js?v=20260518-scale1';
+import { SKILLS } from './skills.js?v=20260518-scale1';
+import { CONSUMABLES } from './consumables.js?v=20260518-scale1';
 
 export const RELICS = {
   combo_amp: {
@@ -57,23 +57,23 @@ export class RunState {
 }
 
 const ENEMIES = [
-  { name: 'Soft Starter', style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -5, speed: 520, garbage: 0 },
-  { name: 'Line Hunter', style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -4, speed: 470, garbage: 0 },
-  { name: 'Speed Drone', style: 'Fast drops, messy board, low defense.', profile: 'fast', rows: -3, speed: 390, garbage: 0 },
-  { name: 'Bomb Adept', style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
-  { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
-  { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
+  { name: 'Soft Starter', style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, rewardBonus: 0, openingRows: 13 },
+  { name: 'Line Hunter', style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 },
+  { name: 'Speed Drone', style: 'Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -8, speed: 365, garbage: 0, risk: 1.55, rewardBonus: 6, openingRows: 12 },
+  { name: 'Bomb Adept', style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
+  { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
+  { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
 ];
 
 const ELITES = [
-  { name: 'Elite: Ceiling Press', style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, ability: 'spike' },
-  { name: 'Elite: Power Core', style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
-  { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, deckExtras: [TYPES.CROSS], ability: 'spike' }
+  { name: 'Elite: Ceiling Press', style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, risk: 1.85, rewardBonus: 9, ability: 'spike' },
+  { name: 'Elite: Power Core', style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
+  { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' }
 ];
 
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
-  const normalPool = shuffle(ENEMIES);
+  const normalPool = shuffle(round <= 2 ? ENEMIES.slice(0, 3) : round <= 5 ? ENEMIES.slice(0, 4) : ENEMIES);
   const elitePool = shuffle(ELITES);
   const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
   const choices = [];
@@ -89,18 +89,27 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
   const pool = elite ? ELITES : ENEMIES;
   const base = selectedBase || pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
-  const roundOneRows = round === 1 ? 15 : DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 6);
+  const tier = round >= 16 ? 3 : round >= 11 ? 2 : round >= 6 ? 1 : 0;
+  const risk = base.risk || 1;
+  const rewardBase = elite ? 24 + level * 3 : 7 + level * 2;
+  const rewardGold = Math.round(rewardBase + tier * (elite ? 9 : 5) + (base.rewardBonus || 0) + risk * (elite ? 5 : 3));
+  const normalRows = round === 1
+    ? base.openingRows || 13
+    : DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 5) + tier * 2;
+  const eliteRows = DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 3) + tier * 3;
+  const startingGarbage = (base.garbage || 0) + Math.floor(level / 7) + tier + (elite ? 1 + tier : 0);
+  const speed = Math.max(82, (base.speed || 430) - level * (elite ? 8 : 5) - tier * (elite ? 32 : 24));
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
     type: elite ? 'elite' : 'normal',
     name: base.name,
     style: base.style,
     aiProfile: base.profile,
-    rewardGold: elite ? 26 + level * 3 : 9 + level * 2,
+    rewardGold,
     rewardPool: elite ? 'elite' : 'normal',
-    startingRows: elite ? Math.max(18, DEFAULT_ROWS + base.rows + Math.floor(level / 4)) : Math.max(15, roundOneRows),
-    startingGarbage: (base.garbage || 0) + (elite ? Math.floor(level / 4) : Math.floor(level / 8)),
-    speed: Math.max(100, (base.speed || 430) - level * (elite ? 7 : 5)),
+    startingRows: elite ? Math.max(18, eliteRows) : Math.max(12, normalRows),
+    startingGarbage,
+    speed,
     deckExtras: base.deckExtras || [],
     ability: round >= 7 || elite ? base.ability : null
   };

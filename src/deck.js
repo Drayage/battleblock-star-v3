@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-copyfx1';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260518-scale1';
 
 export function shuffle(items) {
   const out = [...items];

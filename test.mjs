@@ -3,7 +3,7 @@ import { Deck } from './src/deck.js';
 import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { CONSUMABLES } from './src/consumables.js';
-import { RELICS, applyReward, makeEnemyChoices, makeEventChoices, makeRewards, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -115,7 +115,15 @@ const persisted = persistBoard.grid.map(row => row.map(cell => cell?.type === TY
 assert.equal(persisted[18][0], null);
 assert.equal(persisted[19][0].type, TYPES.GARBAGE);
 
-assert.equal(makeEnemyChoices(1).every(enemy => enemy.startingRows === 15), true);
+const roundOneEnemies = makeEnemyChoices(1);
+assert.equal(roundOneEnemies.every(enemy => enemy.startingRows <= 14), true);
+assert.equal(roundOneEnemies.every(enemy => !enemy.name.includes('Bomb') && !enemy.name.includes('Thief') && !enemy.name.includes('Warden')), true);
+const speedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile: 'fast', rows: -8, speed: 365, garbage: 0, risk: 1.55, rewardBonus: 6, openingRows: 12 });
+const lineHunter = makeEnemy(1, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 });
+assert.equal(speedDrone.startingRows < lineHunter.startingRows, true);
+assert.equal(speedDrone.rewardGold > lineHunter.rewardGold, true);
+assert.equal(makeEnemy(6, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows > makeEnemy(5, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows, true);
+assert.equal(makeEnemy(11, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage > makeEnemy(10, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage, true);
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
 assert.equal(makeRewards('elite').some(reward => reward.kind === 'relic'), true);
 

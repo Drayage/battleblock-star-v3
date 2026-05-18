@@ -1,4 +1,4 @@
-import { COLS, COLORS, TYPES } from './constants.js?v=20260518-copyfx1';
+import { COLS, COLORS, TYPES } from './constants.js?v=20260518-scale1';
 
 export class Renderer {
   constructor(canvas) {

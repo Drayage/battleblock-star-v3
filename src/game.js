@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-copyfx1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-copyfx1';
-import { Deck } from './deck.js?v=20260518-copyfx1';
-import { AI } from './ai.js?v=20260518-copyfx1';
-import { Renderer } from './renderer.js?v=20260518-copyfx1';
-import { InputController } from './input.js?v=20260518-copyfx1';
-import { SKILLS } from './skills.js?v=20260518-copyfx1';
-import { CONSUMABLES } from './consumables.js?v=20260518-copyfx1';
+import { Board } from './board.js?v=20260518-scale1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-scale1';
+import { Deck } from './deck.js?v=20260518-scale1';
+import { AI } from './ai.js?v=20260518-scale1';
+import { Renderer } from './renderer.js?v=20260518-scale1';
+import { InputController } from './input.js?v=20260518-scale1';
+import { SKILLS } from './skills.js?v=20260518-scale1';
+import { CONSUMABLES } from './consumables.js?v=20260518-scale1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-copyfx1';
+} from './progression.js?v=20260518-scale1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -861,6 +861,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-copyfx1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-scale1').catch(() => {});
   });
 }
