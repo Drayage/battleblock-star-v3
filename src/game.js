@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260518-savepause1';
-import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-savepause1';
-import { Deck } from './deck.js?v=20260518-savepause1';
-import { AI } from './ai.js?v=20260518-savepause1';
-import { Renderer } from './renderer.js?v=20260518-savepause1';
-import { InputController } from './input.js?v=20260518-savepause1';
-import { SKILLS } from './skills.js?v=20260518-savepause1';
-import { CONSUMABLES } from './consumables.js?v=20260518-savepause1';
+import { Board } from './board.js?v=20260518-autosave1';
+import { CARD_LIBRARY, COLORS } from './constants.js?v=20260518-autosave1';
+import { Deck } from './deck.js?v=20260518-autosave1';
+import { AI } from './ai.js?v=20260518-autosave1';
+import { Renderer } from './renderer.js?v=20260518-autosave1';
+import { InputController } from './input.js?v=20260518-autosave1';
+import { SKILLS } from './skills.js?v=20260518-autosave1';
+import { CONSUMABLES } from './consumables.js?v=20260518-autosave1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260518-savepause1';
+} from './progression.js?v=20260518-autosave1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -63,6 +63,7 @@ class Game {
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
+    this.autoSaveTimer = 0;
     this.message = '';
     this.bindUi();
     this.refreshMenu();
@@ -81,10 +82,10 @@ class Game {
     document.getElementById('leaveShopBtn').addEventListener('click', () => {
       if (isShopRound(this.run.round)) this.run.visitedShops.add(this.run.round);
       this.showMap();
+      this.autoSave();
     });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
-    document.getElementById('saveRunBtn').addEventListener('click', () => this.saveGame());
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
     });
@@ -123,6 +124,7 @@ class Game {
   newRun() {
     this.run = new RunState();
     this.routeNextScreen();
+    this.autoSave();
   }
 
   routeNextScreen() {
@@ -187,6 +189,7 @@ class Game {
         this.run.seenEvents.add(eventKey);
         this.normalizePersistentGrid();
         this.showMap();
+        this.autoSave();
       });
       wrap.appendChild(btn);
     }
@@ -252,6 +255,7 @@ class Game {
         applyReward(this.run, item);
         this.normalizePersistentGrid();
         this.showShop();
+        this.autoSave();
       });
       wrap.appendChild(btn);
     }
@@ -386,12 +390,14 @@ class Game {
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
+    this.autoSaveTimer = 0;
     this.message = 'Battle start';
     document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
     this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
     this.show('gameScreen');
+    this.autoSave();
   }
 
   renderTouchSlots() {
@@ -499,6 +505,7 @@ class Game {
     }
     if (this.player.defeated) return this.queueBattleEnd('loss');
     if (this.enemy.defeated) return this.queueBattleEnd('win');
+    this.autoSave();
   }
 
   queueBattleEnd(result) {
@@ -506,6 +513,7 @@ class Game {
     this.battleEndResult = result;
     this.battleEndDelay = result === 'win' ? 1400 : 1200;
     this.message = result === 'win' ? 'Enemy defeated' : 'You were defeated';
+    this.autoSave();
   }
 
   winBattle() {
@@ -514,6 +522,7 @@ class Game {
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
     this.showRewards(makeRewards(this.enemyCard.rewardPool));
+    this.autoSave();
   }
 
   showRewards(rewards) {
@@ -536,6 +545,7 @@ class Game {
         this.normalizePersistentGrid();
         this.run.round++;
         this.routeNextScreen();
+        this.autoSave();
       });
       wrap.appendChild(btn);
     });
@@ -576,6 +586,7 @@ class Game {
 
   endRun(win) {
     this.saveRecord(win);
+    this.deleteSave(true);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
     document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} · Gold ${this.run.gold} · HP Rows ${this.run.hpRows}`;
@@ -632,7 +643,11 @@ class Game {
     return run;
   }
 
-  saveGame() {
+  autoSave() {
+    this.saveGame(true);
+  }
+
+  saveGame(silent = false) {
     const state = {
       version: 1,
       savedAt: Date.now(),
@@ -657,7 +672,7 @@ class Game {
       } : null
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-    this.message = 'Saved';
+    if (!silent) this.message = 'Saved';
     this.refreshMenu();
   }
 
@@ -680,6 +695,7 @@ class Game {
         this.enemyAbilityTimer = state.battle.enemyAbilityTimer || 0;
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
+        this.autoSaveTimer = 0;
         this.battleEndDelay = state.battle.battleEndDelay || 0;
         this.battleEndResult = state.battle.battleEndResult || null;
         this.paused = state.battle.paused ?? true;
@@ -704,9 +720,9 @@ class Game {
     }
   }
 
-  deleteSave() {
+  deleteSave(silent = false) {
     localStorage.removeItem(SAVE_KEY);
-    this.refreshMenu();
+    if (!silent) this.refreshMenu();
   }
 
   togglePause() {
@@ -714,6 +730,7 @@ class Game {
     this.paused = !this.paused;
     document.getElementById('pauseBtn').textContent = this.paused ? 'Resume' : 'Pause';
     this.message = this.paused ? 'Paused' : 'Resumed';
+    this.autoSave();
   }
 
   loop(now) {
@@ -751,6 +768,11 @@ class Game {
         message: 'Paused'
       });
       return;
+    }
+    this.autoSaveTimer += dt;
+    if (this.autoSaveTimer >= 5000) {
+      this.autoSaveTimer = 0;
+      this.autoSave();
     }
     this.input.update(now);
     this.player.flash = Math.max(0, this.player.flash - dt);
@@ -824,6 +846,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260518-savepause1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260518-autosave1').catch(() => {});
   });
 }
