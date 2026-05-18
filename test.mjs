@@ -18,7 +18,7 @@ board.grid[19][0] = { type: TYPES.POWER_I, attack: 0.3, traits: ['highPower'] };
 const clear = board.clearLines();
 assert.equal(clear.cleared, 1);
 assert.equal(clear.attack, 1.2);
-assert.equal(clear.mana, 0.5);
+assert.equal(clear.mana, 5);
 
 const garbageBoard = new Board({ rows: 20 });
 for (let r = 17; r < 20; r++) {

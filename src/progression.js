@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-garbageflush1';
-import { Deck, shuffle } from './deck.js?v=20260518-garbageflush1';
-import { SKILLS } from './skills.js?v=20260518-garbageflush1';
-import { CONSUMABLES } from './consumables.js?v=20260518-garbageflush1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260518-mana1';
+import { Deck, shuffle } from './deck.js?v=20260518-mana1';
+import { SKILLS } from './skills.js?v=20260518-mana1';
+import { CONSUMABLES } from './consumables.js?v=20260518-mana1';
 
 export const RELICS = {
   combo_amp: {
