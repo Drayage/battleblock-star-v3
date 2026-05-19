@@ -148,6 +148,7 @@ export class AI {
     this.mistakeGap = skill.mistakeGap || 12;
     this.hesitateRate = skill.hesitateRate || 0;
     this.confidenceHesitate = 0;
+    this.focus = 0;
     this.mistakeCooldown = 0;
     this.lastPieceSerial = null;
     this.lastHoldSerial = null;
@@ -156,8 +157,9 @@ export class AI {
     this.lastPlanCard = null;
   }
 
-  setPressure({ hesitate = 0 } = {}) {
+  setPressure({ hesitate = 0, focus = 0 } = {}) {
     this.confidenceHesitate = hesitate;
+    this.focus = focus;
   }
 
   pickSafeMistake(candidates) {
@@ -227,7 +229,8 @@ export class AI {
     candidates.sort((a, b) => b.s - a.s);
     let best = candidates[0];
     if (!best) return;
-    if (this.mistakeCooldown === 0 && this.mistakeRate > 0 && Math.random() < this.mistakeRate) {
+    const effectiveMistake = this.mistakeRate * (1 - this.focus);
+    if (this.mistakeCooldown === 0 && effectiveMistake > 0 && Math.random() < effectiveMistake) {
       const alt = this.pickSafeMistake(candidates);
       if (alt) {
         best = alt;
@@ -237,7 +240,7 @@ export class AI {
     this.queue = [];
     if (best.hold) this.queue.push('hold');
     for (const action of best.path) this.queue.push(action);
-    const hesitateChance = Math.min(0.9, this.hesitateRate + this.confidenceHesitate);
+    const hesitateChance = Math.max(0, Math.min(0.9, this.hesitateRate + this.confidenceHesitate) * (1 - this.focus));
     if (Math.random() < hesitateChance) this.queue.push('wait');
     this.queue.push('hard');
   }

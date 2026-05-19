@@ -1043,7 +1043,15 @@ class Game {
   }
 
   currentAiPressure() {
-    return { hesitate: this.aiConfidenceHesitate() };
+    return { hesitate: this.aiConfidenceHesitate(), focus: this.aiFocus() };
+  }
+
+  aiFocus() {
+    if (!this.enemy) return 0;
+    const enemyHeight = this.boardMaxHeight(this.enemy);
+    const danger = enemyHeight - (this.enemy.rows - 9);
+    if (danger <= 0) return 0;
+    return Math.min(1, danger / 5);
   }
 
   aiConfidenceHesitate() {
