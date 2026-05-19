@@ -1043,16 +1043,10 @@ class Game {
   }
 
   currentAiPressure() {
-    const fatigue = Math.min(0.24, Math.floor(this.battleClearedLines / 10) * 0.03);
-    const confidence = this.aiConfidenceMistake();
-    return {
-      mistake: fatigue + confidence,
-      noise: fatigue * 0.5 + confidence * 0.6,
-      hold: fatigue * 1.2 + confidence * 1.35
-    };
+    return { hesitate: this.aiConfidenceHesitate() };
   }
 
-  aiConfidenceMistake() {
+  aiConfidenceHesitate() {
     if (!this.player || !this.enemy) return 0;
     const playerHeight = this.boardMaxHeight(this.player);
     const enemyHeight = this.boardMaxHeight(this.enemy);
@@ -1060,7 +1054,7 @@ class Game {
     const enemyComfort = Math.max(0, this.enemy.rows - enemyHeight - 9);
     const gap = playerPressure - enemyHeight;
     if (playerPressure < this.player.rows * 0.48 || enemyComfort < 3 || gap < 4) return 0;
-    return Math.min(0.22, 0.05 + gap * 0.012 + enemyComfort * 0.01);
+    return Math.min(0.55, 0.1 + gap * 0.025 + enemyComfort * 0.02);
   }
 
   boardMaxHeight(board) {

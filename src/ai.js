@@ -123,7 +123,7 @@ function simulate(board, mino, profile) {
     test.y++;
   }
   for (const { x, y } of test.cells) {
-    if (y < 0) return -1e9;
+    if (y < 0) return { s: -1e9, danger: 1e9 };
     if (y >= 0 && y < board.rows) grid[y][x] = { type: test.card.id, attack: test.card.cellAttack, traits: [] };
   }
   let cleared = 0;
@@ -135,20 +135,40 @@ function simulate(board, mino, profile) {
       r++;
     }
   }
-  return scoreGrid(grid, cleared, profile);
+  const ev = analyzeGrid(grid);
+  const dangerRows = Math.max(0, ev.maxHeight - (ev.rows - 5));
+  const danger = dangerRows * 4 + ev.topCells + ev.spire * 0.5;
+  return { s: scoreGrid(grid, cleared, profile), danger };
 }
 
 export class AI {
   constructor(profile = 'balanced', skill = {}) {
     this.profile = profile;
+    this.mistakeRate = skill.mistakeRate || 0;
+    this.mistakeGap = skill.mistakeGap || 12;
     this.hesitateRate = skill.hesitateRate || 0;
+    this.confidenceHesitate = 0;
+    this.mistakeCooldown = 0;
+    this.lastPieceSerial = null;
     this.lastHoldSerial = null;
     this.lastAction = null;
     this.queue = [];
     this.lastPlanCard = null;
   }
 
-  setPressure() {}
+  setPressure({ hesitate = 0 } = {}) {
+    this.confidenceHesitate = hesitate;
+  }
+
+  pickSafeMistake(candidates) {
+    if (candidates.length <= 1) return candidates[0];
+    const best = candidates[0];
+    const pool = candidates
+      .slice(1, 7)
+      .filter(c => c.s > -1e8 && best.s - c.s < 8 && c.danger <= best.danger + 0.5);
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
 
   cacheKey(board) {
     const next = board.nextQueue.slice(0, 2).map(card => card?.id || 'none').join('/');
@@ -171,6 +191,10 @@ export class AI {
     const cardKey = this.cacheKey(board);
     if (this.queue.length && this.lastPlanCard === cardKey) return;
     this.lastPlanCard = cardKey;
+    if (board.pieceSerial !== this.lastPieceSerial) {
+      this.lastPieceSerial = board.pieceSerial;
+      if (this.mistakeCooldown > 0) this.mistakeCooldown--;
+    }
     const candidates = [];
     for (let rot = 0; rot < 4; rot++) {
       for (let x = -2; x < COLS + 2; x++) {
@@ -179,8 +203,8 @@ export class AI {
         if (!board.ok(m)) continue;
         const path = findReachPlan(board, { x, rot, hold: false });
         if (!path) continue;
-        const s = simulate(board, m, this.profile);
-        candidates.push({ x, rot, hold: false, s, path });
+        const { s, danger } = simulate(board, m, this.profile);
+        candidates.push({ x, rot, hold: false, s, danger, path });
       }
     }
     const canHoldThisPiece = !board.holdUsed && !board.holdLocked && this.lastHoldSerial !== board.pieceSerial;
@@ -194,19 +218,27 @@ export class AI {
             if (!board.ok(m)) continue;
             const path = findReachPlan(board, { x, rot, hold: true });
             if (!path) continue;
-            const s = simulate(board, m, this.profile);
-            candidates.push({ x, rot, hold: true, s, path });
+            const { s, danger } = simulate(board, m, this.profile);
+            candidates.push({ x, rot, hold: true, s, danger, path });
           }
         }
       }
     }
     candidates.sort((a, b) => b.s - a.s);
-    const best = candidates[0];
+    let best = candidates[0];
     if (!best) return;
+    if (this.mistakeCooldown === 0 && this.mistakeRate > 0 && Math.random() < this.mistakeRate) {
+      const alt = this.pickSafeMistake(candidates);
+      if (alt) {
+        best = alt;
+        this.mistakeCooldown = this.mistakeGap;
+      }
+    }
     this.queue = [];
     if (best.hold) this.queue.push('hold');
     for (const action of best.path) this.queue.push(action);
-    if (Math.random() < this.hesitateRate) this.queue.push('wait');
+    const hesitateChance = Math.min(0.9, this.hesitateRate + this.confidenceHesitate);
+    if (Math.random() < hesitateChance) this.queue.push('wait');
     this.queue.push('hard');
   }
 
