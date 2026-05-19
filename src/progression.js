@@ -325,7 +325,7 @@ export function makeEventChoices(run, eventKey) {
       kind: 'cleanup',
       tier: TIERS.BRONZE,
       title: '필드 청소',
-      desc: '이월 필드의 가장 낮은 쓰레기 행을 제거합니다.'
+      desc: '이월 필드의 쓰레기 행을 최대 5줄 제거하고, 남은 쓰레기 행을 아래로 정렬합니다.'
     });
   } else {
     sideChoices.push({
