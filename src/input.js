@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260519-event-random1';
+import { GAME_TIMING } from './constants.js?v=20260519-same-shape1';
 
 export class InputController {
   constructor(game) {

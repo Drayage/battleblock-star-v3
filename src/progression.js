@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-event-random1';
-import { Deck, shuffle } from './deck.js?v=20260519-event-random1';
-import { SKILLS } from './skills.js?v=20260519-event-random1';
-import { CONSUMABLES } from './consumables.js?v=20260519-event-random1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-same-shape1';
+import { Deck, shuffle } from './deck.js?v=20260519-same-shape1';
+import { SKILLS } from './skills.js?v=20260519-same-shape1';
+import { CONSUMABLES } from './consumables.js?v=20260519-same-shape1';
 
 export const RELICS = {
   combo_amp: {
@@ -27,13 +27,12 @@ export const RELICS = {
 };
 
 export const BLOCK_UPGRADES = {
-  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.INSTANT_STRIKE],
-  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.INSTANT_PURGE],
-  [TYPES.L]: [TYPES.MANA_L, TYPES.INSTANT_PURGE],
-  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.INSTANT_GUARD],
-  [TYPES.S]: [TYPES.POWER_S, TYPES.INSTANT_STRIKE],
-  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.INSTANT_MANA],
-  [TYPES.Z]: [TYPES.MANA_T, TYPES.INSTANT_GUARD]
+  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I],
+  [TYPES.J]: [TYPES.CLEANSE_J],
+  [TYPES.L]: [TYPES.MANA_L],
+  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O],
+  [TYPES.S]: [TYPES.POWER_S],
+  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T]
 };
 
 export class RunState {

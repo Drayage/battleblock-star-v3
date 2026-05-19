@@ -269,7 +269,8 @@ assert.equal(shouldShowEvent(eventRun), 'start');
 eventRun.deck.addCard(TYPES.HEAVY_JUNK);
 assert.equal(removableDeckCards(eventRun).includes(TYPES.HEAVY_JUNK), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.I && upgrade.to === TYPES.POWER_I), true);
-assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.to === TYPES.INSTANT_STRIKE || upgrade.to === TYPES.INSTANT_GUARD || upgrade.to === TYPES.INSTANT_MANA || upgrade.to === TYPES.INSTANT_PURGE), true);
+assert.equal(upgradeDeckCards(eventRun).every(upgrade => CARD_LIBRARY[upgrade.from].shapeId === CARD_LIBRARY[upgrade.to].shapeId), true);
+assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O && upgrade.to === TYPES.PURGE_O), true);
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
 
 const baseRemoveRun = new RunState();

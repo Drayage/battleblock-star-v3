@@ -1,4 +1,4 @@
-const CACHE_NAME = 'battle-block-star-v3-event-random1';
+const CACHE_NAME = 'battle-block-star-v3-same-shape1';
 const APP_SHELL = [
   './',
   './index.html',
