@@ -30,9 +30,9 @@ export const SKILLS = {
     tier: 'silver',
     cost: 40,
     cooldown: 6000,
-    desc: 'Slow enemy AI actions for 10 seconds.',
+    desc: 'Slow enemy AI actions for 5 seconds.',
     activate({ game }) {
-      game.enemySlowTimer = 10000;
+      game.enemySlowTimer = 5000;
       return true;
     }
   },
@@ -54,12 +54,12 @@ export const SKILLS = {
     tier: 'bronze',
     cost: 30,
     cooldown: 6500,
-    desc: 'Lock the enemy hold slot for 15 seconds.',
+    desc: 'Lock the enemy hold slot for 5 seconds.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;
       game.scheduleBattleTimeout(() => {
         if (game.enemy === enemy) enemy.holdLocked = false;
-      }, 15000);
+      }, 5000);
       return true;
     }
   }
