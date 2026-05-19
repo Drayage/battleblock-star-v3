@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260519-reward-flow1';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260519-starter-skill';
 
 export function shuffle(items) {
   const out = [...items];
