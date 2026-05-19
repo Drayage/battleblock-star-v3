@@ -959,7 +959,8 @@ class Game {
         run: this.run,
         battle: this.battleEndResult === 'win' ? 'VICTORY' : 'DEFEAT',
         enemyCard: this.enemyCard,
-        message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated'
+        message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated',
+        skillCooldowns: this.skillCooldowns
       });
       if (this.battleEndDelay <= 0) {
         if (this.battleEndResult === 'win') this.winBattle();
@@ -974,7 +975,8 @@ class Game {
         run: this.run,
         battle: 'PAUSED',
         enemyCard: this.enemyCard,
-        message: 'Paused'
+        message: 'Paused',
+        skillCooldowns: this.skillCooldowns
       });
       return;
     }
@@ -1016,7 +1018,8 @@ class Game {
       run: this.run,
       battle: this.enemySlowTimer > 0 ? 'TIME WARP' : 'ACTIVE',
       enemyCard: this.enemyCard,
-      message: this.message
+      message: this.message,
+      skillCooldowns: this.skillCooldowns
     });
     this.message = '';
   }
@@ -1160,8 +1163,9 @@ class Game {
       const skill = SKILLS[id];
       if (!skill) return;
       const cd = this.skillCooldowns[id] || 0;
-      const pct = cd > 0 ? 1 - cd / skill.cooldown : 1;
+      const pct = cd > 0 ? 1 - cd / skill.cooldown : 0;
       btn.style.setProperty('--cd-pct', pct.toFixed(3));
+      btn.classList.toggle('has-mp', this.player.mp >= skill.cost);
       btn.classList.toggle('mp-ready', this.player.mp >= skill.cost && cd === 0);
       btn.classList.toggle('on-cooldown', cd > 0);
     });
