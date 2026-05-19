@@ -148,6 +148,39 @@ assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
 assert.equal(CARD_LIBRARY[TYPES.POWER_T].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.BOMB_I].shapeId, 'I');
 assert.equal(CARD_LIBRARY[TYPES.CLEANSE_J].abilityId, 'purgeGarbage');
+assert.equal(CARD_LIBRARY[TYPES.INSTANT_STRIKE].cellAttack, 0.1);
+assert.equal(CARD_LIBRARY[TYPES.INSTANT_STRIKE].onPlace.attack, 1.2);
+assert.equal(CARD_LIBRARY[TYPES.INSTANT_GUARD].onPlace.cancelGarbage, 3);
+assert.equal(CARD_LIBRARY[TYPES.INSTANT_MANA].onPlace.mana, 18);
+assert.equal(CARD_LIBRARY[TYPES.INSTANT_PURGE].onPlace.purgeGarbageRows, 1);
+
+const instantStrikeBoard = new Board({ rows: 20 });
+instantStrikeBoard.current = new Mino(CARD_LIBRARY[TYPES.INSTANT_STRIKE], 3, 8);
+const instantStrike = instantStrikeBoard.lock();
+assert.equal(instantStrike.cleared, 0);
+assert.equal(instantStrike.attack, 1.2);
+assert.equal(instantStrikeBoard.grid[10][3].attack, 0.1);
+
+const instantGuardBoard = new Board({ rows: 20 });
+instantGuardBoard.receiveGarbage(4);
+instantGuardBoard.current = new Mino(CARD_LIBRARY[TYPES.INSTANT_GUARD], 3, 8);
+const instantGuard = instantGuardBoard.lock();
+assert.equal(instantGuard.instant.canceled, 3);
+assert.equal(instantGuardBoard.garbageQueue, 1);
+
+const instantManaBoard = new Board({ rows: 20 });
+instantManaBoard.mp = 5;
+instantManaBoard.current = new Mino(CARD_LIBRARY[TYPES.INSTANT_MANA], 3, 8);
+const instantMana = instantManaBoard.lock();
+assert.equal(instantMana.instant.mana, 18);
+assert.equal(instantManaBoard.mp, 23);
+
+const instantPurgeBoard = new Board({ rows: 20 });
+instantPurgeBoard.grid[19] = Array.from({ length: 10 }, (_, c) => c === 0 ? null : { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] });
+instantPurgeBoard.current = new Mino(CARD_LIBRARY[TYPES.INSTANT_PURGE], 3, 8);
+const instantPurge = instantPurgeBoard.lock();
+assert.equal(instantPurge.instant.purgedRows, 1);
+assert.equal(instantPurgeBoard.grid[19].some(Boolean), false);
 
 const tetrisBoard = new Board({ rows: 20 });
 tetrisBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));

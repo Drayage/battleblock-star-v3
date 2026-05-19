@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-bomb3x3';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-instant1';
 
 export class Renderer {
   constructor(canvas) {
@@ -154,7 +154,8 @@ export class Renderer {
       ctx.fillText(board.clearText, ox + bw / 2, oy + Math.max(cs * 2.1, 38) - lift);
       ctx.font = `bold ${Math.max(10, Math.floor(cs * 0.45))}px Courier New`;
       ctx.fillStyle = '#f4f8ff';
-      ctx.fillText(`+${board.lastAttack.toFixed(1)}`, ox + bw / 2, oy + Math.max(cs * 3.0, 58) - lift);
+      const valueText = board.lastAttack > 0 ? `+${board.lastAttack.toFixed(1)}` : 'PLACE EFFECT';
+      ctx.fillText(valueText, ox + bw / 2, oy + Math.max(cs * 3.0, 58) - lift);
       ctx.globalAlpha = 1;
       ctx.textAlign = 'left';
     }
@@ -178,11 +179,13 @@ export class Renderer {
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
-      const mark = type === TYPES.BOMB ? 'B'
-        : type === TYPES.POWER_I || type === TYPES.POWER_CROSS ? 'P'
+      const mark = type === TYPES.BOMB || type === TYPES.BOMB_I ? 'B'
+        : type === TYPES.POWER_I || type === TYPES.POWER_T || type === TYPES.POWER_S || type === TYPES.POWER_CROSS ? 'P'
         : type === TYPES.CROSS ? '+'
-        : type === TYPES.MANA_T ? 'M'
-        : type === TYPES.PURGE_O ? 'C'
+        : type === TYPES.MANA_T || type === TYPES.MANA_L || type === TYPES.INSTANT_MANA ? 'M'
+        : type === TYPES.PURGE_O || type === TYPES.CLEANSE_J || type === TYPES.INSTANT_PURGE ? 'C'
+        : type === TYPES.INSTANT_STRIKE ? 'A'
+        : type === TYPES.INSTANT_GUARD ? 'G'
         : type === TYPES.HEAVY_JUNK || type === TYPES.WIDE_JUNK ? '!'
         : '';
       if (mark) {

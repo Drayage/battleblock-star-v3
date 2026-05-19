@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-bomb3x3';
-import { Deck, shuffle } from './deck.js?v=20260519-bomb3x3';
-import { SKILLS } from './skills.js?v=20260519-bomb3x3';
-import { CONSUMABLES } from './consumables.js?v=20260519-bomb3x3';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-instant1';
+import { Deck, shuffle } from './deck.js?v=20260519-instant1';
+import { SKILLS } from './skills.js?v=20260519-instant1';
+import { CONSUMABLES } from './consumables.js?v=20260519-instant1';
 
 export const RELICS = {
   combo_amp: {
@@ -62,8 +62,8 @@ const ENEMIES = [
   { name: 'Speed Drone', style: 'Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 },
   { name: 'Opener Script', style: 'OPENER pattern: explosive prepared starts, tiny HP pool.', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] },
   { name: 'Stride Engine', style: 'STRIDE pattern: steady quad and spin pressure over time.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] },
-  { name: 'Plonk Gambler', style: 'PLONK pattern: accepts pressure, then looks for burst damage.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I] },
-  { name: 'Inf DS Shell', style: 'INF DS pattern: defensive downstacking and field cleanup.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] },
+  { name: 'Plonk Gambler', style: 'PLONK pattern: accepts pressure, then looks for burst damage.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE] },
+  { name: 'Inf DS Shell', style: 'INF DS pattern: defensive downstacking and field cleanup.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD] },
   { name: 'Bomb Adept', style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
   { name: 'Mana Thief', style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
   { name: 'Cleanse Warden', style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
@@ -74,7 +74,7 @@ const ELITES = [
   { name: 'Elite: Power Core', style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
   { name: 'Elite: Cross Engine', style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
   { name: 'Elite: Opener Lab', style: 'OPENER elite: very low HP, extremely fast early burst.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
-  { name: 'Elite: Plonk Vault', style: 'PLONK elite: survives pressure and swings back hard.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I], ability: 'spike' }
+  { name: 'Elite: Plonk Vault', style: 'PLONK elite: survives pressure and swings back hard.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
 ];
 
 export function makeEnemyChoices(round) {
@@ -123,8 +123,8 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
 }
 
 export function makeRewards(pool = 'normal') {
-  const normalCards = [TYPES.BOMB, TYPES.MANA_T, TYPES.MANA_L, TYPES.POWER_I, TYPES.POWER_S, TYPES.PURGE_O, TYPES.CLEANSE_J];
-  const eliteCards = [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S, TYPES.POWER_CROSS, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB_I, TYPES.CLEANSE_J];
+  const normalCards = [TYPES.BOMB, TYPES.MANA_T, TYPES.MANA_L, TYPES.POWER_I, TYPES.POWER_S, TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_STRIKE, TYPES.INSTANT_GUARD, TYPES.INSTANT_MANA];
+  const eliteCards = [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S, TYPES.POWER_CROSS, TYPES.CROSS, TYPES.PURGE_O, TYPES.BOMB_I, TYPES.CLEANSE_J, TYPES.INSTANT_STRIKE, TYPES.INSTANT_GUARD, TYPES.INSTANT_MANA, TYPES.INSTANT_PURGE];
   const cards = pool === 'elite' ? eliteCards : normalCards;
   if (pool === 'elite') {
     const skillIds = Object.keys(SKILLS);
@@ -148,6 +148,8 @@ export function makeShopItems(run) {
     { kind: 'card', id: TYPES.MANA_T, title: 'Buy Mana T', price: 30 },
     { kind: 'card', id: TYPES.MANA_L, title: 'Buy Mana L', price: 32 },
     { kind: 'card', id: TYPES.PURGE_O, title: 'Buy Cleanse O', price: 46 },
+    { kind: 'card', id: TYPES.INSTANT_STRIKE, title: 'Buy Strike Hook', price: 38 },
+    { kind: 'card', id: TYPES.INSTANT_GUARD, title: 'Buy Guard Wide', price: 36 },
     { kind: 'hp', amount: 5, title: 'Max HP +5 rows', price: 55 },
     { kind: 'skill', id: skillIds[0] || 'purge', title: skillIds[0] ? `Skill: ${SKILLS[skillIds[0]].name}` : 'Skill upgrade: Purge', price: 50 },
     { kind: 'consumable', id: randomConsumable(), title: 'Consumable pack', price: 22 }

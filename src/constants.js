@@ -47,7 +47,11 @@ export const TYPES = {
   CLEANSE_J: 'CLEANSE_J',
   HEAVY_JUNK: 'HEAVY_JUNK',
   POWER_CROSS: 'POWER_CROSS',
-  WIDE_JUNK: 'WIDE_JUNK'
+  WIDE_JUNK: 'WIDE_JUNK',
+  INSTANT_STRIKE: 'INSTANT_STRIKE',
+  INSTANT_GUARD: 'INSTANT_GUARD',
+  INSTANT_MANA: 'INSTANT_MANA',
+  INSTANT_PURGE: 'INSTANT_PURGE'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -73,6 +77,10 @@ export const COLORS = {
   [TYPES.HEAVY_JUNK]: '#6d5f73',
   [TYPES.POWER_CROSS]: '#ffb0d0',
   [TYPES.WIDE_JUNK]: '#58515f',
+  [TYPES.INSTANT_STRIKE]: '#ffcc66',
+  [TYPES.INSTANT_GUARD]: '#80a8ff',
+  [TYPES.INSTANT_MANA]: '#63ffdd',
+  [TYPES.INSTANT_PURGE]: '#f4f7ff',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -173,6 +181,16 @@ export const SHAPE_LIBRARY = {
       [[0,1,1,0],[1,1,1,1]],
       [[1,0],[1,1],[1,1],[1,0]]
     ]
+  },
+  HOOK5: {
+    name: 'Hook Shape',
+    cells: 5,
+    shape: [
+      [[1,0,0],[1,0,0],[1,1,1]],
+      [[1,1,1],[1,0,0],[1,0,0]],
+      [[1,1,1],[0,0,1],[0,0,1]],
+      [[0,0,1],[0,0,1],[1,1,1]]
+    ]
   }
 };
 
@@ -196,7 +214,11 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.CLEANSE_J]: 'J',
   [TYPES.HEAVY_JUNK]: 'HEAVY5',
   [TYPES.POWER_CROSS]: 'CROSS5',
-  [TYPES.WIDE_JUNK]: 'WIDE6'
+  [TYPES.WIDE_JUNK]: 'WIDE6',
+  [TYPES.INSTANT_STRIKE]: 'HOOK5',
+  [TYPES.INSTANT_GUARD]: 'WIDE6',
+  [TYPES.INSTANT_MANA]: 'CROSS5',
+  [TYPES.INSTANT_PURGE]: 'HEAVY5'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
@@ -206,6 +228,10 @@ export const ABILITY_LIBRARY = {
   bomb: { id: 'bomb', name: 'Bomb', cellAttack: 0.1, traits: ['bomb'], desc: 'Clearing this block destroys a 3x3 area centered on it.' },
   manaBonus: { id: 'manaBonus', name: 'Mana', cellAttack: 0.1, traits: ['manaBonus'], desc: 'Cleared cells grant bonus MP.' },
   purgeGarbage: { id: 'purgeGarbage', name: 'Cleanse', cellAttack: 0.1, traits: ['purgeGarbage'], desc: 'Clearing this block removes a garbage row.' },
+  instantAttack: { id: 'instantAttack', name: 'Instant Strike', cellAttack: 0.1, traits: [], onPlace: { attack: 1.2 }, desc: 'On placement, immediately sends 1.2 attack.' },
+  instantGuard: { id: 'instantGuard', name: 'Instant Guard', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 3 }, desc: 'On placement, deletes up to 3 incoming attack gauge.' },
+  instantMana: { id: 'instantMana', name: 'Instant Mana', cellAttack: 0.1, traits: [], onPlace: { mana: 18 }, desc: 'On placement, immediately restores 18 MP.' },
+  instantPurge: { id: 'instantPurge', name: 'Instant Purge', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 1 }, desc: 'On placement, removes 1 existing garbage row.' },
   curse: { id: 'curse', name: 'Burden', cellAttack: 0.1, traits: ['curse'], desc: 'Awkward junk shape that clogs the deck.' },
   wideCurse: { id: 'wideCurse', name: 'Wide Burden', cellAttack: 0.1, traits: ['curse', 'wide'], desc: 'Six-cell obstruction that clogs the deck.' }
 };
@@ -224,6 +250,7 @@ function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
     shape: shape.shape,
     cellAttack: ability.cellAttack,
     traits: [...ability.traits],
+    onPlace: ability.onPlace ? { ...ability.onPlace } : null,
     rarity
   };
 };
@@ -248,5 +275,9 @@ export const CARD_LIBRARY = {
   [TYPES.CLEANSE_J]: blockCard(TYPES.CLEANSE_J, 'Cleanse J', 'J', 'purgeGarbage', 'rare'),
   [TYPES.HEAVY_JUNK]: blockCard(TYPES.HEAVY_JUNK, 'Heavy Junk', 'HEAVY5', 'curse', 'curse'),
   [TYPES.POWER_CROSS]: blockCard(TYPES.POWER_CROSS, 'Power Cross', 'CROSS5', 'highPower', 'rare'),
-  [TYPES.WIDE_JUNK]: blockCard(TYPES.WIDE_JUNK, 'Wide Junk', 'WIDE6', 'wideCurse', 'curse')
+  [TYPES.WIDE_JUNK]: blockCard(TYPES.WIDE_JUNK, 'Wide Junk', 'WIDE6', 'wideCurse', 'curse'),
+  [TYPES.INSTANT_STRIKE]: blockCard(TYPES.INSTANT_STRIKE, 'Strike Hook', 'HOOK5', 'instantAttack', 'uncommon'),
+  [TYPES.INSTANT_GUARD]: blockCard(TYPES.INSTANT_GUARD, 'Guard Wide', 'WIDE6', 'instantGuard', 'uncommon'),
+  [TYPES.INSTANT_MANA]: blockCard(TYPES.INSTANT_MANA, 'Mana Cross', 'CROSS5', 'instantMana', 'uncommon'),
+  [TYPES.INSTANT_PURGE]: blockCard(TYPES.INSTANT_PURGE, 'Purge Heavy', 'HEAVY5', 'instantPurge', 'rare')
 };

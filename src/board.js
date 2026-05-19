@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-bomb3x3';
-import { Deck } from './deck.js?v=20260519-bomb3x3';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-instant1';
+import { Deck } from './deck.js?v=20260519-instant1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -236,6 +236,7 @@ export class Board {
       this.grid[pos.y][pos.x] = cell(this.current.card);
       placed.push({ ...pos, card: this.current.card });
     }
+    const placedCard = this.current.card;
     const result = this.clearLines();
     if (result.cleared > 0) {
       result.tSpin = wasTSpin;
@@ -259,10 +260,48 @@ export class Board {
       this.comboBreakFlash = result.comboBreak ? GAME_TIMING.COMBO_BREAK_FLASH : 0;
       this.clearTextFlash = 0;
     }
+    const instant = this.applyOnPlace(placedCard);
+    if (instant.triggered) {
+      result.attack = Number((result.attack + instant.attack).toFixed(2));
+      result.instant = instant;
+      if (result.cleared === 0) {
+        this.clearText = instant.text;
+        this.clearTextFlash = GAME_TIMING.CLEAR_FEEDBACK_FLASH;
+      }
+    }
     this.applyReadyGarbage();
     this.lastAttack = result.attack;
     if (this.defeated) return result;
     this.spawn();
+    return result;
+  }
+
+  applyOnPlace(card) {
+    const effect = card?.onPlace;
+    const result = { triggered: false, attack: 0, canceled: 0, mana: 0, purgedRows: 0, text: '' };
+    if (!effect) return result;
+    const labels = [];
+    if (effect.attack) {
+      result.attack = Number(effect.attack.toFixed(2));
+      labels.push(`STRIKE +${result.attack.toFixed(1)}`);
+    }
+    if (effect.cancelGarbage) {
+      result.canceled = this.cancelGarbage(effect.cancelGarbage);
+      if (result.canceled > 0) labels.push(`GAUGE -${result.canceled}`);
+      else labels.push('GAUGE BLOCK');
+    }
+    if (effect.mana) {
+      result.mana = effect.mana;
+      this.mp = Math.min(100, this.mp + effect.mana);
+      labels.push(`MP +${effect.mana}`);
+    }
+    if (effect.purgeGarbageRows) {
+      result.purgedRows = this.purgeGarbageRows(effect.purgeGarbageRows);
+      if (result.purgedRows > 0) labels.push(`GARBAGE -${result.purgedRows}`);
+      else labels.push('PURGE READY');
+    }
+    result.triggered = labels.length > 0;
+    result.text = labels.join(' ');
     return result;
   }
 

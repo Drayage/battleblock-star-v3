@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260519-bomb3x3';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-bomb3x3';
-import { Deck } from './deck.js?v=20260519-bomb3x3';
-import { AI } from './ai.js?v=20260519-bomb3x3';
-import { Renderer } from './renderer.js?v=20260519-bomb3x3';
-import { InputController } from './input.js?v=20260519-bomb3x3';
-import { SKILLS } from './skills.js?v=20260519-bomb3x3';
-import { CONSUMABLES } from './consumables.js?v=20260519-bomb3x3';
+import { Board } from './board.js?v=20260519-instant1';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-instant1';
+import { Deck } from './deck.js?v=20260519-instant1';
+import { AI } from './ai.js?v=20260519-instant1';
+import { Renderer } from './renderer.js?v=20260519-instant1';
+import { InputController } from './input.js?v=20260519-instant1';
+import { SKILLS } from './skills.js?v=20260519-instant1';
+import { CONSUMABLES } from './consumables.js?v=20260519-instant1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260519-bomb3x3';
+} from './progression.js?v=20260519-instant1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -38,7 +38,11 @@ const CARD_DESCRIPTIONS = {
   CLEANSE_J: 'J shape that removes a garbage row when cleared.',
   HEAVY_JUNK: 'Five-cell burden shape. Awkward, mostly a deck tax.',
   POWER_CROSS: 'Five-cell cross shape with high-power cells.',
-  WIDE_JUNK: 'Six-cell wide burden. Clogs the deck with an awkward shape.'
+  WIDE_JUNK: 'Six-cell wide burden. Clogs the deck with an awkward shape.',
+  INSTANT_STRIKE: 'Awkward hook. On placement, immediately sends 1.2 attack; cells are normal afterward.',
+  INSTANT_GUARD: 'Awkward wide block. On placement, deletes up to 3 incoming attack gauge.',
+  INSTANT_MANA: 'Awkward cross. On placement, immediately restores 18 MP.',
+  INSTANT_PURGE: 'Awkward heavy shape. On placement, removes 1 existing garbage row.'
 };
 
 class Game {
@@ -919,6 +923,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260519-bomb3x3').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260519-instant1').catch(() => {});
   });
 }
