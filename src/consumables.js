@@ -1,32 +1,32 @@
 export const CONSUMABLES = {
   battery: {
     id: 'battery',
-    name: 'MP Battery',
+    name: 'MP 배터리',
     tier: 'bronze',
     short: 'B',
-    desc: 'Gain 35 MP immediately.',
+    desc: 'MP를 35 즉시 획득합니다.',
     use({ player }) {
       player.mp = Math.min(100, player.mp + 35);
-      return 'MP Battery used';
+      return 'MP 배터리 사용';
     }
   },
   shield: {
     id: 'shield',
-    name: 'Garbage Shield',
+    name: '쓰레기 방어막',
     tier: 'silver',
     short: 'S',
-    desc: 'Remove all pending incoming garbage.',
+    desc: '예정된 모든 쓰레기를 제거합니다.',
     use({ player }) {
       player.garbageQueue = 0;
-      return 'Garbage Shield used';
+      return '쓰레기 방어막 사용';
     }
   },
   bomb: {
     id: 'bomb',
-    name: 'Bottom Bomb',
+    name: '바닥 폭탄',
     tier: 'gold',
     short: 'X',
-    desc: 'Delete the lowest 2 occupied rows without damage.',
+    desc: '피해 없이 가장 낮은 점유 행 2줄을 삭제합니다.',
     use({ player }) {
       let removed = 0;
       for (let r = player.rows - 1; r >= 0 && removed < 2; r--) {
@@ -37,18 +37,18 @@ export const CONSUMABLES = {
           r++;
         }
       }
-      return 'Bottom Bomb used';
+      return '바닥 폭탄 사용';
     }
   },
   focus: {
     id: 'focus',
-    name: 'Focus Chip',
+    name: '집중 칩',
     tier: 'silver',
     short: 'F',
-    desc: 'Slow enemy actions for 10 seconds.',
+    desc: '10초 동안 적의 행동 속도를 늦춥니다.',
     use({ game }) {
       game.enemySlowTimer = Math.max(game.enemySlowTimer, 10000);
-      return 'Focus Chip used';
+      return '집중 칩 사용';
     }
   }
 };

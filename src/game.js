@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260519-starter-skill';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-starter-skill';
-import { Deck } from './deck.js?v=20260519-starter-skill';
-import { AI } from './ai.js?v=20260519-starter-skill';
-import { Renderer } from './renderer.js?v=20260519-starter-skill';
-import { InputController } from './input.js?v=20260519-starter-skill';
-import { SKILLS } from './skills.js?v=20260519-starter-skill';
-import { CONSUMABLES } from './consumables.js?v=20260519-starter-skill';
+import { Board } from './board.js?v=20260519-ko';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-ko';
+import { Deck } from './deck.js?v=20260519-ko';
+import { AI } from './ai.js?v=20260519-ko';
+import { Renderer } from './renderer.js?v=20260519-ko';
+import { InputController } from './input.js?v=20260519-ko';
+import { SKILLS } from './skills.js?v=20260519-ko';
+import { CONSUMABLES } from './consumables.js?v=20260519-ko';
 import {
   RunState,
   RELICS,
@@ -19,7 +19,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260519-starter-skill';
+} from './progression.js?v=20260519-ko';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -28,23 +28,23 @@ window.BBS_RELICS = RELICS;
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
 const CARD_DESCRIPTIONS = {
-  POWER_I: 'High-power cells. Each cleared cell deals 0.3 attack.',
-  POWER_T: 'T shape with high-power cells. Strong for T-spin style clears.',
-  POWER_S: 'S shape with high-power cells. Harder to place, stronger clears.',
-  CROSS: 'Five-cell cross. Awkward shape, higher clear value.',
-  BOMB: 'Clearing this block destroys nearby garbage.',
-  BOMB_I: 'I shape that also destroys nearby garbage when cleared.',
-  MANA_T: 'Cleared cells grant bonus MP.',
-  MANA_L: 'L shape that grants bonus MP when cleared.',
-  PURGE_O: 'Clearing this block removes a garbage row.',
-  CLEANSE_J: 'J shape that removes a garbage row when cleared.',
-  HEAVY_JUNK: 'Five-cell burden shape. Awkward, mostly a deck tax.',
-  POWER_CROSS: 'Five-cell cross shape with high-power cells.',
-  WIDE_JUNK: 'Six-cell wide burden. Clogs the deck with an awkward shape.',
-  INSTANT_STRIKE: 'Awkward hook. On placement, immediately sends 1.2 attack; cells are normal afterward.',
-  INSTANT_GUARD: 'Awkward wide block. On placement, deletes up to 3 incoming attack gauge.',
-  INSTANT_MANA: 'Awkward cross. On placement, immediately restores 18 MP.',
-  INSTANT_PURGE: 'Awkward heavy shape. On placement, removes 1 existing garbage row.'
+  POWER_I: '고출력 셀. 클리어된 셀당 0.3 공격력.',
+  POWER_T: '고출력 T형. T스핀 클리어에 강합니다.',
+  POWER_S: '고출력 S형. 배치가 까다롭지만 강력한 클리어.',
+  CROSS: '5칸 십자형. 배치가 어렵지만 클리어 가치가 높습니다.',
+  BOMB: '클리어 시 주변 쓰레기를 파괴합니다.',
+  BOMB_I: '클리어 시 주변 쓰레기를 파괴하는 I형.',
+  MANA_T: '클리어된 셀이 추가 MP를 제공합니다.',
+  MANA_L: '클리어 시 추가 MP를 제공하는 L형.',
+  PURGE_O: '클리어 시 쓰레기 행을 제거합니다.',
+  CLEANSE_J: '클리어 시 쓰레기 행을 제거하는 J형.',
+  HEAVY_JUNK: '5칸 방해형. 배치가 까다롭고 덱의 부담이 됩니다.',
+  POWER_CROSS: '고출력 5칸 십자형.',
+  WIDE_JUNK: '6칸 방해형. 까다로운 모양으로 덱을 막습니다.',
+  INSTANT_STRIKE: '배치 즉시 1.2 공격력을 발사합니다.',
+  INSTANT_GUARD: '배치 즉시 들어오는 공격 게이지를 최대 3 차단합니다.',
+  INSTANT_MANA: '배치 즉시 MP를 18 회복합니다.',
+  INSTANT_PURGE: '배치 즉시 쓰레기 행 1줄을 제거합니다.'
 };
 
 class Game {
@@ -111,7 +111,7 @@ class Game {
     document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
     document.getElementById('menuGold').textContent = this.run.gold;
     document.getElementById('menuHp').textContent = this.run.hpRows;
-    document.getElementById('menuDeck').textContent = `${this.run.deckCount()} cards`;
+    document.getElementById('menuDeck').textContent = `${this.run.deckCount()}장`;
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
@@ -122,11 +122,11 @@ class Game {
     const records = this.loadRecords();
     const best = records.reduce((top, r) => Math.max(top, r.round), 0);
     if (!records.length) {
-      el.innerHTML = '<span class="muted">No runs yet.</span>';
+      el.innerHTML = '<span class="muted">기록 없음.</span>';
       return;
     }
-    el.innerHTML = `<strong>Best round ${best}</strong>` + records.slice(0, 5).map(r =>
-      `<span>R${r.round} - ${r.gold}G - ${r.result}</span>`
+    el.innerHTML = `<strong>최고 기록 ${best}라운드</strong>` + records.slice(0, 5).map(r =>
+      `<span>${r.round}라운드 · ${r.gold}G · ${r.result === 'win' ? '승리' : '패배'}</span>`
     ).join('');
   }
 
@@ -147,8 +147,8 @@ class Game {
     if (isRunComplete(this.run)) return this.endRun(true);
     if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
-    document.getElementById('mapTitle').textContent = `Round ${this.run.round}`;
-    document.getElementById('mapMeta').textContent = `Gold ${this.run.gold} - HP ${this.run.hpRows} - Deck ${this.run.deckCount()}`;
+    document.getElementById('mapTitle').textContent = `${this.run.round}라운드`;
+    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
@@ -172,11 +172,11 @@ class Game {
     this.show('eventScreen');
     const completed = this.run.round - 1;
     if (eventKey === 'starter') {
-      document.getElementById('eventTitle').textContent = 'Choose Your Starting Skill';
-      document.getElementById('eventMeta').textContent = 'Pick one skill to start your run.';
+      document.getElementById('eventTitle').textContent = '시작 스킬 선택';
+      document.getElementById('eventMeta').textContent = '런을 시작할 스킬을 선택하세요.';
     } else {
-      document.getElementById('eventTitle').textContent = eventKey === 'start' ? 'Opening Event' : `After Round ${completed}`;
-      document.getElementById('eventMeta').textContent = `Gold ${this.run.gold} - HP ${this.run.hpRows} - choose one`;
+      document.getElementById('eventTitle').textContent = eventKey === 'start' ? '시작 이벤트' : `${completed}라운드 이후`;
+      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows} · 하나 선택`;
     }
     const wrap = document.getElementById('eventChoices');
     wrap.innerHTML = '';
@@ -187,7 +187,7 @@ class Game {
       console.warn('Event choices failed', err);
       choices = [];
     }
-    if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: 'Loose Gold', desc: 'Take a small gold pouch and move on.' }];
+    if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: '여분의 골드', desc: '소량의 골드를 가져갑니다.' }];
     for (const choice of choices) {
       const btn = document.createElement('button');
       btn.className = `choice event ${this.tierClass(choice.tier)}`;
@@ -212,15 +212,15 @@ class Game {
   }
 
   eventName(choice) {
-    if (choice.kind === 'removeCard') return `${choice.price}G - remove ${CARD_LIBRARY[choice.id].name}`;
-    if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} -> ${CARD_LIBRARY[choice.to].name}`;
-    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, add ${CARD_LIBRARY[choice.card].name}`;
+    if (choice.kind === 'removeCard') return `${choice.price}G · ${CARD_LIBRARY[choice.id].name} 제거`;
+    if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}`;
+    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
     if (choice.kind === 'skill') return SKILLS[choice.id].name;
-    if (choice.kind === 'starterSkill') return SKILLS[choice.id].name;
-    if (choice.kind === 'gold') return `Gain ${choice.amount}G`;
-    if (choice.kind === 'cleanup') return 'Clean carried garbage';
-    return 'Event';
+    if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
+    if (choice.kind === 'gold') return `${choice.amount}G 획득`;
+    if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
+    return '이벤트';
   }
 
   attachEventPreview(node, choice) {
@@ -280,8 +280,8 @@ class Game {
 
   showShop() {
     this.show('shopScreen');
-    document.getElementById('leaveShopBtn').textContent = 'Next Battle';
-    document.getElementById('shopGold').textContent = `Gold ${this.run.gold}`;
+    document.getElementById('leaveShopBtn').textContent = '다음 전투';
+    document.getElementById('shopGold').textContent = `골드 ${this.run.gold}`;
     const wrap = document.getElementById('shopItems');
     wrap.innerHTML = '';
     for (const item of makeShopItems(this.run)) {
@@ -325,7 +325,7 @@ class Game {
     relicWrap.innerHTML = '';
 
     if (!this.run.equippedSkills.length) {
-      skillWrap.innerHTML = '<span class="muted">No skills equipped.</span>';
+      skillWrap.innerHTML = '<span class="muted">장착된 스킬 없음.</span>';
     } else {
       this.run.equippedSkills.forEach((id, index) => {
         const skill = SKILLS[id];
@@ -338,7 +338,7 @@ class Game {
     }
 
     if (!this.run.consumables.length) {
-      consumableWrap.innerHTML = '<span class="muted">No consumables held.</span>';
+      consumableWrap.innerHTML = '<span class="muted">보유 소모품 없음.</span>';
     } else {
       this.run.consumables.forEach((id, index) => {
         const itemDef = CONSUMABLES[id];
@@ -351,7 +351,7 @@ class Game {
     }
 
     if (!this.run.relics.length) {
-      relicWrap.innerHTML = '<span class="muted">No relics owned.</span>';
+      relicWrap.innerHTML = '<span class="muted">보유 유물 없음.</span>';
     } else {
       this.run.relics.forEach(id => {
         const relic = RELICS[id];
@@ -367,12 +367,12 @@ class Game {
   itemDesc(item) {
     if (item.kind === 'card') {
       const card = CARD_LIBRARY[item.id];
-      return `${card.shapeName} + ${card.abilityName} (${card.cellCount} cells): ${CARD_DESCRIPTIONS[item.id] || 'Adds this shape and ability combo to your deck.'}`;
+      return `${card.shapeName} + ${card.abilityName} (${card.cellCount}칸): ${CARD_DESCRIPTIONS[item.id] || '이 블록을 덱에 추가합니다.'}`;
     }
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
     if (item.kind === 'relic') return RELICS[item.id].desc;
-    return `${item.amount} extra rows of survival space.`;
+    return `생존 공간 ${item.amount}줄 추가.`;
   }
 
   attachItemPreview(node, item) {
@@ -439,10 +439,10 @@ class Game {
     };
     if (this.run.equippedSkills.length < 3) return add(null);
     this.showSlotPicker({
-      title: `Equip ${SKILLS[id].name}`,
+      title: `${SKILLS[id].name} 장착`,
       desc: SKILLS[id].desc,
       slots: this.run.equippedSkills,
-      labels: slotId => SKILLS[slotId]?.name || 'Empty',
+      labels: slotId => SKILLS[slotId]?.name || '비어있음',
       onPick: add,
       onSkip: () => skipped(false)
     });
@@ -456,10 +456,10 @@ class Game {
     };
     if (this.run.consumables.length < 3) return add(null);
     this.showSlotPicker({
-      title: `Take ${CONSUMABLES[id].name}`,
+      title: `${CONSUMABLES[id].name} 획득`,
       desc: CONSUMABLES[id].desc,
       slots: this.run.consumables,
-      labels: slotId => CONSUMABLES[slotId]?.name || 'Empty',
+      labels: slotId => CONSUMABLES[slotId]?.name || '비어있음',
       onPick: add,
       onSkip: () => skipped(false)
     });
@@ -480,13 +480,14 @@ class Game {
     slots.slice(0, 3).forEach((slotId, index) => {
       const btn = document.createElement('button');
       btn.className = 'choice';
-      btn.innerHTML = `<strong>Slot ${index + 1}</strong><span>${labels(slotId)}</span>`;
+      btn.innerHTML = `<strong>슬롯 ${index + 1}</strong><span>${labels(slotId)}</span>`;
       btn.addEventListener('click', () => {
         overlay.classList.remove('active');
         onPick(index);
       });
       options.appendChild(btn);
     });
+    overlay.querySelector('[data-skip]').textContent = '건너뛰기';
     overlay.querySelector('[data-skip]').onclick = () => {
       overlay.classList.remove('active');
       onSkip();
@@ -513,8 +514,8 @@ class Game {
     this.paused = false;
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
-    this.message = 'Battle start';
-    document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
+    this.message = '전투 시작';
+    document.getElementById('battleTitle').textContent = `${this.run.round}라운드`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
     this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
@@ -526,8 +527,11 @@ class Game {
     const skillWrap = document.getElementById('touchSkills');
     skillWrap.innerHTML = '';
     this.run.equippedSkills.forEach((id, i) => {
+      const skill = SKILLS[id];
       const btn = document.createElement('button');
-      btn.textContent = `${i + 1}. ${SKILLS[id].name}`;
+      btn.dataset.skillId = id;
+      btn.dataset.skillIdx = i;
+      btn.innerHTML = `<span>${i + 1}. ${skill.name}</span><small>${skill.cost}MP</small>`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useSkill(i);
@@ -599,17 +603,17 @@ class Game {
     const skill = SKILLS[id];
     if (!skill || this.player.mp < skill.cost) return;
     if ((this.skillCooldowns[id] || 0) > 0) {
-      this.message = `${skill.name} cooling down`;
+      this.message = `${skill.name} 쿨타임`;
       return;
     }
     const ok = skill.activate({ game: this, player: this.player, enemy: this.enemy, resolve: (result, attacker) => this.resolve(result, attacker) }) !== false;
     if (!ok) {
-      this.message = `${skill.name} failed`;
+      this.message = `${skill.name} 실패`;
       return;
     }
     this.player.mp -= skill.cost;
     this.skillCooldowns[id] = skill.cooldown || 0;
-    this.message = `${skill.name} activated`;
+    this.message = `${skill.name} 발동`;
   }
 
   useConsumable(index) {
@@ -626,7 +630,7 @@ class Game {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
-    if (result.comboBreak && attacker === this.player) this.message = `Combo ${result.comboBreak} ended`;
+    if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
     }
@@ -650,7 +654,7 @@ class Game {
     this.battleEndResult = result;
     this.clearBattleTimeouts();
     this.battleEndDelay = result === 'win' ? GAME_TIMING.BATTLE_WIN_DELAY : GAME_TIMING.BATTLE_LOSS_DELAY;
-    this.message = result === 'win' ? 'Enemy defeated' : 'You were defeated';
+    this.message = result === 'win' ? '적 처치' : '전투 패배';
     this.autoSave();
   }
 
@@ -680,9 +684,9 @@ class Game {
 
   showRewards(rewards, grantedRelic = null) {
     this.show('mapScreen');
-    document.getElementById('mapTitle').textContent = `Round ${this.run.round} Clear`;
-    const relicText = grantedRelic ? ` - gained relic: ${RELICS[grantedRelic].name}` : '';
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold${relicText} - choose one reward`;
+    document.getElementById('mapTitle').textContent = `${this.run.round}라운드 클리어`;
+    const relicText = grantedRelic ? ` · 유물 획득: ${RELICS[grantedRelic].name}` : '';
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText} · 보상 선택`;
     document.getElementById('enemyChoices').innerHTML = '';
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
@@ -710,7 +714,7 @@ class Game {
     if (reward.kind === 'skill') return SKILLS[reward.id].name;
     if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
     if (reward.kind === 'relic') return RELICS[reward.id].name;
-    return `+${reward.amount} rows`;
+    return `HP +${reward.amount}줄`;
   }
 
   normalizePersistentGrid() {
@@ -745,7 +749,7 @@ class Game {
     document.getElementById('endScreen').classList.toggle('run-clear', win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
-    document.getElementById('endSummary').textContent = `Round ${Math.min(this.run.round, 20)} - Gold ${this.run.gold} - HP Rows ${this.run.hpRows}`;
+    document.getElementById('endSummary').textContent = `${Math.min(this.run.round, 20)}라운드 · 골드 ${this.run.gold} · HP ${this.run.hpRows}줄`;
   }
 
   saveRecord(win) {
@@ -861,8 +865,8 @@ class Game {
         this.battleEndResult = state.battle.battleEndResult || null;
         this.skillCooldowns = { ...(state.battle.skillCooldowns || {}) };
         this.paused = state.battle.paused ?? true;
-        this.message = state.battle.message || 'Loaded';
-        document.getElementById('battleTitle').textContent = `Round ${this.run.round}`;
+        this.message = state.battle.message || '불러옴';
+        document.getElementById('battleTitle').textContent = `${this.run.round}라운드`;
         document.getElementById('battleMeta').textContent = this.enemyCard?.name || 'Enemy';
         this.renderTouchSlots();
         this.renderer.resize(this.player.rows, this.enemy.rows);
@@ -905,8 +909,8 @@ class Game {
   togglePause() {
     if (!this.inBattle() || this.battleEndResult) return;
     this.paused = !this.paused;
-    document.getElementById('pauseBtn').textContent = this.paused ? 'Resume' : 'Pause';
-    this.message = this.paused ? 'Paused' : 'Resumed';
+    document.getElementById('pauseBtn').textContent = this.paused ? '재개' : '일시정지';
+    this.message = this.paused ? '일시정지' : '재개';
     this.autoSave();
   }
 
@@ -975,6 +979,7 @@ class Game {
       this.resolve(this.ai.step(this.enemy), this.enemy);
     }
     this.updateEnemyAbility(dt);
+    this.updateSkillButtons();
     if (this.enemy.defeated) this.queueBattleEnd('win');
     this.renderer.draw({
       player: this.player,
@@ -1010,6 +1015,20 @@ class Game {
     }
   }
 
+  updateSkillButtons() {
+    if (!this.player || this.player.defeated) return;
+    document.querySelectorAll('#touchSkills button[data-skill-id]').forEach(btn => {
+      const id = btn.dataset.skillId;
+      const skill = SKILLS[id];
+      if (!skill) return;
+      const cd = this.skillCooldowns[id] || 0;
+      const pct = cd > 0 ? 1 - cd / skill.cooldown : 1;
+      btn.style.setProperty('--cd-pct', pct.toFixed(3));
+      btn.classList.toggle('mp-ready', this.player.mp >= skill.cost && cd === 0);
+      btn.classList.toggle('on-cooldown', cd > 0);
+    });
+  }
+
   updateEnemyAbility(dt) {
     if (!this.enemyCard.ability) return;
     this.enemyAbilityTimer += dt;
@@ -1017,15 +1036,15 @@ class Game {
     this.enemyAbilityTimer = 0;
     if (this.enemyCard.ability === 'spike') {
       this.player.receiveGarbage(1);
-      this.message = `${this.enemyCard.name} spikes garbage`;
+      this.message = `${this.enemyCard.name} 쓰레기 급증`;
     }
     if (this.enemyCard.ability === 'slowPlayer') {
       this.playerSlowTimer = 3000;
-      this.message = `${this.enemyCard.name} slows gravity`;
+      this.message = `${this.enemyCard.name} 중력 둔화`;
     }
     if (this.enemyCard.ability === 'power') {
       this.player.receiveGarbage(2);
-      this.message = `${this.enemyCard.name} fires a power burst`;
+      this.message = `${this.enemyCard.name} 파워 폭발`;
     }
   }
 }
@@ -1034,6 +1053,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260519-starter-skill').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260519-ko').catch(() => {});
   });
 }
