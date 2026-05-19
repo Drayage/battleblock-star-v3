@@ -13,6 +13,7 @@ export const GAME_TIMING = {
   ENEMY_ABILITY_INTERVAL: 6500,
   BATTLE_WIN_DELAY: 1400,
   BATTLE_LOSS_DELAY: 1200,
+  BOMB_FX_FLASH: 520,
   CLEAR_FEEDBACK_FLASH: 1100,
   COMBO_BREAK_FLASH: 900,
   TOUCH_FIRST_DELAY: 240,
@@ -202,11 +203,11 @@ export const ABILITY_LIBRARY = {
   none: { id: 'none', name: 'No ability', cellAttack: 0.1, traits: [], desc: 'Standard tetromino cell.' },
   highPower: { id: 'highPower', name: 'High Power', cellAttack: 0.3, traits: ['highPower'], desc: 'Cleared cells deal 0.3 attack.' },
   oddPower: { id: 'oddPower', name: 'Odd Power', cellAttack: 0.16, traits: ['oddShape'], desc: 'Larger awkward shape with higher return.' },
-  bomb: { id: 'bomb', name: 'Bomb', cellAttack: 0.1, traits: ['bomb'], desc: 'Clearing this block destroys nearby garbage.' },
+  bomb: { id: 'bomb', name: 'Bomb', cellAttack: 0.1, traits: ['bomb'], desc: 'Clearing this block destroys nearby 2x2 blocks.' },
   manaBonus: { id: 'manaBonus', name: 'Mana', cellAttack: 0.1, traits: ['manaBonus'], desc: 'Cleared cells grant bonus MP.' },
   purgeGarbage: { id: 'purgeGarbage', name: 'Cleanse', cellAttack: 0.1, traits: ['purgeGarbage'], desc: 'Clearing this block removes a garbage row.' },
-  curse: { id: 'curse', name: 'Burden', cellAttack: 0.04, traits: ['curse'], desc: 'Awkward junk with weak attack.' },
-  wideCurse: { id: 'wideCurse', name: 'Wide Burden', cellAttack: 0.03, traits: ['curse', 'wide'], desc: 'Six-cell obstruction that clogs the deck.' }
+  curse: { id: 'curse', name: 'Burden', cellAttack: 0.1, traits: ['curse'], desc: 'Awkward junk shape that clogs the deck.' },
+  wideCurse: { id: 'wideCurse', name: 'Wide Burden', cellAttack: 0.1, traits: ['curse', 'wide'], desc: 'Six-cell obstruction that clogs the deck.' }
 };
 
 function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {

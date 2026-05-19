@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-garbtimer1';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-bombfx1';
 
 export class Renderer {
   constructor(canvas) {
@@ -121,6 +121,20 @@ export class Renderer {
     if (board.flash > 0) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
       ctx.fillRect(ox, oy, bw, bh);
+    }
+    for (const fx of board.bombFx || []) {
+      const alpha = Math.min(0.55, fx.timer / GAME_TIMING.BOMB_FX_FLASH);
+      const px = ox + fx.x * cs;
+      const py = oy + fx.y * cs;
+      ctx.fillStyle = `rgba(255,128,32,${alpha})`;
+      ctx.fillRect(px, py - cs, cs * 2, cs * 2);
+      ctx.strokeStyle = `rgba(255,220,120,${Math.min(1, alpha + 0.25)})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px + 1, py - cs + 1, cs * 2 - 2, cs * 2 - 2);
+      ctx.fillStyle = `rgba(255,245,180,${Math.min(0.75, alpha + 0.15)})`;
+      ctx.beginPath();
+      ctx.arc(px + cs, py, cs * (1.05 - alpha * 0.35), 0, Math.PI * 2);
+      ctx.fill();
     }
     if (board.combo >= 2 || board.comboBreakFlash > 0) {
       ctx.textAlign = 'center';

@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-garbtimer1';
-import { Deck } from './deck.js?v=20260519-garbtimer1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-bombfx1';
+import { Deck } from './deck.js?v=20260519-bombfx1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -72,6 +72,7 @@ export class Board {
     this.comboBreakFlash = 0;
     this.clearText = '';
     this.clearTextFlash = 0;
+    this.bombFx = [];
     this.defeated = false;
     this.lastAttack = 0;
     this.lastMoveWasRotate = false;
@@ -97,6 +98,7 @@ export class Board {
     board.comboBreakFlash = state.comboBreakFlash || 0;
     board.clearText = state.clearText || '';
     board.clearTextFlash = state.clearTextFlash || 0;
+    board.bombFx = (state.bombFx || []).map(fx => ({ ...fx }));
     board.defeated = !!state.defeated;
     board.lastAttack = state.lastAttack || 0;
     board.lastMoveWasRotate = !!state.lastMoveWasRotate;
@@ -269,12 +271,16 @@ export class Board {
     let attack = 0;
     let mana = 0;
     let bombRows = [];
+    let bombCells = [];
     let purge = false;
     for (let r = this.rows - 1; r >= 0; r--) {
       if (this.grid[r].every(Boolean)) {
         const row = this.grid[r];
         attack += row.reduce((sum, c) => sum + c.attack, 0);
         mana += row.length * 0.5 + row.filter(c => c.traits.includes('manaBonus')).length * 8;
+        row.forEach((c, x) => {
+          if (c.traits.includes('bomb')) bombCells.push({ x, y: r });
+        });
         if (row.some(c => c.traits.includes('bomb'))) bombRows.push(r);
         if (row.some(c => c.traits.includes('purgeGarbage'))) purge = true;
         this.grid.splice(r, 1);
@@ -283,9 +289,18 @@ export class Board {
         r++;
       }
     }
-    for (const r of bombRows) this.clearGarbageAround(r);
+    for (const { x, y } of bombCells) this.explodeBombAt(x, y);
     if (purge) this.purgeGarbageRows(1);
     return { cleared, attack: Number(attack.toFixed(2)), mana: Number(mana.toFixed(2)), bombRows, purge, tetris: false, tSpin: false };
+  }
+
+  explodeBombAt(x, y) {
+    this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH });
+    for (let r = Math.max(0, y - 1); r <= y; r++) {
+      for (let c = x; c <= Math.min(this.cols - 1, x + 1); c++) {
+        if (r >= 0 && r < this.rows) this.grid[r][c] = null;
+      }
+    }
   }
 
   clearLabel(result) {
@@ -327,6 +342,11 @@ export class Board {
 
   tickGarbage(dt) {
     for (const entry of this.garbageEntries) entry.timer = Math.max(0, entry.timer - dt);
+  }
+
+  tickEffects(dt) {
+    this.bombFx.forEach(fx => { fx.timer = Math.max(0, fx.timer - dt); });
+    this.bombFx = this.bombFx.filter(fx => fx.timer > 0);
   }
 
   readyGarbage() {
@@ -413,6 +433,7 @@ export class Board {
       comboBreakFlash: this.comboBreakFlash,
       clearText: this.clearText,
       clearTextFlash: this.clearTextFlash,
+      bombFx: this.bombFx.map(fx => ({ ...fx })),
       defeated: this.defeated,
       lastAttack: this.lastAttack,
       lastMoveWasRotate: this.lastMoveWasRotate,
