@@ -1179,6 +1179,8 @@ class Game {
       btn.classList.toggle('has-mp', this.player.mp >= skill.cost);
       btn.classList.toggle('mp-ready', this.player.mp >= skill.cost && cd === 0);
       btn.classList.toggle('on-cooldown', cd > 0);
+      const small = btn.querySelector('small');
+      if (small) small.textContent = cd > 0 ? `${(cd / 1000).toFixed(1)}s` : `${skill.cost}MP`;
     });
   }
 

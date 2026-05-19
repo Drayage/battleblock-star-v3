@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-ko';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-ko2';
 
 export class Renderer {
   constructor(canvas) {
