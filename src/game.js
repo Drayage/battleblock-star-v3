@@ -1043,7 +1043,13 @@ class Game {
   }
 
   currentAiPressure() {
-    return { hesitate: this.aiConfidenceHesitate(), focus: this.aiFocus() };
+    const confidence = this.aiConfidence();
+    const fatigue = Math.min(0.08, Math.floor(this.battleClearedLines / 12) * 0.015);
+    return {
+      mistake: Math.min(0.16, fatigue + confidence.mistake),
+      hesitate: confidence.hesitate,
+      focus: this.aiFocus()
+    };
   }
 
   aiFocus() {
@@ -1054,15 +1060,18 @@ class Game {
     return Math.min(1, danger / 5);
   }
 
-  aiConfidenceHesitate() {
-    if (!this.player || !this.enemy) return 0;
+  aiConfidence() {
+    if (!this.player || !this.enemy) return { mistake: 0, hesitate: 0 };
     const playerHeight = this.boardMaxHeight(this.player);
     const enemyHeight = this.boardMaxHeight(this.enemy);
     const playerPressure = playerHeight + this.player.garbageQueue * 0.75 + this.player.readyGarbage() * 1.1;
     const enemyComfort = Math.max(0, this.enemy.rows - enemyHeight - 9);
     const gap = playerPressure - enemyHeight;
-    if (playerPressure < this.player.rows * 0.48 || enemyComfort < 3 || gap < 4) return 0;
-    return Math.min(0.55, 0.1 + gap * 0.025 + enemyComfort * 0.02);
+    if (playerPressure < this.player.rows * 0.48 || enemyComfort < 3 || gap < 4) return { mistake: 0, hesitate: 0 };
+    return {
+      mistake: Math.min(0.09, 0.02 + gap * 0.006 + enemyComfort * 0.005),
+      hesitate: Math.min(0.55, 0.1 + gap * 0.025 + enemyComfort * 0.02)
+    };
   }
 
   boardMaxHeight(board) {

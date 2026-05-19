@@ -148,6 +148,7 @@ export class AI {
     this.mistakeGap = skill.mistakeGap || 12;
     this.hesitateRate = skill.hesitateRate || 0;
     this.confidenceHesitate = 0;
+    this.mistakePressure = 0;
     this.focus = 0;
     this.mistakeCooldown = 0;
     this.lastPieceSerial = null;
@@ -157,7 +158,8 @@ export class AI {
     this.lastPlanCard = null;
   }
 
-  setPressure({ hesitate = 0, focus = 0 } = {}) {
+  setPressure({ mistake = 0, hesitate = 0, focus = 0 } = {}) {
+    this.mistakePressure = mistake;
     this.confidenceHesitate = hesitate;
     this.focus = focus;
   }
@@ -229,7 +231,7 @@ export class AI {
     candidates.sort((a, b) => b.s - a.s);
     let best = candidates[0];
     if (!best) return;
-    const effectiveMistake = this.mistakeRate * (1 - this.focus);
+    const effectiveMistake = (this.mistakeRate + this.mistakePressure) * (1 - this.focus);
     if (this.mistakeCooldown === 0 && effectiveMistake > 0 && Math.random() < effectiveMistake) {
       const alt = this.pickSafeMistake(candidates);
       if (alt) {
