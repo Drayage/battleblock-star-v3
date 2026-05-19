@@ -267,12 +267,14 @@ assert.equal(RELICS.combo_amp.name, 'Combo Amplifier');
 const eventRun = new RunState();
 assert.equal(shouldShowEvent(eventRun), 'start');
 eventRun.deck.addCard(TYPES.HEAVY_JUNK);
-assert.equal(removableDeckCards(eventRun)[0], TYPES.HEAVY_JUNK);
+assert.equal(removableDeckCards(eventRun).includes(TYPES.HEAVY_JUNK), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.I && upgrade.to === TYPES.POWER_I), true);
+assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.to === TYPES.INSTANT_STRIKE || upgrade.to === TYPES.INSTANT_GUARD || upgrade.to === TYPES.INSTANT_MANA || upgrade.to === TYPES.INSTANT_PURGE), true);
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
 
 const baseRemoveRun = new RunState();
-assert.notEqual(removableDeckCards(baseRemoveRun)[0], TYPES.I);
+assert.equal(removableDeckCards(baseRemoveRun).length, BASE_TYPES.length);
+assert.equal(BASE_TYPES.every(id => removableDeckCards(baseRemoveRun).includes(id)), true);
 eventRun.seenEvents.add('start');
 assert.equal(shouldShowEvent(eventRun), null);
 eventRun.round = 3;

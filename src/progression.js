@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-instant1';
-import { Deck, shuffle } from './deck.js?v=20260519-instant1';
-import { SKILLS } from './skills.js?v=20260519-instant1';
-import { CONSUMABLES } from './consumables.js?v=20260519-instant1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-event-random1';
+import { Deck, shuffle } from './deck.js?v=20260519-event-random1';
+import { SKILLS } from './skills.js?v=20260519-event-random1';
+import { CONSUMABLES } from './consumables.js?v=20260519-event-random1';
 
 export const RELICS = {
   combo_amp: {
@@ -27,13 +27,13 @@ export const RELICS = {
 };
 
 export const BLOCK_UPGRADES = {
-  [TYPES.I]: TYPES.POWER_I,
-  [TYPES.J]: TYPES.CLEANSE_J,
-  [TYPES.L]: TYPES.MANA_L,
-  [TYPES.O]: TYPES.BOMB,
-  [TYPES.S]: TYPES.POWER_S,
-  [TYPES.T]: TYPES.POWER_T,
-  [TYPES.Z]: TYPES.MANA_T
+  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.INSTANT_STRIKE],
+  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.INSTANT_PURGE],
+  [TYPES.L]: [TYPES.MANA_L, TYPES.INSTANT_PURGE],
+  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.INSTANT_GUARD],
+  [TYPES.S]: [TYPES.POWER_S, TYPES.INSTANT_STRIKE],
+  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.INSTANT_MANA],
+  [TYPES.Z]: [TYPES.MANA_T, TYPES.INSTANT_GUARD]
 };
 
 export class RunState {
@@ -223,31 +223,17 @@ export function removableDeckCards(run) {
   for (const id of run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
   for (const id of run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
   for (const id of run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
-  return [...counts.keys()]
-    .filter(id => CARD_LIBRARY[id] && (run.deck.extraCards.includes(id) || BASE_TYPES.includes(id)))
-    .sort((a, b) => {
-      const score = id => {
-        const card = CARD_LIBRARY[id];
-        if (card.traits.includes('curse')) return 0;
-        if (run.deck.extraCards.includes(id) && card.rarity !== 'base') return 1;
-        if ([TYPES.S, TYPES.Z].includes(id)) return 2;
-        if ([TYPES.J, TYPES.L].includes(id)) return 3;
-        if ([TYPES.O, TYPES.T].includes(id)) return 4;
-        if (id === TYPES.I) return 5;
-        return 6;
-      };
-      return score(a) - score(b) || CARD_LIBRARY[a].name.localeCompare(CARD_LIBRARY[b].name);
-    });
+  return shuffle([...counts.keys()]
+    .filter(id => CARD_LIBRARY[id] && (run.deck.extraCards.includes(id) || BASE_TYPES.includes(id))));
 }
 
 export function upgradeDeckCards(run) {
   const counts = new Map();
   for (const id of run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
   for (const id of run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
-  return BASE_TYPES
+  return shuffle(BASE_TYPES
     .filter(id => (counts.get(id) || 0) > 0 && BLOCK_UPGRADES[id])
-    .map(id => ({ from: id, to: BLOCK_UPGRADES[id] }))
-    .sort((a, b) => CARD_LIBRARY[a.from].name.localeCompare(CARD_LIBRARY[b.from].name));
+    .flatMap(id => shuffle(BLOCK_UPGRADES[id]).map(to => ({ from: id, to }))));
 }
 
 export function applyReward(run, reward) {
