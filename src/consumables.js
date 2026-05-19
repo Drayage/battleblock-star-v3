@@ -45,9 +45,9 @@ export const CONSUMABLES = {
     name: 'Focus Chip',
     tier: 'silver',
     short: 'F',
-    desc: 'Slow enemy actions briefly.',
+    desc: 'Slow enemy actions for 15 seconds.',
     use({ game }) {
-      game.enemySlowTimer = Math.max(game.enemySlowTimer, 5000);
+      game.enemySlowTimer = Math.max(game.enemySlowTimer, 15000);
       return 'Focus Chip used';
     }
   }
