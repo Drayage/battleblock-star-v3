@@ -15,6 +15,7 @@ import {
   isShopRound,
   makeEnemyChoices,
   makeEventChoices,
+  makeStarterChoices,
   makeRewards,
   makeShopItems,
   shouldShowEvent
@@ -170,13 +171,18 @@ class Game {
   showEvent(eventKey) {
     this.show('eventScreen');
     const completed = this.run.round - 1;
-    document.getElementById('eventTitle').textContent = eventKey === 'start' ? 'Opening Event' : `After Round ${completed}`;
-    document.getElementById('eventMeta').textContent = `Gold ${this.run.gold} - HP ${this.run.hpRows} - choose one`;
+    if (eventKey === 'starter') {
+      document.getElementById('eventTitle').textContent = 'Choose Your Starting Skill';
+      document.getElementById('eventMeta').textContent = 'Pick one skill to start your run.';
+    } else {
+      document.getElementById('eventTitle').textContent = eventKey === 'start' ? 'Opening Event' : `After Round ${completed}`;
+      document.getElementById('eventMeta').textContent = `Gold ${this.run.gold} - HP ${this.run.hpRows} - choose one`;
+    }
     const wrap = document.getElementById('eventChoices');
     wrap.innerHTML = '';
     let choices = [];
     try {
-      choices = makeEventChoices(this.run, eventKey);
+      choices = eventKey === 'starter' ? makeStarterChoices() : makeEventChoices(this.run, eventKey);
     } catch (err) {
       console.warn('Event choices failed', err);
       choices = [];
@@ -211,6 +217,7 @@ class Game {
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, add ${CARD_LIBRARY[choice.card].name}`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
     if (choice.kind === 'skill') return SKILLS[choice.id].name;
+    if (choice.kind === 'starterSkill') return SKILLS[choice.id].name;
     if (choice.kind === 'gold') return `Gain ${choice.amount}G`;
     if (choice.kind === 'cleanup') return 'Clean carried garbage';
     return 'Event';
@@ -241,6 +248,7 @@ class Game {
     if (choice.kind === 'removeCard') return this.run.gold >= choice.price;
     if (choice.kind === 'upgradeCard') return true;
     if (choice.kind === 'skill') return !this.run.ownedSkills.includes(choice.id);
+    if (choice.kind === 'starterSkill') return true;
     if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
     return true;
   }
@@ -260,6 +268,10 @@ class Game {
       this.run.deck.addCard(choice.card);
     }
     if (choice.kind === 'skill') return this.acquireSkill(choice.id, done);
+    if (choice.kind === 'starterSkill') {
+      this.run.starterPicked = true;
+      return this.acquireSkill(choice.id, done);
+    }
     if (choice.kind === 'consumable') return this.acquireConsumable(choice.id, done);
     if (choice.kind === 'gold') this.run.gold += choice.amount;
     if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
@@ -767,7 +779,8 @@ class Game {
       consumables: [...this.run.consumables],
       relics: [...this.run.relics],
       visitedShops: [...this.run.visitedShops],
-      seenEvents: [...this.run.seenEvents]
+      seenEvents: [...this.run.seenEvents],
+      starterPicked: this.run.starterPicked
     };
   }
 
@@ -784,6 +797,7 @@ class Game {
     run.relics = [...(state.relics || [])];
     run.visitedShops = new Set(state.visitedShops || []);
     run.seenEvents = new Set(state.seenEvents || []);
+    run.starterPicked = state.starterPicked ?? false;
     return run;
   }
 

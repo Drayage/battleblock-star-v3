@@ -1,4 +1,41 @@
 export const SKILLS = {
+  minor_purge: {
+    id: 'minor_purge',
+    name: 'Minor Purge',
+    tier: 'bronze',
+    cost: 25,
+    cooldown: 4000,
+    desc: 'Remove the lowest 1 garbage row.',
+    activate({ player }) {
+      return player.purgeGarbageRows(1) > 0;
+    }
+  },
+  double_shot: {
+    id: 'double_shot',
+    name: 'Double Shot',
+    tier: 'bronze',
+    cost: 50,
+    cooldown: 5000,
+    desc: 'Your next line clear deals double attack.',
+    activate({ player }) {
+      if (!player.current || player.defeated) return false;
+      player.nextAttackDouble = true;
+      return true;
+    }
+  },
+  quick_cycle: {
+    id: 'quick_cycle',
+    name: 'Quick Cycle',
+    tier: 'bronze',
+    cost: 40,
+    cooldown: 4000,
+    desc: 'Discard the current block and draw the next one.',
+    activate({ player }) {
+      if (!player.current || player.defeated) return false;
+      player.spawn();
+      return true;
+    }
+  },
   emergency_shard: {
     id: 'emergency_shard',
     name: 'Emergency Shard',
