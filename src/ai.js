@@ -63,27 +63,53 @@ function scoreGrid(grid, cleared, profile) {
   return cleared * p.line + burst + ev.holes * p.hole + ev.totalHeight * p.height + ev.bump * p.bump + wellReward + ev.garbage * p.garbage + survival + spirePenalty + roughnessPenalty;
 }
 
-export function canReachCandidate(board, { x, rot, hold = false }) {
-  if (!board.current) return false;
-  const playCard = hold ? board.held || board.nextQueue[0] : board.current.card;
-  if (!playCard) return false;
-  const test = new Mino(playCard, hold ? 3 : board.current.x, board.current.y);
-  test.rot = hold ? 0 : board.current.rot;
-  if (!board.ok(test)) return false;
+function tryReachOrder(board, playCard, startX, startY, startRot, targetX, targetRot, rotateFirst) {
   const sim = Object.create(Object.getPrototypeOf(board));
   Object.assign(sim, board);
+  const test = new Mino(playCard, startX, startY);
+  test.rot = startRot;
+  if (!board.ok(test)) return null;
   sim.current = test;
-  const turns = (rot - test.rot + 4) % 4;
-  for (let i = 0; i < turns; i++) {
-    if (!sim.rotate(1)) return false;
+  const actions = [];
+  const turns = (targetRot - startRot + 4) % 4;
+  const doRotates = () => {
+    for (let i = 0; i < turns; i++) {
+      if (!sim.rotate(1)) return false;
+      actions.push('rotate');
+    }
+    return true;
+  };
+  const doMovesTo = toX => {
+    while (sim.current.x !== toX) {
+      const step = toX > sim.current.x ? 1 : -1;
+      if (!board.ok(sim.current, step, 0)) return false;
+      sim.current.x += step;
+      actions.push(step > 0 ? 'right' : 'left');
+    }
+    return true;
+  };
+  if (rotateFirst) {
+    if (!doRotates() || !doMovesTo(targetX)) return null;
+  } else {
+    if (!doMovesTo(targetX) || !doRotates() || !doMovesTo(targetX)) return null;
   }
-  const dx = x - sim.current.x;
-  const step = dx > 0 ? 1 : -1;
-  for (let i = 0; i < Math.abs(dx); i++) {
-    if (!board.ok(sim.current, step, 0)) return false;
-    sim.current.x += step;
-  }
-  return sim.current.x === x && sim.current.rot === rot;
+  if (sim.current.x !== targetX || sim.current.rot !== targetRot) return null;
+  return actions;
+}
+
+export function findReachPlan(board, { x, rot, hold = false }) {
+  if (!board.current) return null;
+  const playCard = hold ? board.held || board.nextQueue[0] : board.current.card;
+  if (!playCard) return null;
+  const startX = hold ? 3 : board.current.x;
+  const startY = board.current.y;
+  const startRot = hold ? 0 : board.current.rot;
+  return tryReachOrder(board, playCard, startX, startY, startRot, x, rot, true)
+    || tryReachOrder(board, playCard, startX, startY, startRot, x, rot, false);
+}
+
+export function canReachCandidate(board, target) {
+  return findReachPlan(board, target) !== null;
 }
 
 function simulate(board, mino, profile) {
@@ -150,7 +176,11 @@ export class AI {
 
   pickMistake(candidates) {
     if (candidates.length <= 1) return candidates[0];
-    const pool = candidates.slice(1, Math.min(candidates.length, 9));
+    const best = candidates[0].s;
+    const pool = candidates
+      .slice(1, Math.min(candidates.length, 6))
+      .filter(c => c.s > -1e8 && best - c.s < 18);
+    if (!pool.length) return candidates[0];
     const total = pool.reduce((sum, _, i) => sum + 1 / (i + 2), 0);
     let roll = Math.random() * total;
     for (let i = 0; i < pool.length; i++) {
@@ -174,9 +204,10 @@ export class AI {
         const m = new Mino(board.current.card, x, board.current.y);
         m.rot = rot;
         if (!board.ok(m)) continue;
-        if (!canReachCandidate(board, { x, rot, hold: false })) continue;
+        const path = findReachPlan(board, { x, rot, hold: false });
+        if (!path) continue;
         const s = simulate(board, m, this.profile) + noise();
-        candidates.push({ x, rot, hold: false, s });
+        candidates.push({ x, rot, hold: false, s, path });
       }
     }
     const canHoldThisPiece = !board.holdUsed && !board.holdLocked && this.lastHoldSerial !== board.pieceSerial;
@@ -188,9 +219,10 @@ export class AI {
             const m = new Mino(playCard, x, board.current.y);
             m.rot = rot;
             if (!board.ok(m)) continue;
-            if (!canReachCandidate(board, { x, rot, hold: true })) continue;
+            const path = findReachPlan(board, { x, rot, hold: true });
+            if (!path) continue;
             const s = simulate(board, m, this.profile) + noise();
-            candidates.push({ x, rot, hold: true, s });
+            candidates.push({ x, rot, hold: true, s, path });
           }
         }
       }
@@ -203,12 +235,7 @@ export class AI {
     if (!best) return;
     this.queue = [];
     if (best.hold) this.queue.push('hold');
-    const startRot = best.hold ? 0 : board.current.rot;
-    const startX = best.hold ? 3 : board.current.x;
-    const turns = (best.rot - startRot + 4) % 4;
-    for (let i = 0; i < turns; i++) this.queue.push('rotate');
-    const dx = best.x - startX;
-    for (let i = 0; i < Math.abs(dx); i++) this.queue.push(dx > 0 ? 'right' : 'left');
+    for (const action of best.path) this.queue.push(action);
     if (Math.random() < this.hesitateRate) this.queue.push('wait');
     this.queue.push('hard');
   }

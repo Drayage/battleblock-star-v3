@@ -1047,7 +1047,7 @@ class Game {
     const confidence = this.aiConfidenceMistake();
     return {
       mistake: fatigue + confidence,
-      noise: fatigue * 8 + confidence * 10,
+      noise: fatigue * 2 + confidence * 2.5,
       hold: fatigue * 1.2 + confidence * 1.35
     };
   }
