@@ -86,8 +86,11 @@ function simulate(board, mino, profile) {
 }
 
 export class AI {
-  constructor(profile = 'balanced') {
+  constructor(profile = 'balanced', skill = {}) {
     this.profile = profile;
+    this.mistakeRate = skill.mistakeRate || 0;
+    this.noise = skill.noise || 0;
+    this.hesitateRate = skill.hesitateRate || 0;
     this.queue = [];
     this.lastPlanCard = null;
   }
@@ -97,16 +100,15 @@ export class AI {
     const cardKey = `${board.current.card.id}-${board.current.x}-${board.current.y}-${board.held?.id || 'none'}`;
     if (this.queue.length && this.lastPlanCard === cardKey) return;
     this.lastPlanCard = cardKey;
-    const noise = () => this.profile === 'elite' ? Math.random() * 2 : 0;
-    let best = null;
-    let bestScore = -Infinity;
+    const noise = () => (this.profile === 'elite' ? Math.random() * 2 : 0) + Math.random() * this.noise;
+    const candidates = [];
     for (let rot = 0; rot < 4; rot++) {
       for (let x = -2; x < COLS + 2; x++) {
         const m = new Mino(board.current.card, x, board.current.y);
         m.rot = rot;
         if (!board.ok(m)) continue;
         const s = simulate(board, m, this.profile) + noise();
-        if (s > bestScore) { bestScore = s; best = { x, rot, hold: false }; }
+        candidates.push({ x, rot, hold: false, s });
       }
     }
     if (!board.holdUsed && !board.holdLocked) {
@@ -118,11 +120,14 @@ export class AI {
             m.rot = rot;
             if (!board.ok(m)) continue;
             const s = simulate(board, m, this.profile) + noise();
-            if (s > bestScore) { bestScore = s; best = { x, rot, hold: true }; }
+            candidates.push({ x, rot, hold: true, s });
           }
         }
       }
     }
+    candidates.sort((a, b) => b.s - a.s);
+    const mistakeWindow = Math.min(candidates.length - 1, 2 + Math.floor(Math.random() * 7));
+    const best = Math.random() < this.mistakeRate ? candidates[Math.max(0, mistakeWindow)] : candidates[0];
     if (!best) return;
     this.queue = [];
     if (best.hold) this.queue.push('hold');
@@ -132,6 +137,7 @@ export class AI {
     for (let i = 0; i < turns; i++) this.queue.push('rotate');
     const dx = best.x - startX;
     for (let i = 0; i < Math.abs(dx); i++) this.queue.push(dx > 0 ? 'right' : 'left');
+    if (Math.random() < this.hesitateRate) this.queue.push('wait');
     this.queue.push('hard');
   }
 
@@ -142,6 +148,7 @@ export class AI {
     if (action === 'right') { board.move(1, 0); return null; }
     if (action === 'rotate') { board.rotate(1); return null; }
     if (action === 'hold') { board.hold(); return null; }
+    if (action === 'wait') return null;
     if (action === 'hard') return board.hardDrop();
     if (board.current && !board.defeated) return board.hardDrop();
     return null;

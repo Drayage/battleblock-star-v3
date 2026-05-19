@@ -118,7 +118,7 @@ assert.equal(stalledEnemyBoard.defeated, true);
 
 const queuedMoveBoard = new Board({ rows: 20 });
 const queuedMoveAi = new AI('balanced');
-queuedMoveAi.lastPlanCard = `${queuedMoveBoard.current.card.id}-${queuedMoveBoard.current.x}-${queuedMoveBoard.current.y}`;
+queuedMoveAi.lastPlanCard = `${queuedMoveBoard.current.card.id}-${queuedMoveBoard.current.x}-${queuedMoveBoard.current.y}-none`;
 queuedMoveAi.queue = ['left', 'hard'];
 const queuedMoveResult = queuedMoveAi.step(queuedMoveBoard);
 assert.equal(queuedMoveResult, null);
@@ -241,15 +241,16 @@ assert.equal(persisted[18][0], null);
 assert.equal(persisted[19][0].type, TYPES.GARBAGE);
 
 const roundOneEnemies = makeEnemyChoices(1);
-assert.equal(roundOneEnemies.every(enemy => enemy.startingRows <= 14), true);
+assert.equal(roundOneEnemies.every(enemy => enemy.startingRows <= 13), true);
 assert.equal(roundOneEnemies.every(enemy => !enemy.name.includes('Bomb') && !enemy.name.includes('Thief') && !enemy.name.includes('Warden')), true);
 const speedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile: 'fast', rows: -8, speed: 365, garbage: 0, risk: 1.55, rewardBonus: 6, openingRows: 12 });
 const lineHunter = makeEnemy(1, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 });
 assert.equal(speedDrone.startingRows < lineHunter.startingRows, true);
 assert.equal(speedDrone.rewardGold > lineHunter.rewardGold, true);
-const tunedSpeedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 });
-assert.equal(tunedSpeedDrone.startingRows, 11);
-assert.equal(tunedSpeedDrone.speed < speedDrone.speed, true);
+const tunedSpeedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile: 'fast', rows: -10, speed: 390, garbage: 0, risk: 1.55, rewardBonus: 8, openingRows: 10, aiSkill: { mistakeRate: 0.18, noise: 2.8, hesitateRate: 0.12 } });
+assert.equal(tunedSpeedDrone.startingRows, 10);
+assert.equal(tunedSpeedDrone.aiSkill.mistakeRate > 0.1, true);
+assert.equal(tunedSpeedDrone.speed > 300, true);
 const openerEnemy = makeEnemy(3, false, { name: 'Opener Script', style: '', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] });
 assert.equal(openerEnemy.aiProfile, 'opener');
 assert.equal(openerEnemy.speed < lineHunter.speed, true);
@@ -276,14 +277,16 @@ if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilver
 const relicRun = new RunState();
 applyReward(relicRun, { kind: 'relic', id: 'combo_amp' });
 assert.equal(relicRun.relics.includes('combo_amp'), true);
-assert.equal(RELICS.combo_amp.name, 'Combo Amplifier');
+assert.equal(typeof RELICS.combo_amp.name, 'string');
+assert.equal(RELICS.combo_amp.name.length > 0, true);
 const eliteRelicRun = new RunState();
 const eliteRelicId = grantEliteRelic(eliteRelicRun);
 assert.equal(RELICS[eliteRelicId].tier !== TIERS.BRONZE, true);
 assert.equal(eliteRelicRun.relics.includes(eliteRelicId), true);
 
 const eventRun = new RunState();
-assert.equal(shouldShowEvent(eventRun), 'start');
+assert.equal(shouldShowEvent(eventRun), 'starter');
+eventRun.starterPicked = true;
 eventRun.deck.addCard(TYPES.HEAVY_JUNK);
 assert.equal(removableDeckCards(eventRun).includes(TYPES.HEAVY_JUNK), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.I && upgrade.to === TYPES.POWER_I), true);

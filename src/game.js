@@ -502,7 +502,7 @@ class Game {
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
     if (this.run.relics.includes('hold_cache') && !this.player.held) this.player.mp = Math.min(100, this.player.mp + 15);
-    this.ai = new AI(enemyCard.aiProfile);
+    this.ai = new AI(enemyCard.aiProfile, enemyCard.aiSkill);
     this.fallTimer = 0;
     this.lockTimer = 0;
     this.lockResets = 0;
@@ -851,7 +851,7 @@ class Game {
         this.player = Board.fromState(state.battle.player);
         this.enemy = Board.fromState(state.battle.enemy);
         this.enemyCard = state.battle.enemyCard;
-        this.ai = new AI(this.enemyCard?.aiProfile || 'balanced');
+        this.ai = new AI(this.enemyCard?.aiProfile || 'balanced', this.enemyCard?.aiSkill);
         this.fallTimer = state.battle.fallTimer || 0;
         this.lockTimer = state.battle.lockTimer || 0;
         this.lockResets = state.battle.lockResets || 0;
