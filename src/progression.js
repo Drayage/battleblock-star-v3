@@ -66,6 +66,7 @@ export class RunState {
     this.consumables = [];
     this.relics = [];
     this.visitedShops = new Set();
+    this.shopStock = {};
     this.seenEvents = new Set();
     this.starterPicked = false;
   }
@@ -218,6 +219,8 @@ export function makeRewards(pool = 'normal') {
 }
 
 export function makeShopItems(run) {
+  const key = String(run.round);
+  if (run.shopStock?.[key]?.items) return run.shopStock[key].items;
   const tier = roundTier(run.round);
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
     .filter(card => card.tier && card.rarity !== 'base' && card.rarity !== 'curse')
@@ -232,13 +235,19 @@ export function makeShopItems(run) {
   const consumable = pickByTier(CONSUMABLES, tier);
   const relic = pickByTier(RELICS, tier, { exclude: run.relics });
   const hpTier = tier;
-  return [
+  const items = [
     ...cardItems.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: `Buy ${CARD_LIBRARY[id].name}`, price: shopPrice('card', CARD_LIBRARY[id].tier) })),
     { kind: 'hp', amount: 5, tier: hpTier, title: 'Max HP +5 rows', price: shopPrice('hp', hpTier) },
     ...(skill ? [{ kind: 'skill', id: skill.id, tier: skill.tier, title: `Skill: ${SKILLS[skill.id].name}`, price: shopPrice('skill', skill.tier) }] : []),
     ...(relic ? [{ kind: 'relic', id: relic.id, tier: relic.tier, title: `Relic: ${RELICS[relic.id].name}`, price: shopPrice('relic', relic.tier) }] : []),
     { kind: 'consumable', id: consumable.id, tier: consumable.tier, title: `Consumable: ${CONSUMABLES[consumable.id].name}`, price: shopPrice('consumable', consumable.tier) }
   ];
+  if (run.shopStock) run.shopStock[key] = { items, sold: [] };
+  return items;
+}
+
+export function shopItemKey(item) {
+  return `${item.kind}:${item.id || item.amount || 'slot'}:${item.tier || 'base'}`;
 }
 
 export function shouldShowEvent(run) {

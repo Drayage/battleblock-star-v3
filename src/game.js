@@ -18,6 +18,7 @@ import {
   makeStarterChoices,
   makeRewards,
   makeShopItems,
+  shopItemKey,
   shouldShowEvent
 } from './progression.js?v=20260519-ko';
 
@@ -284,12 +285,15 @@ class Game {
     document.getElementById('shopGold').textContent = `골드 ${this.run.gold}`;
     const wrap = document.getElementById('shopItems');
     wrap.innerHTML = '';
+    const shopKey = String(this.run.round);
+    const sold = new Set(this.run.shopStock?.[shopKey]?.sold || []);
     for (const item of makeShopItems(this.run)) {
+      const soldOut = sold.has(shopItemKey(item));
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${item.title}</strong><span>${item.price} Gold</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${item.price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
-      btn.disabled = this.run.gold < item.price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
+      btn.disabled = soldOut || this.run.gold < item.price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
         if (btn.disabled || this.run.gold < item.price) return;
         this.buyShopItem(item);
@@ -419,6 +423,11 @@ class Game {
     const finish = accepted => {
       if (!accepted) return;
       this.run.gold -= item.price;
+      const shopKey = String(this.run.round);
+      if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [] };
+      const sold = this.run.shopStock[shopKey].sold;
+      const key = shopItemKey(item);
+      if (!sold.includes(key)) sold.push(key);
       this.normalizePersistentGrid();
       this.showShop();
       this.autoSave();
@@ -783,6 +792,7 @@ class Game {
       consumables: [...this.run.consumables],
       relics: [...this.run.relics],
       visitedShops: [...this.run.visitedShops],
+      shopStock: this.run.shopStock,
       seenEvents: [...this.run.seenEvents],
       starterPicked: this.run.starterPicked
     };
@@ -800,6 +810,7 @@ class Game {
     run.consumables = [...(state.consumables || [])];
     run.relics = [...(state.relics || [])];
     run.visitedShops = new Set(state.visitedShops || []);
+    run.shopStock = state.shopStock || {};
     run.seenEvents = new Set(state.seenEvents || []);
     run.starterPicked = state.starterPicked ?? false;
     return run;

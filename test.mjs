@@ -5,7 +5,7 @@ import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, grantEliteRelic, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, grantEliteRelic, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -273,6 +273,10 @@ const shopItems = makeShopItems(shopRun);
 const shopGoldCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.GOLD);
 const shopSilverCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.SILVER);
 if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilverCard.price, true);
+const secondShopItems = makeShopItems(shopRun);
+assert.deepEqual(secondShopItems, shopItems);
+shopRun.shopStock[String(shopRun.round)].sold.push(shopItemKey(shopItems[0]));
+assert.equal(shopRun.shopStock[String(shopRun.round)].sold.includes(shopItemKey(shopItems[0])), true);
 
 const relicRun = new RunState();
 applyReward(relicRun, { kind: 'relic', id: 'combo_amp' });
