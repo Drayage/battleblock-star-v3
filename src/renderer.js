@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-bombfx1';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-bomb3x3';
 
 export class Renderer {
   constructor(canvas) {
@@ -127,13 +127,13 @@ export class Renderer {
       const px = ox + fx.x * cs;
       const py = oy + fx.y * cs;
       ctx.fillStyle = `rgba(255,128,32,${alpha})`;
-      ctx.fillRect(px, py - cs, cs * 2, cs * 2);
+      ctx.fillRect(px - cs, py - cs, cs * 3, cs * 3);
       ctx.strokeStyle = `rgba(255,220,120,${Math.min(1, alpha + 0.25)})`;
       ctx.lineWidth = 2;
-      ctx.strokeRect(px + 1, py - cs + 1, cs * 2 - 2, cs * 2 - 2);
+      ctx.strokeRect(px - cs + 1, py - cs + 1, cs * 3 - 2, cs * 3 - 2);
       ctx.fillStyle = `rgba(255,245,180,${Math.min(0.75, alpha + 0.15)})`;
       ctx.beginPath();
-      ctx.arc(px + cs, py, cs * (1.05 - alpha * 0.35), 0, Math.PI * 2);
+      ctx.arc(px + cs * 0.5, py + cs * 0.5, cs * (1.35 - alpha * 0.35), 0, Math.PI * 2);
       ctx.fill();
     }
     if (board.combo >= 2 || board.comboBreakFlash > 0) {

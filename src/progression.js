@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-bombfx1';
-import { Deck, shuffle } from './deck.js?v=20260519-bombfx1';
-import { SKILLS } from './skills.js?v=20260519-bombfx1';
-import { CONSUMABLES } from './consumables.js?v=20260519-bombfx1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TYPES } from './constants.js?v=20260519-bomb3x3';
+import { Deck, shuffle } from './deck.js?v=20260519-bomb3x3';
+import { SKILLS } from './skills.js?v=20260519-bomb3x3';
+import { CONSUMABLES } from './consumables.js?v=20260519-bomb3x3';
 
 export const RELICS = {
   combo_amp: {

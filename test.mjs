@@ -25,13 +25,17 @@ assert.equal(CARD_LIBRARY[TYPES.HEAVY_JUNK].cellAttack, 0.1);
 assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellAttack, 0.1);
 
 const bombBoard = new Board({ rows: 20 });
+bombBoard.grid[18][3] = { type: TYPES.I, attack: 0.1, traits: [] };
 bombBoard.grid[18][4] = { type: TYPES.I, attack: 0.1, traits: [] };
 bombBoard.grid[18][5] = { type: TYPES.I, attack: 0.1, traits: [] };
+bombBoard.grid[18][6] = { type: TYPES.I, attack: 0.1, traits: [] };
 bombBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
 const bombClear = bombBoard.clearLines();
 assert.equal(bombClear.cleared, 1);
+assert.equal(bombBoard.grid[19][3], null);
 assert.equal(bombBoard.grid[19][4], null);
 assert.equal(bombBoard.grid[19][5], null);
+assert.notEqual(bombBoard.grid[19][6], null);
 assert.equal(bombBoard.bombFx.length, 1);
 
 const garbageBoard = new Board({ rows: 20 });

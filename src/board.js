@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-bombfx1';
-import { Deck } from './deck.js?v=20260519-bombfx1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-bomb3x3';
+import { Deck } from './deck.js?v=20260519-bomb3x3';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -296,8 +296,8 @@ export class Board {
 
   explodeBombAt(x, y) {
     this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH });
-    for (let r = Math.max(0, y - 1); r <= y; r++) {
-      for (let c = x; c <= Math.min(this.cols - 1, x + 1); c++) {
+    for (let r = Math.max(0, y - 1); r <= Math.min(this.rows - 1, y + 1); r++) {
+      for (let c = Math.max(0, x - 1); c <= Math.min(this.cols - 1, x + 1); c++) {
         if (r >= 0 && r < this.rows) this.grid[r][c] = null;
       }
     }
