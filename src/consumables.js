@@ -2,6 +2,7 @@ export const CONSUMABLES = {
   battery: {
     id: 'battery',
     name: 'MP Battery',
+    tier: 'bronze',
     short: 'B',
     desc: 'Gain 35 MP immediately.',
     use({ player }) {
@@ -12,6 +13,7 @@ export const CONSUMABLES = {
   shield: {
     id: 'shield',
     name: 'Garbage Shield',
+    tier: 'silver',
     short: 'S',
     desc: 'Remove all pending incoming garbage.',
     use({ player }) {
@@ -22,6 +24,7 @@ export const CONSUMABLES = {
   bomb: {
     id: 'bomb',
     name: 'Bottom Bomb',
+    tier: 'gold',
     short: 'X',
     desc: 'Delete the lowest 2 occupied rows without damage.',
     use({ player }) {
@@ -40,6 +43,7 @@ export const CONSUMABLES = {
   focus: {
     id: 'focus',
     name: 'Focus Chip',
+    tier: 'silver',
     short: 'F',
     desc: 'Slow enemy actions briefly.',
     use({ game }) {

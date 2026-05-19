@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { CARD_LIBRARY, BASE_TYPES, TYPES } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, grantEliteRelic, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -144,6 +144,8 @@ assert.equal(expandedBoard.defeated, false);
 
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].shapeId, 'CROSS5');
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].abilityId, 'highPower');
+assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].tier, TIERS.GOLD);
+assert.equal(CARD_LIBRARY[TYPES.MANA_T].tier, TIERS.SILVER);
 assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
 assert.equal(CARD_LIBRARY[TYPES.POWER_T].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.BOMB_I].shapeId, 'I');
@@ -251,18 +253,33 @@ assert.equal(tunedSpeedDrone.speed < speedDrone.speed, true);
 const openerEnemy = makeEnemy(3, false, { name: 'Opener Script', style: '', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] });
 assert.equal(openerEnemy.aiProfile, 'opener');
 assert.equal(openerEnemy.speed < lineHunter.speed, true);
-const strideEnemy = makeEnemy(6, false, { name: 'Stride Engine', style: '', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] });
+const strideEnemy = makeEnemy(6, false, { name: 'Stride Engine', tier: TIERS.GOLD, style: '', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] });
 assert.equal(strideEnemy.aiProfile, 'stride');
 assert.equal(strideEnemy.rewardGold > lineHunter.rewardGold, true);
+assert.equal(strideEnemy.tier, TIERS.GOLD);
 assert.equal(makeEnemy(6, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows > makeEnemy(5, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows, true);
 assert.equal(makeEnemy(11, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage > makeEnemy(10, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage, true);
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
-assert.equal(makeRewards('elite').some(reward => reward.kind === 'relic'), true);
+assert.equal(makeRewards('elite').some(reward => reward.kind === 'relic' && reward.tier !== TIERS.BRONZE), true);
+assert.equal(Object.values(SKILLS).every(skill => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(skill.tier)), true);
+assert.equal(Object.values(CONSUMABLES).every(item => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(item.tier)), true);
+assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(relic.tier)), true);
+
+const shopRun = new RunState();
+shopRun.round = 12;
+const shopItems = makeShopItems(shopRun);
+const shopGoldCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.GOLD);
+const shopSilverCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.SILVER);
+if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilverCard.price, true);
 
 const relicRun = new RunState();
 applyReward(relicRun, { kind: 'relic', id: 'combo_amp' });
 assert.equal(relicRun.relics.includes('combo_amp'), true);
 assert.equal(RELICS.combo_amp.name, 'Combo Amplifier');
+const eliteRelicRun = new RunState();
+const eliteRelicId = grantEliteRelic(eliteRelicRun);
+assert.equal(RELICS[eliteRelicId].tier !== TIERS.BRONZE, true);
+assert.equal(eliteRelicRun.relics.includes(eliteRelicId), true);
 
 const eventRun = new RunState();
 assert.equal(shouldShowEvent(eventRun), 'start');
@@ -272,6 +289,7 @@ assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.I
 assert.equal(upgradeDeckCards(eventRun).every(upgrade => CARD_LIBRARY[upgrade.from].shapeId === CARD_LIBRARY[upgrade.to].shapeId), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O && upgrade.to === TYPES.PURGE_O), true);
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
+assert.equal(makeEventChoices(eventRun, 'start').every(choice => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(choice.tier)), true);
 
 const baseRemoveRun = new RunState();
 assert.equal(removableDeckCards(baseRemoveRun).length, BASE_TYPES.length);

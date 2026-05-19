@@ -1,10 +1,11 @@
 export const SKILLS = {
   emergency_shard: {
     id: 'emergency_shard',
-    name: '긴급 하강',
+    name: 'Emergency Shard',
+    tier: 'bronze',
     cost: 25,
     cooldown: 2500,
-    desc: '현재 블록을 1x1 조각으로 압축해 즉시 드롭합니다.',
+    desc: 'Compress the current block into a 1x1 shard and place it immediately.',
     activate({ player, resolve }) {
       const result = player.emergencyShard();
       if (!result) return false;
@@ -14,20 +15,22 @@ export const SKILLS = {
   },
   purge: {
     id: 'purge',
-    name: '정화',
+    name: 'Purge',
+    tier: 'silver',
     cost: 55,
     cooldown: 4500,
-    desc: '필드 하단 방해 줄 3개를 피해 없이 제거합니다.',
+    desc: 'Remove the lowest 3 garbage rows without dealing damage.',
     activate({ player }) {
       return player.purgeGarbageRows(3) > 0;
     }
   },
   time_warp: {
     id: 'time_warp',
-    name: '시간 왜곡',
+    name: 'Time Warp',
+    tier: 'silver',
     cost: 40,
     cooldown: 6000,
-    desc: '4초 동안 적 AI 갱신 속도를 늦춥니다.',
+    desc: 'Slow enemy AI actions for 4 seconds.',
     activate({ game }) {
       game.enemySlowTimer = 4000;
       return true;
@@ -35,10 +38,11 @@ export const SKILLS = {
   },
   magnetic_collapse: {
     id: 'magnetic_collapse',
-    name: '자기 붕괴',
+    name: 'Magnetic Collapse',
+    tier: 'gold',
     cost: 70,
     cooldown: 5000,
-    desc: '내 필드의 모든 블록을 아래로 압축합니다.',
+    desc: 'Drop every block in your field straight downward.',
     activate({ player }) {
       player.magneticCollapse();
       return true;
@@ -46,10 +50,11 @@ export const SKILLS = {
   },
   hold_lock: {
     id: 'hold_lock',
-    name: '홀드 잠금',
+    name: 'Hold Lock',
+    tier: 'bronze',
     cost: 30,
     cooldown: 6500,
-    desc: '5초 동안 적 홀드를 봉인합니다.',
+    desc: 'Lock the enemy hold slot for 5 seconds.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;
       game.scheduleBattleTimeout(() => {

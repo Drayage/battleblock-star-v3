@@ -1,23 +1,25 @@
-import { Board } from './board.js?v=20260519-same-shape1';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-same-shape1';
-import { Deck } from './deck.js?v=20260519-same-shape1';
-import { AI } from './ai.js?v=20260519-same-shape1';
-import { Renderer } from './renderer.js?v=20260519-same-shape1';
-import { InputController } from './input.js?v=20260519-same-shape1';
-import { SKILLS } from './skills.js?v=20260519-same-shape1';
-import { CONSUMABLES } from './consumables.js?v=20260519-same-shape1';
+import { Board } from './board.js?v=20260519-tier1';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-tier1';
+import { Deck } from './deck.js?v=20260519-tier1';
+import { AI } from './ai.js?v=20260519-tier1';
+import { Renderer } from './renderer.js?v=20260519-tier1';
+import { InputController } from './input.js?v=20260519-tier1';
+import { SKILLS } from './skills.js?v=20260519-tier1';
+import { CONSUMABLES } from './consumables.js?v=20260519-tier1';
 import {
   RunState,
   RELICS,
   applyReward,
+  grantEliteRelic,
   isRunComplete,
   isShopRound,
   makeEnemyChoices,
   makeEventChoices,
   makeRewards,
   makeShopItems,
-  shouldShowEvent
-} from './progression.js?v=20260519-same-shape1';
+  shouldShowEvent,
+  tierLabel
+} from './progression.js?v=20260519-tier1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -157,7 +159,7 @@ class Game {
       btn.className = `choice ${enemy.type}`;
       btn.innerHTML = `
         <strong>${enemy.name}</strong>
-        <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
+        <span>${enemy.type.toUpperCase()} - ${tierLabel(enemy.tier)} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
       `;
@@ -184,7 +186,7 @@ class Game {
     for (const choice of choices) {
       const btn = document.createElement('button');
       btn.className = 'choice event';
-      btn.innerHTML = `<strong>${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      btn.innerHTML = `<strong>${choice.title}</strong><span>${tierLabel(choice.tier)} - ${this.eventName(choice)}</span><small>${choice.desc}</small>`;
       try {
         this.attachEventPreview(btn, choice);
       } catch {
@@ -264,7 +266,7 @@ class Game {
     for (const item of makeShopItems(this.run)) {
       const btn = document.createElement('button');
       btn.className = 'choice shop';
-      btn.innerHTML = `<strong>${item.title}</strong><span>${item.price} Gold</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${item.title}</strong><span>${tierLabel(item.tier)} - ${item.price} Gold</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = this.run.gold < item.price || (item.kind === 'consumable' && this.run.consumables.length >= 3);
       btn.addEventListener('click', () => {
@@ -348,11 +350,11 @@ class Game {
   itemDesc(item) {
     if (item.kind === 'card') {
       const card = CARD_LIBRARY[item.id];
-      return `${card.shapeName} + ${card.abilityName} (${card.cellCount} cells): ${CARD_DESCRIPTIONS[item.id] || 'Adds this shape and ability combo to your deck.'}`;
+      return `${tierLabel(card.tier)} - ${card.shapeName} + ${card.abilityName} (${card.cellCount} cells): ${CARD_DESCRIPTIONS[item.id] || 'Adds this shape and ability combo to your deck.'}`;
     }
-    if (item.kind === 'skill') return SKILLS[item.id].desc;
-    if (item.kind === 'consumable') return CONSUMABLES[item.id].desc;
-    if (item.kind === 'relic') return RELICS[item.id].desc;
+    if (item.kind === 'skill') return `${tierLabel(SKILLS[item.id].tier)} - ${SKILLS[item.id].desc}`;
+    if (item.kind === 'consumable') return `${tierLabel(CONSUMABLES[item.id].tier)} - ${CONSUMABLES[item.id].desc}`;
+    if (item.kind === 'relic') return `${tierLabel(RELICS[item.id].tier)} - ${RELICS[item.id].desc}`;
     return `${item.amount} extra rows of survival space.`;
   }
 
@@ -563,17 +565,19 @@ class Game {
 
   winBattle() {
     this.run.gold += this.enemyCard.rewardGold;
+    const relicId = this.enemyCard.type === 'elite' ? grantEliteRelic(this.run) : null;
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
-    this.showRewards(makeRewards(this.enemyCard.rewardPool));
+    this.showRewards(makeRewards(this.enemyCard.rewardPool), relicId);
     this.autoSave();
   }
 
-  showRewards(rewards) {
+  showRewards(rewards, grantedRelic = null) {
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `Round ${this.run.round} Clear`;
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold - choose one reward`;
+    const relicText = grantedRelic ? ` - gained ${tierLabel(RELICS[grantedRelic].tier)} relic: ${RELICS[grantedRelic].name}` : '';
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold${relicText} - choose one reward`;
     document.getElementById('enemyChoices').innerHTML = '';
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
@@ -583,7 +587,7 @@ class Game {
     rewards.forEach(reward => {
       const btn = document.createElement('button');
       btn.className = 'choice reward';
-      btn.innerHTML = `<strong>${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      btn.innerHTML = `<strong>${reward.title}</strong><span>${tierLabel(reward.tier)} - ${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         applyReward(this.run, reward);
@@ -923,6 +927,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260519-same-shape1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260519-tier1').catch(() => {});
   });
 }

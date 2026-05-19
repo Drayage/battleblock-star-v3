@@ -55,6 +55,17 @@ export const TYPES = {
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
+export const TIERS = {
+  BRONZE: 'bronze',
+  SILVER: 'silver',
+  GOLD: 'gold'
+};
+export const TIER_ORDER = [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD];
+export const TIER_LABELS = {
+  [TIERS.BRONZE]: 'BRONZE',
+  [TIERS.SILVER]: 'SILVER',
+  [TIERS.GOLD]: 'GOLD'
+};
 
 export const COLORS = {
   [TYPES.I]: '#00d9e8',
@@ -236,6 +247,12 @@ export const ABILITY_LIBRARY = {
   wideCurse: { id: 'wideCurse', name: 'Wide Burden', cellAttack: 0.1, traits: ['curse', 'wide'], desc: 'Six-cell obstruction that clogs the deck.' }
 };
 
+function tierFromRarity(rarity) {
+  if (rarity === 'gold' || rarity === 'rare') return TIERS.GOLD;
+  if (rarity === 'silver' || rarity === 'uncommon') return TIERS.SILVER;
+  return TIERS.BRONZE;
+}
+
 function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
   const shape = SHAPE_LIBRARY[shapeId];
   const ability = ABILITY_LIBRARY[abilityId];
@@ -251,7 +268,8 @@ function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
     cellAttack: ability.cellAttack,
     traits: [...ability.traits],
     onPlace: ability.onPlace ? { ...ability.onPlace } : null,
-    rarity
+    rarity,
+    tier: tierFromRarity(rarity)
   };
 };
 
