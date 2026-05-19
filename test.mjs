@@ -44,6 +44,11 @@ garbageSurvivalBoard.applyGarbage(1);
 assert.equal(garbageSurvivalBoard.defeated, false);
 assert.equal(survivalBoard.defeated, false);
 
+const alignedGarbageBoard = new Board({ rows: 20 });
+alignedGarbageBoard.applyGarbage(4);
+const garbageHoles = alignedGarbageBoard.grid.slice(-4).map(row => row.findIndex(cell => !cell));
+assert.equal(new Set(garbageHoles).size, 1);
+
 const lethalQueuedBoard = new Board({ rows: 20 });
 lethalQueuedBoard.grid[4][0] = { type: TYPES.I, attack: 0.1, traits: [] };
 lethalQueuedBoard.receiveGarbage(5);

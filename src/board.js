@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260518-clearfx1';
-import { Deck } from './deck.js?v=20260518-clearfx1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-garbage1';
+import { Deck } from './deck.js?v=20260519-garbage1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -313,13 +313,13 @@ export class Board {
   }
 
   applyGarbage(lines) {
+    const hole = Math.floor(Math.random() * this.cols);
     for (let i = 0; i < lines; i++) {
       if (this.grid[0].some(Boolean)) {
         this.defeated = true;
         return;
       }
       this.grid.shift();
-      const hole = Math.floor(Math.random() * this.cols);
       this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] }));
     }
   }

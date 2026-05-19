@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260518-clearfx1';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-garbage1';
 
 export class Renderer {
   constructor(canvas) {
