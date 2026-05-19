@@ -1,5 +1,5 @@
-import { Mino } from './board.js?v=20260519-garbage1';
-import { COLS } from './constants.js?v=20260519-garbage1';
+import { Mino } from './board.js?v=20260519-garbtimer1';
+import { COLS } from './constants.js?v=20260519-garbtimer1';
 
 function analyzeGrid(grid) {
   const rows = grid.length;

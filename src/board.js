@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-garbage1';
-import { Deck } from './deck.js?v=20260519-garbage1';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260519-garbtimer1';
+import { Deck } from './deck.js?v=20260519-garbtimer1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -66,7 +66,7 @@ export class Board {
     this.holdUsed = false;
     this.holdLocked = false;
     this.nextQueue = [];
-    this.garbageQueue = 0;
+    this.garbageEntries = [];
     this.mp = 0;
     this.combo = 0;
     this.comboBreakFlash = 0;
@@ -91,7 +91,7 @@ export class Board {
     board.holdUsed = !!state.holdUsed;
     board.holdLocked = !!state.holdLocked;
     board.nextQueue = (state.nextQueue || []).map(id => CARD_LIBRARY[id]).filter(Boolean);
-    board.garbageQueue = state.garbageQueue || 0;
+    board.garbageEntries = Board.garbageEntriesFromState(state);
     board.mp = state.mp || 0;
     board.combo = state.combo || 0;
     board.comboBreakFlash = state.comboBreakFlash || 0;
@@ -109,6 +109,25 @@ export class Board {
     const mino = new Mino(CARD_LIBRARY[state.cardId] || CARD_LIBRARY[TYPES.I], state.x, state.y);
     mino.rot = state.rot || 0;
     return mino;
+  }
+
+  static garbageEntriesFromState(state = {}) {
+    if (Array.isArray(state.garbageEntries)) {
+      return state.garbageEntries
+        .map(entry => ({ amount: Math.max(0, Math.ceil(entry.amount || 0)), timer: Math.max(0, entry.timer || 0) }))
+        .filter(entry => entry.amount > 0);
+    }
+    const amount = Math.max(0, Math.ceil(state.garbageQueue || 0));
+    return amount > 0 ? [{ amount, timer: 0 }] : [];
+  }
+
+  get garbageQueue() {
+    return this.garbageEntries.reduce((sum, entry) => sum + entry.amount, 0);
+  }
+
+  set garbageQueue(amount) {
+    const n = Math.max(0, Math.ceil(amount || 0));
+    this.garbageEntries = n > 0 ? [{ amount: n, timer: 0 }] : [];
   }
 
   fillQueue() {
@@ -230,7 +249,7 @@ export class Board {
       this.clearText = result.clearText;
       this.clearTextFlash = result.clearText ? GAME_TIMING.CLEAR_FEEDBACK_FLASH : 0;
       const cancel = Math.min(this.garbageQueue, Math.floor(result.attack));
-      this.garbageQueue -= cancel;
+      this.cancelGarbage(cancel);
       result.attack = Math.max(0, result.attack - cancel);
     } else {
       if (this.combo > 1) result.comboBreak = this.combo;
@@ -238,10 +257,7 @@ export class Board {
       this.comboBreakFlash = result.comboBreak ? GAME_TIMING.COMBO_BREAK_FLASH : 0;
       this.clearTextFlash = 0;
     }
-    if (this.garbageQueue > 0) {
-      this.applyGarbage(this.garbageQueue);
-      this.garbageQueue = 0;
-    }
+    this.applyReadyGarbage();
     this.lastAttack = result.attack;
     if (this.defeated) return result;
     this.spawn();
@@ -300,16 +316,44 @@ export class Board {
   }
 
   receiveGarbage(amount) {
-    this.garbageQueue += Math.max(0, Math.ceil(amount));
-    if (this.wouldOverflowGarbage(this.garbageQueue)) {
-      this.applyGarbage(this.garbageQueue);
-      this.garbageQueue = 0;
-    }
+    const n = Math.max(0, Math.ceil(amount));
+    if (n > 0) this.garbageEntries.push({ amount: n, timer: GAME_TIMING.GARBAGE_ARM_DELAY });
   }
 
   wouldOverflowGarbage(lines) {
     const n = Math.max(0, Math.ceil(lines));
     return this.grid.slice(0, Math.min(n, this.rows)).some(row => row.some(Boolean));
+  }
+
+  tickGarbage(dt) {
+    for (const entry of this.garbageEntries) entry.timer = Math.max(0, entry.timer - dt);
+  }
+
+  readyGarbage() {
+    return this.garbageEntries.reduce((sum, entry) => sum + (entry.timer <= 0 ? entry.amount : 0), 0);
+  }
+
+  cancelGarbage(amount) {
+    let remaining = Math.max(0, Math.floor(amount));
+    if (remaining <= 0) return 0;
+    let canceled = 0;
+    for (const entry of this.garbageEntries) {
+      if (remaining <= 0) break;
+      const take = Math.min(entry.amount, remaining);
+      entry.amount -= take;
+      remaining -= take;
+      canceled += take;
+    }
+    this.garbageEntries = this.garbageEntries.filter(entry => entry.amount > 0);
+    return canceled;
+  }
+
+  applyReadyGarbage() {
+    const ready = this.readyGarbage();
+    if (ready <= 0) return 0;
+    this.garbageEntries = this.garbageEntries.filter(entry => entry.timer > 0);
+    this.applyGarbage(ready);
+    return ready;
   }
 
   applyGarbage(lines) {
@@ -362,6 +406,7 @@ export class Board {
       holdUsed: this.holdUsed,
       holdLocked: this.holdLocked,
       nextQueue: this.nextQueue.map(card => card.id),
+      garbageEntries: this.garbageEntries.map(entry => ({ ...entry })),
       garbageQueue: this.garbageQueue,
       mp: this.mp,
       combo: this.combo,

@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-garbage1';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-garbtimer1';
 
 export class Renderer {
   constructor(canvas) {
@@ -50,12 +50,12 @@ export class Renderer {
     ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
-    this.garbageMeter(player.garbageQueue, L.pX - 10, L.y, player.rows * L.cell);
+    this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
     if (L.mobile) {
       this.mobileInfo(player, enemy, run, L.pX, L.y + player.rows * L.cell + 18, L.cell);
     } else {
       this.board(enemy, L.eX, L.y, L.cell, 'ENEMY');
-      this.garbageMeter(enemy.garbageQueue, L.eX - 12, L.y, enemy.rows * L.cell);
+      this.garbageMeter(enemy, L.eX - 12, L.y, enemy.rows * L.cell);
       this.sidePanel(player, 20, L.y, L.cell, run);
     }
     if (battle === 'VICTORY' || battle === 'DEFEAT') this.battleOverlay(battle, L);
@@ -237,7 +237,7 @@ export class Renderer {
     this.ctx.font = 'bold 9px Courier New';
     this.ctx.fillText('ENEMY', ox, oy - 5);
     this.board(enemy, ox, oy, cs, '');
-    this.garbageMeter(enemy.garbageQueue, ox + COLS * cs + 5, oy, enemy.rows * cs);
+    this.garbageMeter(enemy, ox + COLS * cs + 5, oy, enemy.rows * cs);
   }
 
   mobileInfo(player, enemy, run, ox, oy, cs) {
@@ -255,7 +255,7 @@ export class Renderer {
     if (player.held) this.preview(player.held, ox + 10, oy + 28, 8);
     player.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + Math.floor(panelW * 0.38) + i * 28, oy + 28, 7));
     this.board(enemy, ox + Math.floor(panelW * 0.72), oy + 27, 4, '');
-    this.garbageMeter(enemy.garbageQueue, ox + panelW - 12, oy + 27, enemy.rows * 4);
+    this.garbageMeter(enemy, ox + panelW - 12, oy + 27, enemy.rows * 4);
 
     const mpY = oy + 96;
     ctx.fillStyle = '#10192d';
@@ -288,15 +288,24 @@ export class Renderer {
     });
   }
 
-  garbageMeter(amount, ox, oy, h) {
+  garbageMeter(source, ox, oy, h) {
     const ctx = this.ctx;
+    const entries = Array.isArray(source?.garbageEntries)
+      ? source.garbageEntries
+      : [{ amount: Math.max(0, Math.ceil(Number(source) || 0)), timer: 0 }];
+    const amount = entries.reduce((sum, entry) => sum + entry.amount, 0);
     ctx.fillStyle = '#080a10';
     ctx.fillRect(ox, oy, 7, h);
-    const cells = Math.min(Math.ceil(amount), Math.floor(h / 8));
     const cap = Math.floor(h / 8);
-    for (let i = 0; i < cells; i++) {
-      ctx.fillStyle = amount >= 8 ? '#ff335f' : amount >= 4 ? '#ff9f2f' : '#d7c64a';
-      ctx.fillRect(ox + 1, oy + h - 7 - i * 8, 5, 6);
+    let drawn = 0;
+    for (const entry of entries) {
+      const cells = Math.min(entry.amount, cap - drawn);
+      ctx.fillStyle = entry.timer <= 0 ? '#ff335f' : '#777f91';
+      for (let i = 0; i < cells; i++) {
+        ctx.fillRect(ox + 1, oy + h - 7 - (drawn + i) * 8, 5, 6);
+      }
+      drawn += cells;
+      if (drawn >= cap) break;
     }
     if (amount > cap) {
       ctx.fillStyle = '#ffcad5';

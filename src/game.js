@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260519-garbage1';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-garbage1';
-import { Deck } from './deck.js?v=20260519-garbage1';
-import { AI } from './ai.js?v=20260519-garbage1';
-import { Renderer } from './renderer.js?v=20260519-garbage1';
-import { InputController } from './input.js?v=20260519-garbage1';
-import { SKILLS } from './skills.js?v=20260519-garbage1';
-import { CONSUMABLES } from './consumables.js?v=20260519-garbage1';
+import { Board } from './board.js?v=20260519-garbtimer1';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-garbtimer1';
+import { Deck } from './deck.js?v=20260519-garbtimer1';
+import { AI } from './ai.js?v=20260519-garbtimer1';
+import { Renderer } from './renderer.js?v=20260519-garbtimer1';
+import { InputController } from './input.js?v=20260519-garbtimer1';
+import { SKILLS } from './skills.js?v=20260519-garbtimer1';
+import { CONSUMABLES } from './consumables.js?v=20260519-garbtimer1';
 import {
   RunState,
   RELICS,
@@ -17,7 +17,7 @@ import {
   makeRewards,
   makeShopItems,
   shouldShowEvent
-} from './progression.js?v=20260519-garbage1';
+} from './progression.js?v=20260519-garbtimer1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -839,6 +839,8 @@ class Game {
     this.input.update(now);
     this.player.flash = Math.max(0, this.player.flash - dt);
     this.enemy.flash = Math.max(0, this.enemy.flash - dt);
+    this.player.tickGarbage(dt);
+    this.enemy.tickGarbage(dt);
     this.player.comboBreakFlash = Math.max(0, this.player.comboBreakFlash - dt);
     this.enemy.comboBreakFlash = Math.max(0, this.enemy.comboBreakFlash - dt);
     this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
@@ -915,6 +917,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260519-garbage1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260519-garbtimer1').catch(() => {});
   });
 }

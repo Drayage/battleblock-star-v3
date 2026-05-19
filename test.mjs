@@ -52,6 +52,10 @@ assert.equal(new Set(garbageHoles).size, 1);
 const lethalQueuedBoard = new Board({ rows: 20 });
 lethalQueuedBoard.grid[4][0] = { type: TYPES.I, attack: 0.1, traits: [] };
 lethalQueuedBoard.receiveGarbage(5);
+assert.equal(lethalQueuedBoard.garbageQueue, 5);
+assert.equal(lethalQueuedBoard.defeated, false);
+lethalQueuedBoard.tickGarbage(3000);
+lethalQueuedBoard.applyReadyGarbage();
 assert.equal(lethalQueuedBoard.garbageQueue, 0);
 assert.equal(lethalQueuedBoard.defeated, true);
 
@@ -60,6 +64,18 @@ nonlethalQueuedBoard.grid[4][0] = { type: TYPES.I, attack: 0.1, traits: [] };
 nonlethalQueuedBoard.receiveGarbage(4);
 assert.equal(nonlethalQueuedBoard.garbageQueue, 4);
 assert.equal(nonlethalQueuedBoard.defeated, false);
+nonlethalQueuedBoard.tickGarbage(2999);
+assert.equal(nonlethalQueuedBoard.readyGarbage(), 0);
+nonlethalQueuedBoard.tickGarbage(1);
+assert.equal(nonlethalQueuedBoard.readyGarbage(), 4);
+
+const cancelQueuedBoard = new Board({ rows: 20 });
+cancelQueuedBoard.receiveGarbage(4);
+assert.equal(cancelQueuedBoard.cancelGarbage(2), 2);
+cancelQueuedBoard.tickGarbage(3000);
+cancelQueuedBoard.applyReadyGarbage();
+assert.equal(cancelQueuedBoard.garbageQueue, 0);
+assert.equal(cancelQueuedBoard.grid.slice(-2).every(row => row.filter(Boolean).length === 9), true);
 
 const spawnBufferBoard = new Board({ rows: 20 });
 assert.equal(spawnBufferBoard.current.y, SPAWN_Y);
