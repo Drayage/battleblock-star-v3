@@ -94,6 +94,7 @@ export class AI {
     this.holdMistakeRate = skill.holdMistakeRate ?? this.mistakeRate * 0.6;
     this.pressure = { mistake: 0, noise: 0, hold: 0 };
     this.lastHoldSerial = null;
+    this.lastAction = null;
     this.queue = [];
     this.lastPlanCard = null;
   }
@@ -157,6 +158,7 @@ export class AI {
   step(board) {
     this.plan(board);
     const action = this.queue.shift();
+    this.lastAction = action || null;
     if (action === 'left') { board.move(-1, 0); return null; }
     if (action === 'right') { board.move(1, 0); return null; }
     if (action === 'rotate') { board.rotate(1); return null; }

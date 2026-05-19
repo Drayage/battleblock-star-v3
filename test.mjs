@@ -122,6 +122,7 @@ queuedMoveAi.lastPlanCard = `${queuedMoveBoard.current.card.id}-${queuedMoveBoar
 queuedMoveAi.queue = ['left', 'hard'];
 const queuedMoveResult = queuedMoveAi.step(queuedMoveBoard);
 assert.equal(queuedMoveResult, null);
+assert.equal(queuedMoveAi.lastAction, 'left');
 assert.equal(queuedMoveBoard.current.x, 2);
 assert.equal(queuedMoveBoard.grid.some(row => row.some(Boolean)), false);
 

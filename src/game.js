@@ -65,6 +65,7 @@ class Game {
     this.lockResets = 0;
     this.groundTouched = false;
     this.enemyTimer = 0;
+    this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
     this.playerSlowTimer = 0;
@@ -518,6 +519,7 @@ class Game {
     this.lockResets = 0;
     this.groundTouched = false;
     this.enemyTimer = 0;
+    this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
     this.battleEndDelay = 0;
@@ -838,6 +840,7 @@ class Game {
         lockResets: this.lockResets,
         groundTouched: this.groundTouched,
         enemyTimer: this.enemyTimer,
+        enemyActionStall: this.enemyActionStall,
         enemyAbilityTimer: this.enemyAbilityTimer,
         enemySlowTimer: this.enemySlowTimer,
         playerSlowTimer: this.playerSlowTimer,
@@ -872,6 +875,7 @@ class Game {
         this.lockResets = state.battle.lockResets || 0;
         this.groundTouched = !!state.battle.groundTouched;
         this.enemyTimer = state.battle.enemyTimer || 0;
+        this.enemyActionStall = state.battle.enemyActionStall || 0;
         this.enemyAbilityTimer = state.battle.enemyAbilityTimer || 0;
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
@@ -993,7 +997,7 @@ class Game {
     if (this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
       this.ai.setPressure(this.currentAiPressure());
-      this.resolve(this.ai.step(this.enemy), this.enemy);
+      this.resolve(this.resolveEnemyStep(), this.enemy);
     }
     this.updateEnemyAbility(dt);
     this.updateSkillButtons();
@@ -1011,7 +1015,27 @@ class Game {
 
   currentEnemyDelay() {
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
-    return Math.round(base * this.playerPressureRelief());
+    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor());
+  }
+
+  resolveEnemyStep() {
+    const result = this.ai.step(this.enemy);
+    if (result) {
+      this.enemyActionStall = 0;
+      return result;
+    }
+    if (['left', 'right', 'rotate', 'hold', 'wait'].includes(this.ai.lastAction)) this.enemyActionStall++;
+    else this.enemyActionStall = 0;
+    if (this.enemyActionStall >= 6 && this.enemy?.current && !this.enemy.defeated) {
+      this.enemyActionStall = 0;
+      this.ai.queue = [];
+      return this.enemy.hardDrop();
+    }
+    return null;
+  }
+
+  enemyActionStallFactor() {
+    return Math.max(0.38, 1 - this.enemyActionStall * 0.14);
   }
 
   battleHeatAttackBonus() {
