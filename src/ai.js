@@ -141,25 +141,18 @@ function simulate(board, mino, profile) {
 export class AI {
   constructor(profile = 'balanced', skill = {}) {
     this.profile = profile;
-    this.mistakeRate = skill.mistakeRate || 0;
-    this.noise = skill.noise || 0;
     this.hesitateRate = skill.hesitateRate || 0;
-    this.holdMistakeRate = skill.holdMistakeRate ?? this.mistakeRate * 0.6;
-    this.pressure = { mistake: 0, noise: 0, hold: 0 };
     this.lastHoldSerial = null;
     this.lastAction = null;
     this.queue = [];
     this.lastPlanCard = null;
   }
 
-  setPressure({ mistake = 0, noise = 0, hold = 0 } = {}) {
-    this.pressure = { mistake, noise, hold };
-  }
+  setPressure() {}
 
   cacheKey(board) {
     const next = board.nextQueue.slice(0, 2).map(card => card?.id || 'none').join('/');
     const held = board.held?.id || 'none';
-    const pressure = `${this.pressure.mistake.toFixed(2)}:${this.pressure.noise.toFixed(1)}:${this.pressure.hold.toFixed(2)}`;
     return [
       board.pieceSerial,
       board.current?.card.id,
@@ -169,25 +162,8 @@ export class AI {
       board.holdUsed ? 'h1' : 'h0',
       board.holdLocked ? 'l1' : 'l0',
       held,
-      next,
-      pressure
+      next
     ].join('|');
-  }
-
-  pickMistake(candidates) {
-    if (candidates.length <= 1) return candidates[0];
-    const best = candidates[0].s;
-    const pool = candidates
-      .slice(1, Math.min(candidates.length, 6))
-      .filter(c => c.s > -1e8 && best - c.s < 18);
-    if (!pool.length) return candidates[0];
-    const total = pool.reduce((sum, _, i) => sum + 1 / (i + 2), 0);
-    let roll = Math.random() * total;
-    for (let i = 0; i < pool.length; i++) {
-      roll -= 1 / (i + 2);
-      if (roll <= 0) return pool[i];
-    }
-    return pool[pool.length - 1];
   }
 
   plan(board) {
@@ -195,9 +171,6 @@ export class AI {
     const cardKey = this.cacheKey(board);
     if (this.queue.length && this.lastPlanCard === cardKey) return;
     this.lastPlanCard = cardKey;
-    const mistakeRate = Math.min(0.75, this.mistakeRate + this.pressure.mistake);
-    const holdMistakeRate = Math.min(0.85, this.holdMistakeRate + this.pressure.hold);
-    const noise = () => Math.random() * (this.noise + this.pressure.noise);
     const candidates = [];
     for (let rot = 0; rot < 4; rot++) {
       for (let x = -2; x < COLS + 2; x++) {
@@ -206,7 +179,7 @@ export class AI {
         if (!board.ok(m)) continue;
         const path = findReachPlan(board, { x, rot, hold: false });
         if (!path) continue;
-        const s = simulate(board, m, this.profile) + noise();
+        const s = simulate(board, m, this.profile);
         candidates.push({ x, rot, hold: false, s, path });
       }
     }
@@ -221,17 +194,14 @@ export class AI {
             if (!board.ok(m)) continue;
             const path = findReachPlan(board, { x, rot, hold: true });
             if (!path) continue;
-            const s = simulate(board, m, this.profile) + noise();
+            const s = simulate(board, m, this.profile);
             candidates.push({ x, rot, hold: true, s, path });
           }
         }
       }
     }
     candidates.sort((a, b) => b.s - a.s);
-    let best = Math.random() < mistakeRate ? this.pickMistake(candidates) : candidates[0];
-    if (best?.hold && Math.random() < holdMistakeRate) {
-      best = candidates.find(candidate => !candidate.hold) || best;
-    }
+    const best = candidates[0];
     if (!best) return;
     this.queue = [];
     if (best.hold) this.queue.push('hold');
