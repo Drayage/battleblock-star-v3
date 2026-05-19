@@ -73,6 +73,7 @@ class Game {
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
     this.aiFocusLastPiece = null;
+    this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -528,6 +529,7 @@ class Game {
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
     this.aiFocusLastPiece = null;
+    this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -1066,13 +1068,17 @@ class Game {
     }
     const enemyHeight = this.boardMaxHeight(this.enemy);
     const danger = enemyHeight - (this.enemy.rows - 9);
-    if (this.aiFocusActivePieces > 0) return Math.min(1, Math.max(0.5, danger / 5));
-    if (danger > 0) {
+    if (danger <= 0) {
+      this.aiFocusInEpisode = false;
+      return 0;
+    }
+    if (!this.aiFocusInEpisode) {
+      this.aiFocusInEpisode = true;
       this.aiFocusActivations++;
       this.aiFocusActivePieces = 6;
-      return Math.min(1, danger / 5);
     }
-    return 0;
+    if (this.aiFocusActivePieces > 0) return Math.min(1, Math.max(0.5, danger / 5));
+    return Math.min(1, danger / 5);
   }
 
   aiFocusSlowFactor() {
