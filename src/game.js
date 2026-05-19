@@ -70,6 +70,9 @@ class Game {
     this.enemySlowTimer = 0;
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
+    this.aiFocusActivations = 0;
+    this.aiFocusActivePieces = 0;
+    this.aiFocusLastPiece = null;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -522,6 +525,9 @@ class Game {
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
+    this.aiFocusActivations = 0;
+    this.aiFocusActivePieces = 0;
+    this.aiFocusLastPiece = null;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -1015,7 +1021,7 @@ class Game {
 
   currentEnemyDelay() {
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
-    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor());
+    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor());
   }
 
   resolveEnemyStep() {
@@ -1054,10 +1060,24 @@ class Game {
 
   aiFocus() {
     if (!this.enemy) return 0;
+    if (this.enemy.pieceSerial !== this.aiFocusLastPiece) {
+      this.aiFocusLastPiece = this.enemy.pieceSerial;
+      if (this.aiFocusActivePieces > 0) this.aiFocusActivePieces--;
+    }
     const enemyHeight = this.boardMaxHeight(this.enemy);
     const danger = enemyHeight - (this.enemy.rows - 9);
-    if (danger <= 0) return 0;
-    return Math.min(1, danger / 5);
+    if (this.aiFocusActivePieces > 0) return Math.min(1, Math.max(0.5, danger / 5));
+    if (danger > 0) {
+      this.aiFocusActivations++;
+      this.aiFocusActivePieces = 6;
+      return Math.min(1, danger / 5);
+    }
+    return 0;
+  }
+
+  aiFocusSlowFactor() {
+    if (this.aiFocusActivePieces <= 0) return 1;
+    return 1 + Math.min(1.2, this.aiFocusActivations * 0.22);
   }
 
   aiConfidence() {
