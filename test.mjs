@@ -260,7 +260,8 @@ assert.equal(strideEnemy.tier, TIERS.GOLD);
 assert.equal(makeEnemy(6, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows > makeEnemy(5, false, { name: 'Soft Starter', style: '', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, openingRows: 13 }).startingRows, true);
 assert.equal(makeEnemy(11, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage > makeEnemy(10, false, { name: 'Line Hunter', style: '', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, openingRows: 14 }).startingGarbage, true);
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
-assert.equal(makeRewards('elite').some(reward => reward.kind === 'relic' && reward.tier !== TIERS.BRONZE), true);
+assert.equal(makeRewards('elite').every(reward => reward.kind === 'card'), true);
+assert.equal(makeRewards('elite').some(reward => reward.tier !== TIERS.BRONZE), true);
 assert.equal(Object.values(SKILLS).every(skill => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(skill.tier)), true);
 assert.equal(Object.values(CONSUMABLES).every(item => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(item.tier)), true);
 assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(relic.tier)), true);
@@ -290,6 +291,7 @@ assert.equal(upgradeDeckCards(eventRun).every(upgrade => CARD_LIBRARY[upgrade.fr
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O && upgrade.to === TYPES.PURGE_O), true);
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
 assert.equal(makeEventChoices(eventRun, 'start').every(choice => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(choice.tier)), true);
+assert.equal(Array.from({ length: 20 }, () => makeEventChoices(eventRun, 'start')).some(choices => choices.some(choice => choice.kind === 'skill')), true);
 
 const baseRemoveRun = new RunState();
 assert.equal(removableDeckCards(baseRemoveRun).length, BASE_TYPES.length);

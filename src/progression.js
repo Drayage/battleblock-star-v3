@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260519-tier1';
-import { Deck, shuffle } from './deck.js?v=20260519-tier1';
-import { SKILLS } from './skills.js?v=20260519-tier1';
-import { CONSUMABLES } from './consumables.js?v=20260519-tier1';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260519-reward-flow1';
+import { Deck, shuffle } from './deck.js?v=20260519-reward-flow1';
+import { SKILLS } from './skills.js?v=20260519-reward-flow1';
+import { CONSUMABLES } from './consumables.js?v=20260519-reward-flow1';
 
 export const RELICS = {
   combo_amp: {
@@ -75,24 +75,24 @@ export class RunState {
 }
 
 const ENEMIES = [
-  { name: 'Soft Starter', tier: TIERS.BRONZE, style: 'BRONZE - Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, rewardBonus: 0, openingRows: 13 },
-  { name: 'Line Hunter', tier: TIERS.BRONZE, style: 'BRONZE - Clears singles often and attacks steadily.', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 },
-  { name: 'Speed Drone', tier: TIERS.SILVER, style: 'SILVER - Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 },
-  { name: 'Opener Script', tier: TIERS.SILVER, style: 'SILVER OPENER - Explosive prepared starts, tiny HP pool.', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] },
-  { name: 'Stride Engine', tier: TIERS.GOLD, style: 'GOLD STRIDE - Steady quad and spin pressure over time.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] },
-  { name: 'Plonk Gambler', tier: TIERS.GOLD, style: 'GOLD PLONK - Accepts pressure, then looks for burst damage.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE] },
-  { name: 'Inf DS Shell', tier: TIERS.SILVER, style: 'SILVER INF DS - Defensive downstacking and field cleanup.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD] },
-  { name: 'Bomb Adept', tier: TIERS.SILVER, style: 'SILVER - Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
-  { name: 'Mana Thief', tier: TIERS.SILVER, style: 'SILVER - Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
-  { name: 'Cleanse Warden', tier: TIERS.GOLD, style: 'GOLD - Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
+  { name: 'Soft Starter', tier: TIERS.BRONZE, style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, rewardBonus: 0, openingRows: 13 },
+  { name: 'Line Hunter', tier: TIERS.BRONZE, style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 },
+  { name: 'Speed Drone', tier: TIERS.SILVER, style: 'Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 },
+  { name: 'Opener Script', tier: TIERS.SILVER, style: 'OPENER pattern: explosive prepared starts, tiny HP pool.', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] },
+  { name: 'Stride Engine', tier: TIERS.GOLD, style: 'STRIDE pattern: steady quad and spin pressure over time.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] },
+  { name: 'Plonk Gambler', tier: TIERS.GOLD, style: 'PLONK pattern: accepts pressure, then looks for burst damage.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE] },
+  { name: 'Inf DS Shell', tier: TIERS.SILVER, style: 'INF DS pattern: defensive downstacking and field cleanup.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD] },
+  { name: 'Bomb Adept', tier: TIERS.SILVER, style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
+  { name: 'Mana Thief', tier: TIERS.SILVER, style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
+  { name: 'Cleanse Warden', tier: TIERS.GOLD, style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
 ];
 
 const ELITES = [
-  { name: 'Elite: Ceiling Press', tier: TIERS.GOLD, style: 'GOLD ELITE - High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, risk: 1.85, rewardBonus: 9, ability: 'spike' },
-  { name: 'Elite: Power Core', tier: TIERS.GOLD, style: 'GOLD ELITE - Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
-  { name: 'Elite: Cross Engine', tier: TIERS.GOLD, style: 'GOLD ELITE - Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
-  { name: 'Elite: Opener Lab', tier: TIERS.GOLD, style: 'GOLD OPENER ELITE - Very low HP, extremely fast early burst.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
-  { name: 'Elite: Plonk Vault', tier: TIERS.GOLD, style: 'GOLD PLONK ELITE - Survives pressure and swings back hard.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
+  { name: 'Elite: Ceiling Press', tier: TIERS.GOLD, style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, risk: 1.85, rewardBonus: 9, ability: 'spike' },
+  { name: 'Elite: Power Core', tier: TIERS.GOLD, style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
+  { name: 'Elite: Cross Engine', tier: TIERS.GOLD, style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
+  { name: 'Elite: Opener Lab', tier: TIERS.GOLD, style: 'OPENER elite: very low HP, extremely fast early burst.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
+  { name: 'Elite: Plonk Vault', tier: TIERS.GOLD, style: 'PLONK elite: survives pressure and swings back hard.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
 ];
 
 export function tierLabel(tier) {
@@ -200,25 +200,13 @@ export function makeRewards(pool = 'normal') {
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
     .filter(card => card.tier && card.rarity !== 'base' && card.rarity !== 'curse')
     .map(card => [card.id, card]));
-  if (elite) {
-    const rareCard = pickByTier(rewardCards, TIERS.GOLD, { elite: true });
-    const skill = pickByTier(SKILLS, TIERS.GOLD, { elite: true });
-    const relic = pickByTier(RELICS, TIERS.GOLD, { elite: true, minTier: TIERS.SILVER });
-    const consumable = pickByTier(CONSUMABLES, TIERS.GOLD, { elite: true });
-    return shuffle([
-      { kind: 'card', id: rareCard.id, tier: rareCard.tier, title: `${tierLabel(rareCard.tier)} block reward` },
-      { kind: 'skill', id: skill.id, tier: skill.tier, title: `${tierLabel(skill.tier)} skill reward` },
-      { kind: 'relic', id: relic.id, tier: relic.tier, title: `${tierLabel(relic.tier)} elite relic choice` },
-      { kind: 'consumable', id: consumable.id, tier: consumable.tier, title: `${tierLabel(consumable.tier)} consumable kit` }
-    ]);
-  }
   const picked = [];
   while (picked.length < 3) {
-    const card = pickByTier(rewardCards, sourceTier, { exclude: picked });
+    const card = pickByTier(rewardCards, elite ? TIERS.GOLD : sourceTier, { elite, exclude: picked });
     if (!card || picked.includes(card.id)) break;
     picked.push(card.id);
   }
-  return picked.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: `${tierLabel(CARD_LIBRARY[id].tier)} block reward` }));
+  return picked.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: 'Block reward' }));
 }
 
 export function makeShopItems(run) {
@@ -279,6 +267,16 @@ export function makeEventChoices(run, eventKey) {
       desc: `Upgrade 1 ${CARD_LIBRARY[upgrade.from].name} into ${CARD_LIBRARY[upgrade.to].name}.`
     });
   }
+  const skill = pickByTier(SKILLS, roundTier(run.round), { exclude: run.ownedSkills });
+  if (skill) {
+    sideChoices.push({
+      kind: 'skill',
+      id: skill.id,
+      tier: skill.tier,
+      title: 'Skill Mentor',
+      desc: `Learn ${skill.name}. If your skill slots are full, choose a slot to replace or skip.`
+    });
+  }
   sideChoices.push({
     kind: 'hpForCurse',
     amount: eventKey === 'start' ? 2 : 3,
@@ -293,7 +291,7 @@ export function makeEventChoices(run, eventKey) {
     id: supply.id,
     tier: supply.tier,
     title: 'Supply Cache',
-    desc: 'Gain one consumable. Max 3 can be carried.'
+    desc: `${supply.name}: ${supply.desc} If your item slots are full, choose a slot to replace or skip.`
   });
   if (eventKey !== 'start') {
     sideChoices.push({

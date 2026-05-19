@@ -26,6 +26,13 @@ button{font:inherit}
 .block-preview{--cell:8px;--cols:4;display:grid;grid-template-columns:repeat(var(--cols),var(--cell));grid-auto-rows:var(--cell);gap:1px;margin-top:10px}.block-preview i{display:block;width:var(--cell);height:var(--cell);background:transparent;border-radius:1px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
 .deck-card .block-preview,.choice .block-preview{margin-top:10px}.deck-card .block-preview{margin-top:0}.item-chip{display:inline-grid;place-items:center;width:34px;height:34px;margin-top:10px;border:1px solid #45699f;border-radius:7px;background:#13233c;color:#dce8ff;font-weight:bold}.loadout-card .item-chip{margin-top:0}
 .choice.elite{border-color:#8f5b24;background:#251a12}.choice.shop{border-color:#35624c;background:#101f1b}.choice.reward{border-color:#6451a6;background:#17142b}.choice.event{border-color:#47618c;background:#121a2c}.choice:disabled{opacity:.35;cursor:not-allowed}
+.tier-bronze{border-color:#8b6a43!important;box-shadow:inset 0 0 0 1px rgba(139,106,67,.2)}
+.tier-silver{border-color:#b8c6d9!important;box-shadow:0 0 0 1px rgba(184,198,217,.18),0 0 12px rgba(184,198,217,.08)}
+.tier-gold{border-color:#f0c45c!important;box-shadow:0 0 0 1px rgba(240,196,92,.25),0 0 16px rgba(240,196,92,.14)}
+#slotPicker{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,12,.78)}
+#slotPicker.active{display:flex}
+.slot-dialog{width:min(440px,100%);background:#101827;border:1px solid #38568f;border-radius:10px;padding:16px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.slot-dialog h2{font-size:16px;color:#e2ecff;margin-bottom:8px}.slot-dialog p{font-size:12px;color:#8d9ab7;line-height:1.45;margin-bottom:12px}.slot-options{display:grid;gap:8px;margin-bottom:10px}.slot-options .choice{min-height:64px}
 .hidden{display:none!important}
 #gameScreen{max-width:none;width:100%;padding-bottom:112px}.hud{width:min(980px,100%);margin:0 auto 8px}
 #canvasWrap{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;min-height:420px}canvas{display:block;transform-origin:top center;image-rendering:pixelated}

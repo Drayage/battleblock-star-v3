@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260519-tier1';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-tier1';
-import { Deck } from './deck.js?v=20260519-tier1';
-import { AI } from './ai.js?v=20260519-tier1';
-import { Renderer } from './renderer.js?v=20260519-tier1';
-import { InputController } from './input.js?v=20260519-tier1';
-import { SKILLS } from './skills.js?v=20260519-tier1';
-import { CONSUMABLES } from './consumables.js?v=20260519-tier1';
+import { Board } from './board.js?v=20260519-reward-flow1';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-reward-flow1';
+import { Deck } from './deck.js?v=20260519-reward-flow1';
+import { AI } from './ai.js?v=20260519-reward-flow1';
+import { Renderer } from './renderer.js?v=20260519-reward-flow1';
+import { InputController } from './input.js?v=20260519-reward-flow1';
+import { SKILLS } from './skills.js?v=20260519-reward-flow1';
+import { CONSUMABLES } from './consumables.js?v=20260519-reward-flow1';
 import {
   RunState,
   RELICS,
@@ -17,9 +17,8 @@ import {
   makeEventChoices,
   makeRewards,
   makeShopItems,
-  shouldShowEvent,
-  tierLabel
-} from './progression.js?v=20260519-tier1';
+  shouldShowEvent
+} from './progression.js?v=20260519-reward-flow1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -156,10 +155,10 @@ class Game {
     wrap.innerHTML = '';
     for (const enemy of makeEnemyChoices(this.run.round)) {
       const btn = document.createElement('button');
-      btn.className = `choice ${enemy.type}`;
+      btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       btn.innerHTML = `
         <strong>${enemy.name}</strong>
-        <span>${enemy.type.toUpperCase()} - ${tierLabel(enemy.tier)} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
+        <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
       `;
@@ -185,8 +184,8 @@ class Game {
     if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: 'Loose Gold', desc: 'Take a small gold pouch and move on.' }];
     for (const choice of choices) {
       const btn = document.createElement('button');
-      btn.className = 'choice event';
-      btn.innerHTML = `<strong>${choice.title}</strong><span>${tierLabel(choice.tier)} - ${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      btn.className = `choice event ${this.tierClass(choice.tier)}`;
+      btn.innerHTML = `<strong>${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
       try {
         this.attachEventPreview(btn, choice);
       } catch {
@@ -195,11 +194,12 @@ class Game {
       btn.disabled = !this.canUseEvent(choice);
       btn.addEventListener('click', () => {
         if (btn.disabled) return;
-        this.applyEventChoice(choice);
-        this.run.seenEvents.add(eventKey);
-        this.normalizePersistentGrid();
-        this.showMap();
-        this.autoSave();
+        this.applyEventChoice(choice, () => {
+          this.run.seenEvents.add(eventKey);
+          this.normalizePersistentGrid();
+          this.showMap();
+          this.autoSave();
+        });
       });
       wrap.appendChild(btn);
     }
@@ -210,6 +210,7 @@ class Game {
     if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} -> ${CARD_LIBRARY[choice.to].name}`;
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, add ${CARD_LIBRARY[choice.card].name}`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
+    if (choice.kind === 'skill') return SKILLS[choice.id].name;
     if (choice.kind === 'gold') return `Gain ${choice.amount}G`;
     if (choice.kind === 'cleanup') return 'Clean carried garbage';
     return 'Event';
@@ -228,17 +229,23 @@ class Game {
       chip.textContent = CONSUMABLES[choice.id].short;
       node.appendChild(chip);
     }
+    if (choice.kind === 'skill') {
+      const chip = document.createElement('div');
+      chip.className = 'item-chip';
+      chip.textContent = 'S';
+      node.appendChild(chip);
+    }
   }
 
   canUseEvent(choice) {
     if (choice.kind === 'removeCard') return this.run.gold >= choice.price;
     if (choice.kind === 'upgradeCard') return true;
-    if (choice.kind === 'consumable') return this.run.consumables.length < 3;
+    if (choice.kind === 'skill') return !this.run.ownedSkills.includes(choice.id);
     if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
     return true;
   }
 
-  applyEventChoice(choice) {
+  applyEventChoice(choice, done = () => {}) {
     if (choice.kind === 'removeCard') {
       this.run.gold -= choice.price;
       this.run.deck.removeCard(choice.id);
@@ -252,9 +259,11 @@ class Game {
       this.run.hpRows += choice.amount;
       this.run.deck.addCard(choice.card);
     }
-    if (choice.kind === 'consumable') this.run.consumables.push(choice.id);
+    if (choice.kind === 'skill') return this.acquireSkill(choice.id, done);
+    if (choice.kind === 'consumable') return this.acquireConsumable(choice.id, done);
     if (choice.kind === 'gold') this.run.gold += choice.amount;
     if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
+    done();
   }
 
   showShop() {
@@ -265,17 +274,13 @@ class Game {
     wrap.innerHTML = '';
     for (const item of makeShopItems(this.run)) {
       const btn = document.createElement('button');
-      btn.className = 'choice shop';
-      btn.innerHTML = `<strong>${item.title}</strong><span>${tierLabel(item.tier)} - ${item.price} Gold</span><small>${this.itemDesc(item)}</small>`;
+      btn.className = `choice shop ${this.tierClass(item.tier)}`;
+      btn.innerHTML = `<strong>${item.title}</strong><span>${item.price} Gold</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
-      btn.disabled = this.run.gold < item.price || (item.kind === 'consumable' && this.run.consumables.length >= 3);
+      btn.disabled = this.run.gold < item.price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
         if (btn.disabled || this.run.gold < item.price) return;
-        this.run.gold -= item.price;
-        applyReward(this.run, item);
-        this.normalizePersistentGrid();
-        this.showShop();
-        this.autoSave();
+        this.buyShopItem(item);
       });
       wrap.appendChild(btn);
     }
@@ -291,7 +296,7 @@ class Game {
     [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
       const card = CARD_LIBRARY[id];
       const item = document.createElement('div');
-      item.className = 'deck-card';
+      item.className = `deck-card ${this.tierClass(card.tier)}`;
       item.appendChild(this.blockPreview(card, 7));
       item.insertAdjacentHTML('beforeend', `<span>${card.name}</span><strong>x${count}</strong>`);
       wrap.appendChild(item);
@@ -314,7 +319,7 @@ class Game {
         const skill = SKILLS[id];
         if (!skill) return;
         const item = document.createElement('div');
-        item.className = 'loadout-card';
+        item.className = `loadout-card ${this.tierClass(skill.tier)}`;
         item.innerHTML = `<span class="item-chip">${index + 1}</span><span><strong>${skill.name}</strong><small>${skill.desc}</small><small class="cost">${skill.cost} MP</small></span>`;
         skillWrap.appendChild(item);
       });
@@ -327,7 +332,7 @@ class Game {
         const itemDef = CONSUMABLES[id];
         if (!itemDef) return;
         const item = document.createElement('div');
-        item.className = 'loadout-card';
+        item.className = `loadout-card ${this.tierClass(itemDef.tier)}`;
         item.innerHTML = `<span class="item-chip">${itemDef.short}</span><span><strong>${index + 4}. ${itemDef.name}</strong><small>${itemDef.desc}</small></span>`;
         consumableWrap.appendChild(item);
       });
@@ -340,7 +345,7 @@ class Game {
         const relic = RELICS[id];
         if (!relic) return;
         const item = document.createElement('div');
-        item.className = 'loadout-card';
+        item.className = `loadout-card ${this.tierClass(relic.tier)}`;
         item.innerHTML = `<span class="item-chip">R</span><span><strong>${relic.name}</strong><small>${relic.desc}</small></span>`;
         relicWrap.appendChild(item);
       });
@@ -350,11 +355,11 @@ class Game {
   itemDesc(item) {
     if (item.kind === 'card') {
       const card = CARD_LIBRARY[item.id];
-      return `${tierLabel(card.tier)} - ${card.shapeName} + ${card.abilityName} (${card.cellCount} cells): ${CARD_DESCRIPTIONS[item.id] || 'Adds this shape and ability combo to your deck.'}`;
+      return `${card.shapeName} + ${card.abilityName} (${card.cellCount} cells): ${CARD_DESCRIPTIONS[item.id] || 'Adds this shape and ability combo to your deck.'}`;
     }
-    if (item.kind === 'skill') return `${tierLabel(SKILLS[item.id].tier)} - ${SKILLS[item.id].desc}`;
-    if (item.kind === 'consumable') return `${tierLabel(CONSUMABLES[item.id].tier)} - ${CONSUMABLES[item.id].desc}`;
-    if (item.kind === 'relic') return `${tierLabel(RELICS[item.id].tier)} - ${RELICS[item.id].desc}`;
+    if (item.kind === 'skill') return SKILLS[item.id].desc;
+    if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
+    if (item.kind === 'relic') return RELICS[item.id].desc;
     return `${item.amount} extra rows of survival space.`;
   }
 
@@ -392,6 +397,89 @@ class Game {
 
   rendererColor(id) {
     return COLORS[id] || '#8fb1ff';
+  }
+
+  tierClass(tier) {
+    return `tier-${tier || 'bronze'}`;
+  }
+
+  buyShopItem(item) {
+    const finish = accepted => {
+      if (!accepted) return;
+      this.run.gold -= item.price;
+      this.normalizePersistentGrid();
+      this.showShop();
+      this.autoSave();
+    };
+    if (item.kind === 'skill') return this.acquireSkill(item.id, () => finish(true), () => finish(false));
+    if (item.kind === 'consumable') return this.acquireConsumable(item.id, () => finish(true), () => finish(false));
+    applyReward(this.run, item);
+    finish(true);
+  }
+
+  acquireSkill(id, done = () => {}, skipped = done) {
+    if (this.run.ownedSkills.includes(id)) return skipped(false);
+    const add = slot => {
+      this.run.ownedSkills.push(id);
+      if (slot == null && this.run.equippedSkills.length < 3) this.run.equippedSkills.push(id);
+      else if (slot != null) this.run.equippedSkills[slot] = id;
+      done(true);
+    };
+    if (this.run.equippedSkills.length < 3) return add(null);
+    this.showSlotPicker({
+      title: `Equip ${SKILLS[id].name}`,
+      desc: SKILLS[id].desc,
+      slots: this.run.equippedSkills,
+      labels: slotId => SKILLS[slotId]?.name || 'Empty',
+      onPick: add,
+      onSkip: () => skipped(false)
+    });
+  }
+
+  acquireConsumable(id, done = () => {}, skipped = done) {
+    const add = slot => {
+      if (slot == null && this.run.consumables.length < 3) this.run.consumables.push(id);
+      else if (slot != null) this.run.consumables[slot] = id;
+      done(true);
+    };
+    if (this.run.consumables.length < 3) return add(null);
+    this.showSlotPicker({
+      title: `Take ${CONSUMABLES[id].name}`,
+      desc: CONSUMABLES[id].desc,
+      slots: this.run.consumables,
+      labels: slotId => CONSUMABLES[slotId]?.name || 'Empty',
+      onPick: add,
+      onSkip: () => skipped(false)
+    });
+  }
+
+  showSlotPicker({ title, desc, slots, labels, onPick, onSkip }) {
+    let overlay = document.getElementById('slotPicker');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'slotPicker';
+      overlay.innerHTML = '<div class="slot-dialog"><h2></h2><p></p><div class="slot-options"></div><button class="ghost wide" data-skip="1">Skip</button></div>';
+      document.body.appendChild(overlay);
+    }
+    overlay.querySelector('h2').textContent = title;
+    overlay.querySelector('p').textContent = desc;
+    const options = overlay.querySelector('.slot-options');
+    options.innerHTML = '';
+    slots.slice(0, 3).forEach((slotId, index) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.innerHTML = `<strong>Slot ${index + 1}</strong><span>${labels(slotId)}</span>`;
+      btn.addEventListener('click', () => {
+        overlay.classList.remove('active');
+        onPick(index);
+      });
+      options.appendChild(btn);
+    });
+    overlay.querySelector('[data-skip]').onclick = () => {
+      overlay.classList.remove('active');
+      onSkip();
+    };
+    overlay.classList.add('active');
   }
 
   startBattle(enemyCard) {
@@ -576,7 +664,7 @@ class Game {
   showRewards(rewards, grantedRelic = null) {
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `Round ${this.run.round} Clear`;
-    const relicText = grantedRelic ? ` - gained ${tierLabel(RELICS[grantedRelic].tier)} relic: ${RELICS[grantedRelic].name}` : '';
+    const relicText = grantedRelic ? ` - gained relic: ${RELICS[grantedRelic].name}` : '';
     document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold} Gold${relicText} - choose one reward`;
     document.getElementById('enemyChoices').innerHTML = '';
     const panel = document.getElementById('rewardPanel');
@@ -586,8 +674,8 @@ class Game {
     wrap.innerHTML = '';
     rewards.forEach(reward => {
       const btn = document.createElement('button');
-      btn.className = 'choice reward';
-      btn.innerHTML = `<strong>${reward.title}</strong><span>${tierLabel(reward.tier)} - ${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      btn.className = `choice reward ${this.tierClass(reward.tier)}`;
+      btn.innerHTML = `<strong>${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         applyReward(this.run, reward);
@@ -927,6 +1015,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260519-tier1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260519-reward-flow1').catch(() => {});
   });
 }
