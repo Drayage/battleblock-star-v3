@@ -67,6 +67,7 @@ export class RunState {
     this.relics = [];
     this.visitedShops = new Set();
     this.seenEvents = new Set();
+    this.starterPicked = false;
   }
 
   deckCount() {
@@ -234,11 +235,20 @@ export function makeShopItems(run) {
 }
 
 export function shouldShowEvent(run) {
+  if (!run.starterPicked) return 'starter';
   if (run.round === 1 && !run.seenEvents.has('start')) return 'start';
   const completed = run.round - 1;
   const key = `after-${completed}`;
   if (completed > 0 && completed % 2 === 0 && !run.seenEvents.has(key)) return key;
   return null;
+}
+
+export function makeStarterChoices() {
+  return [
+    { kind: 'starterSkill', id: 'minor_purge', tier: TIERS.BRONZE, title: '방어형', desc: SKILLS.minor_purge.desc },
+    { kind: 'starterSkill', id: 'double_shot', tier: TIERS.BRONZE, title: '공격형', desc: SKILLS.double_shot.desc },
+    { kind: 'starterSkill', id: 'quick_cycle', tier: TIERS.BRONZE, title: '유틸형', desc: SKILLS.quick_cycle.desc }
+  ];
 }
 
 export function makeEventChoices(run, eventKey) {

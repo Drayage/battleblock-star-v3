@@ -78,6 +78,7 @@ export class Board {
     this.lastMoveWasRotate = false;
     this.flash = 0;
     this.attackPool = 0;
+    this.nextAttackDouble = false;
     this.fillQueue();
     this.spawn();
   }
@@ -105,6 +106,7 @@ export class Board {
     board.lastMoveWasRotate = !!state.lastMoveWasRotate;
     board.flash = state.flash || 0;
     board.attackPool = state.attackPool || 0;
+    board.nextAttackDouble = !!state.nextAttackDouble;
     board.fillQueue();
     return board;
   }
@@ -254,6 +256,10 @@ export class Board {
       this.comboBreakFlash = 0;
       this.clearText = result.clearText;
       this.clearTextFlash = result.clearText ? GAME_TIMING.CLEAR_FEEDBACK_FLASH : 0;
+      if (this.nextAttackDouble) {
+        result.attack = Number((result.attack * 2).toFixed(2));
+        this.nextAttackDouble = false;
+      }
       this.attackPool += result.attack;
       const cancel = Math.min(this.garbageQueue, Math.floor(this.attackPool));
       this.cancelGarbage(cancel);
@@ -484,7 +490,8 @@ export class Board {
       lastAttack: this.lastAttack,
       lastMoveWasRotate: this.lastMoveWasRotate,
       flash: this.flash,
-      attackPool: this.attackPool
+      attackPool: this.attackPool,
+      nextAttackDouble: this.nextAttackDouble
     };
   }
 }
