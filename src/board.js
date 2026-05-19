@@ -317,7 +317,8 @@ export class Board {
       if (this.grid[r].every(Boolean)) {
         const row = this.grid[r];
         attack += row.reduce((sum, c) => sum + c.attack, 0);
-        mana += row.length * 0.5 + row.filter(c => c.traits.includes('manaBonus')).length * 4;
+        mana += row.reduce((sum, c) => sum + (c.traits.includes('garbage') ? 0.4 : 0.5), 0)
+               + row.filter(c => c.traits.includes('manaBonus')).length * 4;
         row.forEach((c, x) => {
           if (c.traits.includes('bomb')) bombCells.push({ x, y: r });
         });
