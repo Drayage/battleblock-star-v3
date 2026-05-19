@@ -93,6 +93,7 @@ export class AI {
     this.hesitateRate = skill.hesitateRate || 0;
     this.holdMistakeRate = skill.holdMistakeRate ?? this.mistakeRate * 0.6;
     this.pressure = { mistake: 0, noise: 0, hold: 0 };
+    this.lastHoldSerial = null;
     this.queue = [];
     this.lastPlanCard = null;
   }
@@ -119,7 +120,8 @@ export class AI {
         candidates.push({ x, rot, hold: false, s });
       }
     }
-    if (!board.holdUsed && !board.holdLocked) {
+    const canHoldThisPiece = !board.holdUsed && !board.holdLocked && this.lastHoldSerial !== board.pieceSerial;
+    if (canHoldThisPiece) {
       const playCard = board.held || board.nextQueue[0];
       if (playCard) {
         for (let rot = 0; rot < 4; rot++) {
@@ -158,7 +160,12 @@ export class AI {
     if (action === 'left') { board.move(-1, 0); return null; }
     if (action === 'right') { board.move(1, 0); return null; }
     if (action === 'rotate') { board.rotate(1); return null; }
-    if (action === 'hold') { board.hold(); return null; }
+    if (action === 'hold') {
+      if (!board.holdUsed && this.lastHoldSerial !== board.pieceSerial && board.hold()) {
+        this.lastHoldSerial = board.pieceSerial;
+      }
+      return null;
+    }
     if (action === 'wait') return null;
     if (action === 'hard') return board.hardDrop();
     if (board.current && !board.defeated) return board.hardDrop();

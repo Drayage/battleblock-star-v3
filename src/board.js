@@ -66,6 +66,7 @@ export class Board {
     this.holdUsed = false;
     this.holdLocked = false;
     this.nextQueue = [];
+    this.pieceSerial = 0;
     this.garbageEntries = [];
     this.mp = 0;
     this.combo = 0;
@@ -94,6 +95,7 @@ export class Board {
     board.holdUsed = !!state.holdUsed;
     board.holdLocked = !!state.holdLocked;
     board.nextQueue = (state.nextQueue || []).map(id => CARD_LIBRARY[id]).filter(Boolean);
+    board.pieceSerial = state.pieceSerial || 0;
     board.garbageEntries = Board.garbageEntriesFromState(state);
     board.mp = state.mp || 0;
     board.combo = state.combo || 0;
@@ -148,6 +150,7 @@ export class Board {
   spawn() {
     const card = this.nextQueue.shift();
     this.fillQueue();
+    this.pieceSerial++;
     this.current = new Mino(card, 3, SPAWN_Y);
     this.holdUsed = false;
     this.lastMoveWasRotate = false;
@@ -478,6 +481,7 @@ export class Board {
       holdUsed: this.holdUsed,
       holdLocked: this.holdLocked,
       nextQueue: this.nextQueue.map(card => card.id),
+      pieceSerial: this.pieceSerial,
       garbageEntries: this.garbageEntries.map(entry => ({ ...entry })),
       garbageQueue: this.garbageQueue,
       mp: this.mp,
