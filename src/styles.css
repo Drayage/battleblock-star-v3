@@ -44,18 +44,19 @@ button{font:inherit}
   html.in-game,body.in-game{height:100dvh;overflow:hidden}
   html.in-game #app,body.in-game #app{height:100dvh;min-height:0;overflow:hidden;padding:6px}
   #app{padding:6px;align-items:flex-start}
-  .choice-grid{grid-template-columns:1fr}.topbar,.hud{padding:0 4px;margin-bottom:4px}
-  .hud-actions{gap:5px}.hud-actions .ghost{padding:7px 8px;font-size:11px}
-  #gameScreen{height:100dvh;overflow:hidden;padding-bottom:108px}
-  #canvasWrap{min-height:0;max-height:calc(100dvh - 118px)}
-  #mobilePad{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto!important;gap:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));max-height:106px}
-  #mobilePad .pad-slots{position:absolute;left:6px;right:6px;bottom:106px;display:flex;gap:5px;pointer-events:auto}
+  .choice-grid{grid-template-columns:1fr}.topbar,.hud{padding:0 4px;margin-bottom:2px}
+  .hud strong{font-size:13px}.hud span{font-size:10px;margin-top:1px}
+  .hud-actions{gap:5px}.hud-actions .ghost{padding:5px 7px;font-size:10px}
+  #gameScreen{height:100dvh;overflow:hidden;padding-bottom:120px}
+  #canvasWrap{min-height:0;max-height:calc(100dvh - 128px)}
+  #mobilePad{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto!important;gap:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));max-height:118px}
+  #mobilePad .pad-slots{position:absolute;left:6px;right:6px;bottom:118px;display:flex;gap:5px;pointer-events:auto}
   #mobilePad .pad-slots:empty{display:none}
   #mobilePad .pad-actions{display:grid!important;grid-template-columns:1fr!important;gap:5px;width:100%}
   #mobilePad .pad-row{display:grid;gap:5px}
   #mobilePad .pad-row-top{grid-template-columns:1fr 2fr 2fr;padding:0}
   #mobilePad .pad-row-bottom{grid-template-columns:repeat(4,minmax(0,1fr))}
-  #mobilePad button{min-width:0;width:100%;min-height:46px;height:46px;padding:0;font-size:22px;line-height:1}
+  #mobilePad button{min-width:0;width:100%;min-height:50px;height:50px;padding:0;font-size:22px;line-height:1}
   #mobilePad .pad-actions .big{font-size:22px}
   #mobilePad .pad-skills{min-height:0}
   #mobilePad .pad-skills button{min-height:30px;height:30px;font-size:8px}
