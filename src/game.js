@@ -621,7 +621,12 @@ class Game {
     if (result.attack > 0) {
       const attack = result.attack * mult;
       const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
-      defender.receiveGarbage(buffered);
+      if (buffered > 0) {
+        attacker.attackPool += buffered;
+        const toSend = Math.floor(attacker.attackPool);
+        attacker.attackPool = Number((attacker.attackPool - toSend).toFixed(4));
+        if (toSend > 0) defender.receiveGarbage(toSend);
+      }
     }
     if (this.player.defeated) return this.queueBattleEnd('loss');
     if (this.enemy.defeated) return this.queueBattleEnd('win');

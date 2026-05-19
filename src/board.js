@@ -77,6 +77,7 @@ export class Board {
     this.lastAttack = 0;
     this.lastMoveWasRotate = false;
     this.flash = 0;
+    this.attackPool = 0;
     this.fillQueue();
     this.spawn();
   }
@@ -103,6 +104,7 @@ export class Board {
     board.lastAttack = state.lastAttack || 0;
     board.lastMoveWasRotate = !!state.lastMoveWasRotate;
     board.flash = state.flash || 0;
+    board.attackPool = state.attackPool || 0;
     board.fillQueue();
     return board;
   }
@@ -478,7 +480,8 @@ export class Board {
       defeated: this.defeated,
       lastAttack: this.lastAttack,
       lastMoveWasRotate: this.lastMoveWasRotate,
-      flash: this.flash
+      flash: this.flash,
+      attackPool: this.attackPool
     };
   }
 }
