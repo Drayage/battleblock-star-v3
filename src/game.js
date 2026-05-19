@@ -117,7 +117,7 @@ class Game {
   refreshMenu() {
     document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
     document.getElementById('menuGold').textContent = this.run.gold;
-    document.getElementById('menuHp').textContent = `${this.garbageRowCount()}/${this.run.hpRows}`;
+    document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
     document.getElementById('menuDeck').textContent = `${this.run.deckCount()}장`;
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
@@ -155,7 +155,7 @@ class Game {
     if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `${this.run.round}라운드`;
-    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.garbageRowCount()}/${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
+    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
@@ -183,7 +183,7 @@ class Game {
       document.getElementById('eventMeta').textContent = '런을 시작할 스킬을 선택하세요.';
     } else {
       document.getElementById('eventTitle').textContent = eventKey === 'start' ? '시작 이벤트' : `${completed}라운드 이후`;
-      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.garbageRowCount()}/${this.run.hpRows} · 하나 선택`;
+      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 하나 선택`;
     }
     const wrap = document.getElementById('eventChoices');
     wrap.innerHTML = '';

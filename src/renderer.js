@@ -47,11 +47,11 @@ export class Renderer {
     ctx.fillText(`Round ${run.round} / 20`, L.w / 2, 26);
     ctx.font = '12px Courier New';
     ctx.fillStyle = '#7f8ca8';
-    let boardH = 0;
+    let stackH = 0;
     for (let r = 0; r < player.rows; r++) {
-      if (player.grid[r] && player.grid[r].some(c => c)) { boardH = player.rows - r; break; }
+      if (player.grid[r] && player.grid[r].some(c => c)) { stackH = player.rows - r; break; }
     }
-    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${boardH}/${run.hpRows}`, L.w / 2, 47);
+    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
     this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
@@ -215,15 +215,9 @@ export class Renderer {
     if (board.held) this.preview(board.held, ox + 20, oy + 28, Math.max(7, cs * 0.48));
     ctx.fillText('NEXT', ox + 8, oy + 78);
     board.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + 14, oy + 88 + i * 23, Math.max(6, cs * 0.38)));
-    ctx.fillStyle = '#10192d';
-    ctx.fillRect(ox, oy + 172, width, 14);
-    ctx.fillStyle = '#38d0ff';
-    ctx.fillRect(ox, oy + 172, Math.min(width, board.mp * (width / 100)), 14);
-    ctx.strokeStyle = '#26375f';
-    ctx.strokeRect(ox, oy + 172, width, 14);
     ctx.fillStyle = '#e2efff';
     ctx.font = '10px Courier New';
-    ctx.fillText(`MP ${Math.floor(board.mp)}`, ox + 6, oy + 183);
+    ctx.fillText(`MP ${Math.floor(board.mp)}`, ox + 6, oy + 176);
     run.equippedSkills.forEach((id, i) => {
       const skill = window.BBS_SKILLS[id];
       if (!skill) return;
@@ -306,15 +300,9 @@ export class Renderer {
     this.garbageMeter(enemy, ox + panelW - 12, oy + 27, enemy.rows * 4);
 
     const mpY = oy + 96;
-    ctx.fillStyle = '#10192d';
-    ctx.fillRect(ox + 8, mpY, panelW - 16, 12);
-    ctx.fillStyle = '#38d0ff';
-    ctx.fillRect(ox + 8, mpY, Math.min(panelW - 16, player.mp * ((panelW - 16) / 100)), 12);
-    ctx.strokeStyle = '#26375f';
-    ctx.strokeRect(ox + 8, mpY, panelW - 16, 12);
     ctx.fillStyle = '#e2efff';
     ctx.font = '9px Courier New';
-    ctx.fillText(`MP ${Math.floor(player.mp)}`, ox + 12, mpY + 9);
+    ctx.fillText(`MP ${Math.floor(player.mp)}`, ox + 12, mpY + 4);
     run.equippedSkills.forEach((id, i) => {
       const skill = window.BBS_SKILLS[id];
       if (!skill) return;
