@@ -56,7 +56,7 @@ function scoreGrid(grid, cleared, profile) {
   };
   const burst = cleared >= 4 ? 24 : cleared >= 2 ? 8 : cleared > 0 ? 3 : 0;
   const dangerRows = Math.max(0, ev.maxHeight - (ev.rows - 5));
-  const survival = dangerRows * -22 + ev.topCells * -10;
+  const survival = dangerRows * -30 + ev.topCells * -14;
   const spirePenalty = ev.spire * ev.spire * -9;
   const roughnessPenalty = Math.max(0, ev.roughness - 7) * -5;
   const wellReward = ev.maxHeight < ev.rows - 7 ? ev.bestWell * p.well : 0;
