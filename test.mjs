@@ -250,6 +250,7 @@ assert.equal(speedDrone.rewardGold > lineHunter.rewardGold, true);
 const tunedSpeedDrone = makeEnemy(1, false, { name: 'Speed Drone', style: '', profile: 'fast', rows: -10, speed: 390, garbage: 0, risk: 1.55, rewardBonus: 8, openingRows: 10, aiSkill: { mistakeRate: 0.18, noise: 2.8, hesitateRate: 0.12 } });
 assert.equal(tunedSpeedDrone.startingRows, 10);
 assert.equal(tunedSpeedDrone.aiSkill.mistakeRate > 0.1, true);
+assert.equal(tunedSpeedDrone.aiSkill.holdMistakeRate > 0.08, true);
 assert.equal(tunedSpeedDrone.speed > 300, true);
 const openerEnemy = makeEnemy(3, false, { name: 'Opener Script', style: '', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] });
 assert.equal(openerEnemy.aiProfile, 'opener');

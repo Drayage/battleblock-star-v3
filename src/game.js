@@ -984,7 +984,7 @@ class Game {
     });
     this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * GAME_TIMING.PLAYER_SLOW_FACTOR : dt);
     this.enemyTimer += dt;
-    const enemyDelay = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
+    const enemyDelay = this.currentEnemyDelay();
     if (this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
       this.resolve(this.ai.step(this.enemy), this.enemy);
@@ -1001,6 +1001,28 @@ class Game {
       message: this.message
     });
     this.message = '';
+  }
+
+  currentEnemyDelay() {
+    const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
+    return Math.round(base * this.playerPressureRelief());
+  }
+
+  playerPressureRelief() {
+    if (!this.player) return 1;
+    const heights = Array.from({ length: this.player.cols }, (_, c) => {
+      for (let r = 0; r < this.player.rows; r++) if (this.player.grid[r][c]) return this.player.rows - r;
+      return 0;
+    });
+    const maxHeight = Math.max(...heights);
+    const topPressure = Math.max(0, maxHeight - (this.player.rows - 8));
+    const queued = this.player.garbageQueue;
+    const ready = this.player.readyGarbage();
+    let relief = 1;
+    if (topPressure >= 2) relief += Math.min(0.28, topPressure * 0.055);
+    if (queued >= 4) relief += Math.min(0.22, (queued - 3) * 0.035);
+    if (ready >= 2) relief += Math.min(0.16, ready * 0.035);
+    return Math.min(1.58, relief);
   }
 
   updatePlayerGravity(dt) {

@@ -77,10 +77,10 @@ export class RunState {
 }
 
 const ENEMIES = [
-  { name: '소프트 스타터', tier: TIERS.BRONZE, style: '느린 스태커. 낮은 HP와 약한 압박.', profile: 'balanced', rows: -7, speed: 455, garbage: 0, risk: 0.72, rewardBonus: 0, openingRows: 12, aiSkill: { mistakeRate: 0.32, noise: 3.8, hesitateRate: 0.08 } },
-  { name: '라인 헌터', tier: TIERS.BRONZE, style: '단일 클리어를 자주 하며 꾸준히 압박합니다.', profile: 'balanced', rows: -6, speed: 420, garbage: 0, risk: 0.98, rewardBonus: 1, openingRows: 13, aiSkill: { mistakeRate: 0.24, noise: 2.8, hesitateRate: 0.06 } },
-  { name: '스피드 드론', tier: TIERS.SILVER, style: '매우 빠르지만 취약합니다. 스트레스가 심해 보상이 높습니다.', profile: 'fast', rows: -10, speed: 285, garbage: 0, risk: 1.62, rewardBonus: 8, openingRows: 10, aiSkill: { mistakeRate: 0.2, noise: 2, hesitateRate: 0.035 } },
-  { name: '오프너 스크립트', tier: TIERS.SILVER, style: 'OPENER 패턴: 폭발적인 준비 오프닝, 매우 낮은 HP.', profile: 'opener', rows: -9, speed: 260, garbage: 0, risk: 1.82, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T], aiSkill: { mistakeRate: 0.14, noise: 1.6, hesitateRate: 0.025 } },
+  { name: '소프트 스타터', tier: TIERS.BRONZE, style: '느린 스태커. 낮은 HP와 약한 압박.', profile: 'balanced', rows: -7, speed: 455, garbage: 0, risk: 0.72, rewardBonus: 0, openingRows: 12, aiSkill: { mistakeRate: 0.38, noise: 4.2, hesitateRate: 0.08, holdMistakeRate: 0.48 } },
+  { name: '라인 헌터', tier: TIERS.BRONZE, style: '단일 클리어를 자주 하며 꾸준히 압박합니다.', profile: 'balanced', rows: -6, speed: 420, garbage: 0, risk: 0.98, rewardBonus: 1, openingRows: 13, aiSkill: { mistakeRate: 0.3, noise: 3.2, hesitateRate: 0.06, holdMistakeRate: 0.38 } },
+  { name: '스피드 드론', tier: TIERS.SILVER, style: '매우 빠르지만 취약합니다. 스트레스가 심해 보상이 높습니다.', profile: 'fast', rows: -10, speed: 285, garbage: 0, risk: 1.62, rewardBonus: 8, openingRows: 10, aiSkill: { mistakeRate: 0.25, noise: 2.4, hesitateRate: 0.035, holdMistakeRate: 0.28 } },
+  { name: '오프너 스크립트', tier: TIERS.SILVER, style: 'OPENER 패턴: 폭발적인 준비 오프닝, 매우 낮은 HP.', profile: 'opener', rows: -9, speed: 260, garbage: 0, risk: 1.82, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T], aiSkill: { mistakeRate: 0.18, noise: 1.8, hesitateRate: 0.025, holdMistakeRate: 0.22 } },
   { name: '스트라이드 엔진', tier: TIERS.GOLD, style: 'STRIDE 패턴: 꾸준한 쿼드 및 스핀 압박.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T], aiSkill: { mistakeRate: 0.05, noise: 0.8, hesitateRate: 0.03 } },
   { name: '플롱크 겜블러', tier: TIERS.GOLD, style: 'PLONK 패턴: 압박을 버티다가 폭발적 피해를 노립니다.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], aiSkill: { mistakeRate: 0.06, noise: 1, hesitateRate: 0.04 } },
   { name: 'INF DS 쉘', tier: TIERS.SILVER, style: 'INF DS 패턴: 방어적 다운스태킹과 필드 정리.', profile: 'infds', rows: 3, speed: 450, garbage: 1, risk: 1.3, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD], aiSkill: { mistakeRate: 0.08, noise: 1.4, hesitateRate: 0.06 } },
@@ -180,7 +180,8 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
   const aiSkill = {
     mistakeRate: Math.max(0, (baseSkill.mistakeRate || 0) - level * 0.012 - tier * 0.035 - (elite ? 0.08 : 0)),
     noise: Math.max(0, (baseSkill.noise || 0) - level * 0.12 - tier * 0.45 - (elite ? 0.8 : 0)),
-    hesitateRate: Math.max(0, (baseSkill.hesitateRate || 0) - level * 0.01 - tier * 0.03 - (elite ? 0.06 : 0))
+    hesitateRate: Math.max(0, (baseSkill.hesitateRate || 0) - level * 0.01 - tier * 0.03 - (elite ? 0.06 : 0)),
+    holdMistakeRate: Math.max(0, (baseSkill.holdMistakeRate ?? (baseSkill.mistakeRate || 0) * 0.6) - level * 0.018 - tier * 0.05 - (elite ? 0.1 : 0))
   };
   const rewardTier = elite ? TIERS.GOLD : maxTier(base.tier || TIERS.BRONZE, roundTier(round));
   return {

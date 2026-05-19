@@ -91,6 +91,7 @@ export class AI {
     this.mistakeRate = skill.mistakeRate || 0;
     this.noise = skill.noise || 0;
     this.hesitateRate = skill.hesitateRate || 0;
+    this.holdMistakeRate = skill.holdMistakeRate ?? this.mistakeRate * 0.6;
     this.queue = [];
     this.lastPlanCard = null;
   }
@@ -127,7 +128,10 @@ export class AI {
     }
     candidates.sort((a, b) => b.s - a.s);
     const mistakeWindow = Math.min(candidates.length - 1, 2 + Math.floor(Math.random() * 7));
-    const best = Math.random() < this.mistakeRate ? candidates[Math.max(0, mistakeWindow)] : candidates[0];
+    let best = Math.random() < this.mistakeRate ? candidates[Math.max(0, mistakeWindow)] : candidates[0];
+    if (best?.hold && Math.random() < this.holdMistakeRate) {
+      best = candidates.find(candidate => !candidate.hold) || best;
+    }
     if (!best) return;
     this.queue = [];
     if (best.hold) this.queue.push('hold');
