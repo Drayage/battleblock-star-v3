@@ -1,4 +1,4 @@
-const CACHE_NAME = 'battle-block-star-v3-reward-flow1';
+const CACHE_NAME = 'battle-block-star-v3-starter-skill';
 const APP_SHELL = [
   './',
   './index.html',

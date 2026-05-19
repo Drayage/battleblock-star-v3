@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-reward-flow1';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-starter-skill';
 
 export class Renderer {
   constructor(canvas) {
