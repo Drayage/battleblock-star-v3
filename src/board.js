@@ -245,7 +245,7 @@ export class Board {
       const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
       this.combo++;
-      const comboMult = 1.1 + this.combo * 0.1;
+      const comboMult = this.combo >= 2 ? 1.0 + this.combo * 0.1 : 1.0;
       result.attack = Number((result.attack * comboMult).toFixed(2));
       this.mp = Math.min(100, this.mp + result.mana);
       this.flash = 180;
