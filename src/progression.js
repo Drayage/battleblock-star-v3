@@ -19,7 +19,7 @@ export const RELICS = {
   garbage_buffer: {
     id: 'garbage_buffer',
     name: 'Garbage Buffer',
-    tier: TIERS.SILVER,
+    tier: TIERS.GOLD,
     desc: 'Enemy attacks send 1 less garbage whenever they hit you.'
   },
   hold_cache: {

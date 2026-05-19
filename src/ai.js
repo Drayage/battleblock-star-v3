@@ -94,9 +94,10 @@ export class AI {
 
   plan(board) {
     if (!board.current) return;
-    const cardKey = `${board.current.card.id}-${board.current.x}-${board.current.y}`;
+    const cardKey = `${board.current.card.id}-${board.current.x}-${board.current.y}-${board.held?.id || 'none'}`;
     if (this.queue.length && this.lastPlanCard === cardKey) return;
     this.lastPlanCard = cardKey;
+    const noise = () => this.profile === 'elite' ? Math.random() * 2 : 0;
     let best = null;
     let bestScore = -Infinity;
     for (let rot = 0; rot < 4; rot++) {
@@ -104,18 +105,32 @@ export class AI {
         const m = new Mino(board.current.card, x, board.current.y);
         m.rot = rot;
         if (!board.ok(m)) continue;
-        const s = simulate(board, m, this.profile) + (this.profile === 'elite' ? Math.random() * 2 : 0);
-        if (s > bestScore) {
-          bestScore = s;
-          best = { x, rot };
+        const s = simulate(board, m, this.profile) + noise();
+        if (s > bestScore) { bestScore = s; best = { x, rot, hold: false }; }
+      }
+    }
+    if (!board.holdUsed && !board.holdLocked) {
+      const playCard = board.held || board.nextQueue[0];
+      if (playCard) {
+        for (let rot = 0; rot < 4; rot++) {
+          for (let x = -2; x < COLS + 2; x++) {
+            const m = new Mino(playCard, x, board.current.y);
+            m.rot = rot;
+            if (!board.ok(m)) continue;
+            const s = simulate(board, m, this.profile) + noise();
+            if (s > bestScore) { bestScore = s; best = { x, rot, hold: true }; }
+          }
         }
       }
     }
     if (!best) return;
-    const turns = (best.rot - board.current.rot + 4) % 4;
     this.queue = [];
+    if (best.hold) this.queue.push('hold');
+    const startRot = best.hold ? 0 : board.current.rot;
+    const startX = best.hold ? 3 : board.current.x;
+    const turns = (best.rot - startRot + 4) % 4;
     for (let i = 0; i < turns; i++) this.queue.push('rotate');
-    const dx = best.x - board.current.x;
+    const dx = best.x - startX;
     for (let i = 0; i < Math.abs(dx); i++) this.queue.push(dx > 0 ? 'right' : 'left');
     this.queue.push('hard');
   }
@@ -123,18 +138,10 @@ export class AI {
   step(board) {
     this.plan(board);
     const action = this.queue.shift();
-    if (action === 'left') {
-      board.move(-1, 0);
-      return null;
-    }
-    if (action === 'right') {
-      board.move(1, 0);
-      return null;
-    }
-    if (action === 'rotate') {
-      board.rotate(1);
-      return null;
-    }
+    if (action === 'left') { board.move(-1, 0); return null; }
+    if (action === 'right') { board.move(1, 0); return null; }
+    if (action === 'rotate') { board.rotate(1); return null; }
+    if (action === 'hold') { board.hold(); return null; }
     if (action === 'hard') return board.hardDrop();
     if (board.current && !board.defeated) return board.hardDrop();
     return null;

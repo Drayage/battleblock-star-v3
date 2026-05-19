@@ -245,7 +245,8 @@ export class Board {
       const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
       this.combo++;
-      result.attack += Math.max(0, this.combo - 1) * 0.3;
+      const comboMult = 1.1 + this.combo * 0.1;
+      result.attack = Number((result.attack * comboMult).toFixed(2));
       this.mp = Math.min(100, this.mp + result.mana);
       this.flash = 180;
       this.comboBreakFlash = 0;
@@ -316,7 +317,7 @@ export class Board {
       if (this.grid[r].every(Boolean)) {
         const row = this.grid[r];
         attack += row.reduce((sum, c) => sum + c.attack, 0);
-        mana += row.length * 0.5 + row.filter(c => c.traits.includes('manaBonus')).length * 8;
+        mana += row.length * 0.5 + row.filter(c => c.traits.includes('manaBonus')).length * 4;
         row.forEach((c, x) => {
           if (c.traits.includes('bomb')) bombCells.push({ x, y: r });
         });
@@ -423,7 +424,7 @@ export class Board {
         return;
       }
       this.grid.shift();
-      this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] }));
+      this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage'] }));
     }
   }
 
