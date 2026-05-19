@@ -97,7 +97,7 @@ export const COLORS = {
 
 export const SHAPE_LIBRARY = {
   I: {
-    name: 'I Shape',
+    name: 'I형',
     cells: 4,
     shape: [
     [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
@@ -107,7 +107,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   J: {
-    name: 'J Shape',
+    name: 'J형',
     cells: 4,
     shape: [
     [[1,0,0],[1,1,1],[0,0,0]],
@@ -117,7 +117,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   L: {
-    name: 'L Shape',
+    name: 'L형',
     cells: 4,
     shape: [
     [[0,0,1],[1,1,1],[0,0,0]],
@@ -127,14 +127,14 @@ export const SHAPE_LIBRARY = {
     ]
   },
   O: {
-    name: 'O Shape',
+    name: 'O형',
     cells: 4,
     shape: [
     [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]], [[1,1],[1,1]]
     ]
   },
   S: {
-    name: 'S Shape',
+    name: 'S형',
     cells: 4,
     shape: [
     [[0,1,1],[1,1,0],[0,0,0]],
@@ -144,7 +144,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   T: {
-    name: 'T Shape',
+    name: 'T형',
     cells: 4,
     shape: [
     [[0,1,0],[1,1,1],[0,0,0]],
@@ -154,7 +154,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   Z: {
-    name: 'Z Shape',
+    name: 'Z형',
     cells: 4,
     shape: [
     [[1,1,0],[0,1,1],[0,0,0]],
@@ -164,7 +164,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   CROSS5: {
-    name: 'Cross Shape',
+    name: '크로스형',
     cells: 5,
     shape: [
     [[0,1,0],[1,1,1],[0,1,0]],
@@ -174,7 +174,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   HEAVY5: {
-    name: 'Heavy Shape',
+    name: '헤비형',
     cells: 5,
     shape: [
     [[1,1,1],[0,1,0],[0,1,0]],
@@ -184,7 +184,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   WIDE6: {
-    name: 'Wide Shape',
+    name: '와이드형',
     cells: 6,
     shape: [
       [[1,1,1,1],[0,1,1,0]],
@@ -194,7 +194,7 @@ export const SHAPE_LIBRARY = {
     ]
   },
   HOOK5: {
-    name: 'Hook Shape',
+    name: '훅형',
     cells: 5,
     shape: [
       [[1,0,0],[1,0,0],[1,1,1]],
@@ -233,18 +233,18 @@ export const SHAPES = Object.fromEntries(Object.entries({
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
-  none: { id: 'none', name: 'No ability', cellAttack: 0.1, traits: [], desc: 'Standard tetromino cell.' },
-  highPower: { id: 'highPower', name: 'High Power', cellAttack: 0.3, traits: ['highPower'], desc: 'Cleared cells deal 0.3 attack.' },
-  oddPower: { id: 'oddPower', name: 'Odd Power', cellAttack: 0.16, traits: ['oddShape'], desc: 'Larger awkward shape with higher return.' },
-  bomb: { id: 'bomb', name: 'Bomb', cellAttack: 0.1, traits: ['bomb'], desc: 'Clearing this block destroys a 3x3 area centered on it.' },
-  manaBonus: { id: 'manaBonus', name: 'Mana', cellAttack: 0.1, traits: ['manaBonus'], desc: 'Cleared cells grant bonus MP.' },
-  purgeGarbage: { id: 'purgeGarbage', name: 'Cleanse', cellAttack: 0.1, traits: ['purgeGarbage'], desc: 'Clearing this block removes a garbage row.' },
-  instantAttack: { id: 'instantAttack', name: 'Instant Strike', cellAttack: 0.1, traits: [], onPlace: { attack: 1.2 }, desc: 'On placement, immediately sends 1.2 attack.' },
-  instantGuard: { id: 'instantGuard', name: 'Instant Guard', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 3 }, desc: 'On placement, deletes up to 3 incoming attack gauge.' },
-  instantMana: { id: 'instantMana', name: 'Instant Mana', cellAttack: 0.1, traits: [], onPlace: { mana: 18 }, desc: 'On placement, immediately restores 18 MP.' },
-  instantPurge: { id: 'instantPurge', name: 'Instant Purge', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 1 }, desc: 'On placement, removes 1 existing garbage row.' },
-  curse: { id: 'curse', name: 'Burden', cellAttack: 0.1, traits: ['curse'], desc: 'Awkward junk shape that clogs the deck.' },
-  wideCurse: { id: 'wideCurse', name: 'Wide Burden', cellAttack: 0.1, traits: ['curse', 'wide'], desc: 'Six-cell obstruction that clogs the deck.' }
+  none: { id: 'none', name: '일반', cellAttack: 0.1, traits: [], desc: '기본 테트로미노 셀.' },
+  highPower: { id: 'highPower', name: '고출력', cellAttack: 0.3, traits: ['highPower'], desc: '클리어된 셀당 0.3 공격력.' },
+  oddPower: { id: 'oddPower', name: '특수', cellAttack: 0.16, traits: ['oddShape'], desc: '특수 모양. 더 높은 반환값.' },
+  bomb: { id: 'bomb', name: '폭탄', cellAttack: 0.1, traits: ['bomb'], desc: '클리어 시 중심 3×3 영역을 파괴합니다.' },
+  manaBonus: { id: 'manaBonus', name: '마나', cellAttack: 0.1, traits: ['manaBonus'], desc: '클리어된 셀이 추가 MP를 제공합니다.' },
+  purgeGarbage: { id: 'purgeGarbage', name: '클렌즈', cellAttack: 0.1, traits: ['purgeGarbage'], desc: '클리어 시 쓰레기 행을 제거합니다.' },
+  instantAttack: { id: 'instantAttack', name: '즉발 공격', cellAttack: 0.1, traits: [], onPlace: { attack: 1.2 }, desc: '배치 즉시 1.2 공격력을 발사합니다.' },
+  instantGuard: { id: 'instantGuard', name: '즉발 방어', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 3 }, desc: '배치 즉시 들어오는 공격 게이지를 최대 3 차단합니다.' },
+  instantMana: { id: 'instantMana', name: '즉발 마나', cellAttack: 0.1, traits: [], onPlace: { mana: 18 }, desc: '배치 즉시 MP를 18 회복합니다.' },
+  instantPurge: { id: 'instantPurge', name: '즉발 퍼지', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 1 }, desc: '배치 즉시 쓰레기 행 1줄을 제거합니다.' },
+  curse: { id: 'curse', name: '방해', cellAttack: 0.1, traits: ['curse'], desc: '덱을 막는 방해형 블록.' },
+  wideCurse: { id: 'wideCurse', name: '광역 방해', cellAttack: 0.1, traits: ['curse', 'wide'], desc: '덱을 막는 6칸 방해형 블록.' }
 };
 
 function tierFromRarity(rarity) {
@@ -277,25 +277,25 @@ export const CARD_LIBRARY = {
   [TYPES.I]: blockCard(TYPES.I, 'I Mino', 'I'),
   [TYPES.J]: blockCard(TYPES.J, 'J Mino', 'J'),
   [TYPES.L]: blockCard(TYPES.L, 'L Mino', 'L'),
-  [TYPES.O]: blockCard(TYPES.O, 'O Mino', 'O'),
-  [TYPES.S]: blockCard(TYPES.S, 'S Mino', 'S'),
-  [TYPES.T]: blockCard(TYPES.T, 'T Mino', 'T'),
-  [TYPES.Z]: blockCard(TYPES.Z, 'Z Mino', 'Z'),
-  [TYPES.POWER_I]: blockCard(TYPES.POWER_I, 'Power I', 'I', 'highPower', 'rare'),
-  [TYPES.POWER_T]: blockCard(TYPES.POWER_T, 'Power T', 'T', 'highPower', 'rare'),
-  [TYPES.POWER_S]: blockCard(TYPES.POWER_S, 'Power S', 'S', 'highPower', 'rare'),
-  [TYPES.CROSS]: blockCard(TYPES.CROSS, 'Cross Mino', 'CROSS5', 'oddPower', 'rare'),
-  [TYPES.BOMB]: blockCard(TYPES.BOMB, 'Bomb O', 'O', 'bomb', 'uncommon'),
-  [TYPES.BOMB_I]: blockCard(TYPES.BOMB_I, 'Bomb I', 'I', 'bomb', 'rare'),
-  [TYPES.MANA_T]: blockCard(TYPES.MANA_T, 'Mana T', 'T', 'manaBonus', 'uncommon'),
-  [TYPES.MANA_L]: blockCard(TYPES.MANA_L, 'Mana L', 'L', 'manaBonus', 'uncommon'),
-  [TYPES.PURGE_O]: blockCard(TYPES.PURGE_O, 'Cleanse O', 'O', 'purgeGarbage', 'rare'),
-  [TYPES.CLEANSE_J]: blockCard(TYPES.CLEANSE_J, 'Cleanse J', 'J', 'purgeGarbage', 'rare'),
-  [TYPES.HEAVY_JUNK]: blockCard(TYPES.HEAVY_JUNK, 'Heavy Junk', 'HEAVY5', 'curse', 'curse'),
-  [TYPES.POWER_CROSS]: blockCard(TYPES.POWER_CROSS, 'Power Cross', 'CROSS5', 'highPower', 'rare'),
-  [TYPES.WIDE_JUNK]: blockCard(TYPES.WIDE_JUNK, 'Wide Junk', 'WIDE6', 'wideCurse', 'curse'),
-  [TYPES.INSTANT_STRIKE]: blockCard(TYPES.INSTANT_STRIKE, 'Strike Hook', 'HOOK5', 'instantAttack', 'uncommon'),
-  [TYPES.INSTANT_GUARD]: blockCard(TYPES.INSTANT_GUARD, 'Guard Wide', 'WIDE6', 'instantGuard', 'uncommon'),
-  [TYPES.INSTANT_MANA]: blockCard(TYPES.INSTANT_MANA, 'Mana Cross', 'CROSS5', 'instantMana', 'uncommon'),
-  [TYPES.INSTANT_PURGE]: blockCard(TYPES.INSTANT_PURGE, 'Purge Heavy', 'HEAVY5', 'instantPurge', 'rare')
+  [TYPES.O]: blockCard(TYPES.O, 'O 미노', 'O'),
+  [TYPES.S]: blockCard(TYPES.S, 'S 미노', 'S'),
+  [TYPES.T]: blockCard(TYPES.T, 'T 미노', 'T'),
+  [TYPES.Z]: blockCard(TYPES.Z, 'Z 미노', 'Z'),
+  [TYPES.POWER_I]: blockCard(TYPES.POWER_I, '파워 I', 'I', 'highPower', 'rare'),
+  [TYPES.POWER_T]: blockCard(TYPES.POWER_T, '파워 T', 'T', 'highPower', 'rare'),
+  [TYPES.POWER_S]: blockCard(TYPES.POWER_S, '파워 S', 'S', 'highPower', 'rare'),
+  [TYPES.CROSS]: blockCard(TYPES.CROSS, '크로스 미노', 'CROSS5', 'oddPower', 'rare'),
+  [TYPES.BOMB]: blockCard(TYPES.BOMB, '봄브 O', 'O', 'bomb', 'uncommon'),
+  [TYPES.BOMB_I]: blockCard(TYPES.BOMB_I, '봄브 I', 'I', 'bomb', 'rare'),
+  [TYPES.MANA_T]: blockCard(TYPES.MANA_T, '마나 T', 'T', 'manaBonus', 'uncommon'),
+  [TYPES.MANA_L]: blockCard(TYPES.MANA_L, '마나 L', 'L', 'manaBonus', 'uncommon'),
+  [TYPES.PURGE_O]: blockCard(TYPES.PURGE_O, '클렌즈 O', 'O', 'purgeGarbage', 'rare'),
+  [TYPES.CLEANSE_J]: blockCard(TYPES.CLEANSE_J, '클렌즈 J', 'J', 'purgeGarbage', 'rare'),
+  [TYPES.HEAVY_JUNK]: blockCard(TYPES.HEAVY_JUNK, '헤비 정크', 'HEAVY5', 'curse', 'curse'),
+  [TYPES.POWER_CROSS]: blockCard(TYPES.POWER_CROSS, '파워 크로스', 'CROSS5', 'highPower', 'rare'),
+  [TYPES.WIDE_JUNK]: blockCard(TYPES.WIDE_JUNK, '와이드 정크', 'WIDE6', 'wideCurse', 'curse'),
+  [TYPES.INSTANT_STRIKE]: blockCard(TYPES.INSTANT_STRIKE, '스트라이크 훅', 'HOOK5', 'instantAttack', 'uncommon'),
+  [TYPES.INSTANT_GUARD]: blockCard(TYPES.INSTANT_GUARD, '가드 와이드', 'WIDE6', 'instantGuard', 'uncommon'),
+  [TYPES.INSTANT_MANA]: blockCard(TYPES.INSTANT_MANA, '마나 크로스', 'CROSS5', 'instantMana', 'uncommon'),
+  [TYPES.INSTANT_PURGE]: blockCard(TYPES.INSTANT_PURGE, '퍼지 헤비', 'HEAVY5', 'instantPurge', 'rare')
 };

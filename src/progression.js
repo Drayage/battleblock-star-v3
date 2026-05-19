@@ -1,32 +1,32 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260519-starter-skill';
-import { Deck, shuffle } from './deck.js?v=20260519-starter-skill';
-import { SKILLS } from './skills.js?v=20260519-starter-skill';
-import { CONSUMABLES } from './consumables.js?v=20260519-starter-skill';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260519-ko';
+import { Deck, shuffle } from './deck.js?v=20260519-ko';
+import { SKILLS } from './skills.js?v=20260519-ko';
+import { CONSUMABLES } from './consumables.js?v=20260519-ko';
 
 export const RELICS = {
   combo_amp: {
     id: 'combo_amp',
-    name: 'Combo Amplifier',
+    name: '콤보 증폭기',
     tier: TIERS.GOLD,
-    desc: 'At 2+ combo, your attacks deal 25% more damage.'
+    desc: '2콤보 이상 시 공격력이 25% 증가합니다.'
   },
   mana_lens: {
     id: 'mana_lens',
-    name: 'Mana Lens',
+    name: '마나 렌즈',
     tier: TIERS.SILVER,
-    desc: 'Line clears restore 35% more MP after the base gain.'
+    desc: '라인 클리어 후 기본 마나 회복량의 35%를 추가 회복합니다.'
   },
   garbage_buffer: {
     id: 'garbage_buffer',
-    name: 'Garbage Buffer',
+    name: '쓰레기 완충기',
     tier: TIERS.GOLD,
-    desc: 'Enemy attacks send 1 less garbage whenever they hit you.'
+    desc: '적의 공격이 명중할 때마다 쓰레기가 1줄 줄어듭니다.'
   },
   hold_cache: {
     id: 'hold_cache',
-    name: 'Hold Cache',
+    name: '홀드 캐시',
     tier: TIERS.BRONZE,
-    desc: 'Start each battle with +15 MP if your hold slot is empty.'
+    desc: '홀드 슬롯이 비어있으면 전투 시작 시 MP +15.'
   }
 };
 
@@ -76,24 +76,24 @@ export class RunState {
 }
 
 const ENEMIES = [
-  { name: 'Soft Starter', tier: TIERS.BRONZE, style: 'Slow stacker. Low HP and weak pressure.', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, rewardBonus: 0, openingRows: 13 },
-  { name: 'Line Hunter', tier: TIERS.BRONZE, style: 'Clears singles often and attacks steadily.', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 },
-  { name: 'Speed Drone', tier: TIERS.SILVER, style: 'Very fast but fragile. Pays extra because it is stressful.', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 },
-  { name: 'Opener Script', tier: TIERS.SILVER, style: 'OPENER pattern: explosive prepared starts, tiny HP pool.', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] },
-  { name: 'Stride Engine', tier: TIERS.GOLD, style: 'STRIDE pattern: steady quad and spin pressure over time.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] },
-  { name: 'Plonk Gambler', tier: TIERS.GOLD, style: 'PLONK pattern: accepts pressure, then looks for burst damage.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE] },
-  { name: 'Inf DS Shell', tier: TIERS.SILVER, style: 'INF DS pattern: defensive downstacking and field cleanup.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD] },
-  { name: 'Bomb Adept', tier: TIERS.SILVER, style: 'Adds bomb blocks from midgame.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
-  { name: 'Mana Thief', tier: TIERS.SILVER, style: 'Midgame caster that periodically slows you.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
-  { name: 'Cleanse Warden', tier: TIERS.GOLD, style: 'Uses cleanse blocks and resists garbage pressure.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
+  { name: '소프트 스타터', tier: TIERS.BRONZE, style: '느린 스태커. 낮은 HP와 약한 압박.', profile: 'balanced', rows: -6, speed: 540, garbage: 0, risk: 0.75, rewardBonus: 0, openingRows: 13 },
+  { name: '라인 헌터', tier: TIERS.BRONZE, style: '단일 클리어를 자주 하며 꾸준히 압박합니다.', profile: 'balanced', rows: -5, speed: 485, garbage: 0, risk: 1, rewardBonus: 1, openingRows: 14 },
+  { name: '스피드 드론', tier: TIERS.SILVER, style: '매우 빠르지만 취약합니다. 스트레스가 심해 보상이 높습니다.', profile: 'fast', rows: -9, speed: 320, garbage: 0, risk: 1.7, rewardBonus: 8, openingRows: 11 },
+  { name: '오프너 스크립트', tier: TIERS.SILVER, style: 'OPENER 패턴: 폭발적인 준비 오프닝, 매우 낮은 HP.', profile: 'opener', rows: -9, speed: 300, garbage: 0, risk: 1.85, rewardBonus: 10, openingRows: 11, minRound: 3, deckExtras: [TYPES.POWER_T] },
+  { name: '스트라이드 엔진', tier: TIERS.GOLD, style: 'STRIDE 패턴: 꾸준한 쿼드 및 스핀 압박.', profile: 'stride', rows: -2, speed: 340, garbage: 1, risk: 1.65, rewardBonus: 7, minRound: 6, deckExtras: [TYPES.POWER_I, TYPES.POWER_T] },
+  { name: '플롱크 겜블러', tier: TIERS.GOLD, style: 'PLONK 패턴: 압박을 버티다가 폭발적 피해를 노립니다.', profile: 'plonk', rows: -4, speed: 360, garbage: 2, risk: 1.6, rewardBonus: 7, minRound: 7, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE] },
+  { name: 'INF DS 쉘', tier: TIERS.SILVER, style: 'INF DS 패턴: 방어적 다운스태킹과 필드 정리.', profile: 'infds', rows: 3, speed: 430, garbage: 1, risk: 1.35, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD] },
+  { name: '봄브 어뎁트', tier: TIERS.SILVER, style: '중반부터 폭탄 블록을 추가합니다.', profile: 'balanced', rows: 0, speed: 420, garbage: 1, risk: 1.25, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I] },
+  { name: '마나 도둑', tier: TIERS.SILVER, style: '주기적으로 플레이어를 느리게 하는 중반 캐스터.', profile: 'balanced', rows: 1, speed: 405, garbage: 1, risk: 1.35, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer' },
+  { name: '클렌즈 워든', tier: TIERS.GOLD, style: '클렌즈 블록을 사용하며 쓰레기 압박에 저항합니다.', profile: 'stacker', rows: 2, speed: 380, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J] }
 ];
 
 const ELITES = [
-  { name: 'Elite: Ceiling Press', tier: TIERS.GOLD, style: 'High HP, starts with pressure, rewards rare blocks.', profile: 'elite', rows: 5, speed: 310, garbage: 3, risk: 1.85, rewardBonus: 9, ability: 'spike' },
-  { name: 'Elite: Power Core', tier: TIERS.GOLD, style: 'Uses multiple power blocks and sends larger bursts.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
-  { name: 'Elite: Cross Engine', tier: TIERS.GOLD, style: 'Odd shapes, high variance, elite rewards.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
-  { name: 'Elite: Opener Lab', tier: TIERS.GOLD, style: 'OPENER elite: very low HP, extremely fast early burst.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
-  { name: 'Elite: Plonk Vault', tier: TIERS.GOLD, style: 'PLONK elite: survives pressure and swings back hard.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
+  { name: '엘리트: 천장 압박기', tier: TIERS.GOLD, style: '높은 HP, 초반 압박, 희귀 블록 보상.', profile: 'elite', rows: 5, speed: 310, garbage: 3, risk: 1.85, rewardBonus: 9, ability: 'spike' },
+  { name: '엘리트: 파워 코어', tier: TIERS.GOLD, style: '다수의 파워 블록으로 큰 폭발 피해를 줍니다.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
+  { name: '엘리트: 크로스 엔진', tier: TIERS.GOLD, style: '특이한 모양, 높은 분산, 엘리트 보상.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
+  { name: '엘리트: 오프너 랩', tier: TIERS.GOLD, style: 'OPENER 엘리트: 매우 낮은 HP, 극도로 빠른 초반 폭발.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
+  { name: '엘리트: 플롱크 볼트', tier: TIERS.GOLD, style: 'PLONK 엘리트: 압박을 버티다가 강력하게 반격합니다.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
 ];
 
 export function tierLabel(tier) {
@@ -149,7 +149,7 @@ function shopPrice(kind, tier) {
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
-  const normalPool = shuffle(round <= 2 ? unlocked.filter(enemy => ['Soft Starter', 'Line Hunter', 'Speed Drone'].includes(enemy.name)) : round <= 5 ? unlocked.filter(enemy => !['Mana Thief', 'Cleanse Warden'].includes(enemy.name)) : unlocked);
+  const normalPool = shuffle(round <= 2 ? unlocked.filter(enemy => ['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name)) : round <= 5 ? unlocked.filter(enemy => !['마나 도둑', '클렌즈 워든'].includes(enemy.name)) : unlocked);
   const elitePool = shuffle(ELITES.filter(enemy => !enemy.minRound || round >= enemy.minRound));
   const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
   const choices = [];
@@ -245,9 +245,9 @@ export function shouldShowEvent(run) {
 
 export function makeStarterChoices() {
   return [
-    { kind: 'starterSkill', id: 'minor_purge', tier: TIERS.BRONZE, title: '방어형', desc: SKILLS.minor_purge.desc },
-    { kind: 'starterSkill', id: 'double_shot', tier: TIERS.BRONZE, title: '공격형', desc: SKILLS.double_shot.desc },
-    { kind: 'starterSkill', id: 'quick_cycle', tier: TIERS.BRONZE, title: '유틸형', desc: SKILLS.quick_cycle.desc }
+    { kind: 'starterSkill', id: 'minor_purge', tier: TIERS.BRONZE, title: SKILLS.minor_purge.name, desc: SKILLS.minor_purge.desc },
+    { kind: 'starterSkill', id: 'double_shot', tier: TIERS.BRONZE, title: SKILLS.double_shot.name, desc: SKILLS.double_shot.desc },
+    { kind: 'starterSkill', id: 'quick_cycle', tier: TIERS.BRONZE, title: SKILLS.quick_cycle.name, desc: SKILLS.quick_cycle.desc }
   ];
 }
 
@@ -262,8 +262,8 @@ export function makeEventChoices(run, eventKey) {
       id,
       tier: CARD_LIBRARY[id].tier || TIERS.BRONZE,
       price: eventKey === 'start' ? 8 : 15,
-      title: 'Deck Surgery',
-      desc: `Pay gold to remove 1 ${CARD_LIBRARY[id].name} from your deck.`
+      title: '덱 수술',
+      desc: `덱에서 ${CARD_LIBRARY[id].name} 1장을 제거합니다.`
     });
   }
   const upgrade = upgradeDeckCards(run)[0];
@@ -273,8 +273,8 @@ export function makeEventChoices(run, eventKey) {
       from: upgrade.from,
       to: upgrade.to,
       tier: CARD_LIBRARY[upgrade.to].tier || TIERS.BRONZE,
-      title: 'Block Infusion',
-      desc: `Upgrade 1 ${CARD_LIBRARY[upgrade.from].name} into ${CARD_LIBRARY[upgrade.to].name}.`
+      title: '블록 주입',
+      desc: `${CARD_LIBRARY[upgrade.from].name}을(를) ${CARD_LIBRARY[upgrade.to].name}으로 업그레이드합니다.`
     });
   }
   const skill = pickByTier(SKILLS, roundTier(run.round), { exclude: run.ownedSkills });
@@ -283,8 +283,8 @@ export function makeEventChoices(run, eventKey) {
       kind: 'skill',
       id: skill.id,
       tier: skill.tier,
-      title: 'Skill Mentor',
-      desc: `Learn ${skill.name}. If your skill slots are full, choose a slot to replace or skip.`
+      title: '스킬 교관',
+      desc: `${skill.name}을(를) 배웁니다. 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
     });
   }
   sideChoices.push({
@@ -292,31 +292,31 @@ export function makeEventChoices(run, eventKey) {
     amount: eventKey === 'start' ? 2 : 3,
     card: eventKey === 'start' ? TYPES.HEAVY_JUNK : TYPES.WIDE_JUNK,
     tier: eventKey === 'start' ? TIERS.BRONZE : TIERS.SILVER,
-    title: 'Reinforced Field',
-    desc: 'Gain max HP rows, but add an awkward 5-6 cell burden block.'
+    title: '강화 필드',
+    desc: '최대 HP 행이 증가하지만, 방해 블록이 덱에 추가됩니다.'
   });
   const supply = pickByTier(CONSUMABLES, roundTier(run.round));
   sideChoices.push({
     kind: 'consumable',
     id: supply.id,
     tier: supply.tier,
-    title: 'Supply Cache',
-    desc: `${supply.name}: ${supply.desc} If your item slots are full, choose a slot to replace or skip.`
+    title: '보급 캐시',
+    desc: `${supply.name}: ${supply.desc} 아이템 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
   });
   if (eventKey !== 'start') {
     sideChoices.push({
       kind: 'cleanup',
       tier: TIERS.BRONZE,
-      title: 'Field Sweep',
-      desc: 'Remove one bottom garbage row from your carried field.'
+      title: '필드 청소',
+      desc: '이월 필드의 가장 낮은 쓰레기 행을 제거합니다.'
     });
   } else {
     sideChoices.push({
       kind: 'gold',
       amount: 12,
       tier: TIERS.BRONZE,
-      title: 'Loose Gold',
-      desc: 'Take a small gold pouch and move on.'
+      title: '여분의 골드',
+      desc: '소량의 골드를 가져갑니다.'
     });
   }
   return [...choices, ...shuffle(sideChoices)].slice(0, 3);
