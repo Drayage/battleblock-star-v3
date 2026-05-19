@@ -68,6 +68,7 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
     this.playerSlowTimer = 0;
+    this.battleClearedLines = 0;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -518,6 +519,7 @@ class Game {
     this.groundTouched = false;
     this.enemyTimer = 0;
     this.enemyAbilityTimer = 0;
+    this.battleClearedLines = 0;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -638,13 +640,14 @@ class Game {
   resolve(result, attacker) {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
+    if (result.cleared > 0) this.battleClearedLines += result.cleared;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
     }
     if (result.attack > 0) {
-      const attack = result.attack * mult;
+      const attack = (result.attack + this.battleHeatAttackBonus()) * mult;
       const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
@@ -838,6 +841,7 @@ class Game {
         enemyAbilityTimer: this.enemyAbilityTimer,
         enemySlowTimer: this.enemySlowTimer,
         playerSlowTimer: this.playerSlowTimer,
+        battleClearedLines: this.battleClearedLines,
         battleEndDelay: this.battleEndDelay,
         battleEndResult: this.battleEndResult,
         skillCooldowns: { ...this.skillCooldowns },
@@ -871,6 +875,7 @@ class Game {
         this.enemyAbilityTimer = state.battle.enemyAbilityTimer || 0;
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
+        this.battleClearedLines = state.battle.battleClearedLines || 0;
         this.autoSaveTimer = 0;
         this.battleEndDelay = state.battle.battleEndDelay || 0;
         this.battleEndResult = state.battle.battleEndResult || null;
@@ -987,6 +992,7 @@ class Game {
     const enemyDelay = this.currentEnemyDelay();
     if (this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
+      this.ai.setPressure(this.currentAiPressure());
       this.resolve(this.ai.step(this.enemy), this.enemy);
     }
     this.updateEnemyAbility(dt);
@@ -1006,6 +1012,44 @@ class Game {
   currentEnemyDelay() {
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
     return Math.round(base * this.playerPressureRelief());
+  }
+
+  battleHeatAttackBonus() {
+    return Math.floor(this.battleClearedLines / 10) * 0.1;
+  }
+
+  currentAiPressure() {
+    const fatigue = Math.min(0.24, Math.floor(this.battleClearedLines / 10) * 0.03);
+    const confidence = this.aiConfidenceMistake();
+    return {
+      mistake: fatigue + confidence,
+      noise: fatigue * 8 + confidence * 10,
+      hold: fatigue * 1.2 + confidence * 1.35
+    };
+  }
+
+  aiConfidenceMistake() {
+    if (!this.player || !this.enemy) return 0;
+    const playerHeight = this.boardMaxHeight(this.player);
+    const enemyHeight = this.boardMaxHeight(this.enemy);
+    const playerPressure = playerHeight + this.player.garbageQueue * 0.75 + this.player.readyGarbage() * 1.1;
+    const enemyComfort = Math.max(0, this.enemy.rows - enemyHeight - 9);
+    const gap = playerPressure - enemyHeight;
+    if (playerPressure < this.player.rows * 0.48 || enemyComfort < 3 || gap < 4) return 0;
+    return Math.min(0.22, 0.05 + gap * 0.012 + enemyComfort * 0.01);
+  }
+
+  boardMaxHeight(board) {
+    let max = 0;
+    for (let c = 0; c < board.cols; c++) {
+      for (let r = 0; r < board.rows; r++) {
+        if (board.grid[r][c]) {
+          max = Math.max(max, board.rows - r);
+          break;
+        }
+      }
+    }
+    return max;
   }
 
   playerPressureRelief() {

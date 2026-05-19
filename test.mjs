@@ -133,6 +133,9 @@ let nearCeilingResult = null;
 for (let i = 0; i < 12 && !nearCeilingResult; i++) nearCeilingResult = survivalAi.step(nearCeilingBoard);
 assert.notEqual(nearCeilingResult?.topOut, true);
 assert.equal(nearCeilingBoard.defeated, false);
+const pressureAi = new AI('balanced', { mistakeRate: 0.1, holdMistakeRate: 0.2 });
+pressureAi.setPressure({ mistake: 0.12, noise: 1.5, hold: 0.18 });
+assert.deepEqual(pressureAi.pressure, { mistake: 0.12, noise: 1.5, hold: 0.18 });
 
 const expandedPersist = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
 expandedPersist[19][0] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };

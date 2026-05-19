@@ -92,8 +92,13 @@ export class AI {
     this.noise = skill.noise || 0;
     this.hesitateRate = skill.hesitateRate || 0;
     this.holdMistakeRate = skill.holdMistakeRate ?? this.mistakeRate * 0.6;
+    this.pressure = { mistake: 0, noise: 0, hold: 0 };
     this.queue = [];
     this.lastPlanCard = null;
+  }
+
+  setPressure({ mistake = 0, noise = 0, hold = 0 } = {}) {
+    this.pressure = { mistake, noise, hold };
   }
 
   plan(board) {
@@ -101,7 +106,9 @@ export class AI {
     const cardKey = `${board.current.card.id}-${board.current.x}-${board.current.y}-${board.held?.id || 'none'}`;
     if (this.queue.length && this.lastPlanCard === cardKey) return;
     this.lastPlanCard = cardKey;
-    const noise = () => (this.profile === 'elite' ? Math.random() * 2 : 0) + Math.random() * this.noise;
+    const mistakeRate = Math.min(0.75, this.mistakeRate + this.pressure.mistake);
+    const holdMistakeRate = Math.min(0.85, this.holdMistakeRate + this.pressure.hold);
+    const noise = () => (this.profile === 'elite' ? Math.random() * 2 : 0) + Math.random() * (this.noise + this.pressure.noise);
     const candidates = [];
     for (let rot = 0; rot < 4; rot++) {
       for (let x = -2; x < COLS + 2; x++) {
@@ -128,8 +135,8 @@ export class AI {
     }
     candidates.sort((a, b) => b.s - a.s);
     const mistakeWindow = Math.min(candidates.length - 1, 2 + Math.floor(Math.random() * 7));
-    let best = Math.random() < this.mistakeRate ? candidates[Math.max(0, mistakeWindow)] : candidates[0];
-    if (best?.hold && Math.random() < this.holdMistakeRate) {
+    let best = Math.random() < mistakeRate ? candidates[Math.max(0, mistakeWindow)] : candidates[0];
+    if (best?.hold && Math.random() < holdMistakeRate) {
       best = candidates.find(candidate => !candidate.hold) || best;
     }
     if (!best) return;
