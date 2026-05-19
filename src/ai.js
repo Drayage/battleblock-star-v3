@@ -39,9 +39,9 @@ function analyzeGrid(grid) {
 function scoreGrid(grid, cleared, profile) {
   const ev = analyzeGrid(grid);
   const p = {
-    balanced: { line: 9, hole: -8, height: -0.75, bump: -1.25, well: 0.1, garbage: -0.2 },
-    fast: { line: 8, hole: -7, height: -0.62, bump: -1.05, well: 0.05, garbage: -0.1 },
-    opener: { line: 12, hole: -6.5, height: -0.55, bump: -0.95, well: 0.15, garbage: -0.08 },
+    balanced: { line: 13, hole: -7.5, height: -0.68, bump: -1.05, well: 0.18, garbage: -0.16 },
+    fast: { line: 12, hole: -6.5, height: -0.55, bump: -0.9, well: 0.12, garbage: -0.08 },
+    opener: { line: 16, hole: -6, height: -0.5, bump: -0.8, well: 0.22, garbage: -0.06 },
     stride: { line: 13, hole: -8.5, height: -0.7, bump: -1.1, well: 0.65, garbage: -0.12 },
     plonk: { line: 14, hole: -6.8, height: -0.45, bump: -0.95, well: 0.45, garbage: 0.02 },
     infds: { line: 7, hole: -10, height: -0.95, bump: -1.5, well: 0.1, garbage: -0.65 },
@@ -50,7 +50,7 @@ function scoreGrid(grid, cleared, profile) {
   }[profile] || {
     line: 9, hole: -8, height: -0.75, bump: -1.25, well: 0.1, garbage: -0.2
   };
-  const burst = cleared >= 4 ? 18 : cleared >= 2 ? 5 : 0;
+  const burst = cleared >= 4 ? 24 : cleared >= 2 ? 8 : cleared > 0 ? 3 : 0;
   const dangerRows = Math.max(0, ev.maxHeight - (ev.rows - 5));
   const survival = dangerRows * -30 + ev.topCells * -14;
   const spirePenalty = ev.spire * ev.spire * -9;
