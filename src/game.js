@@ -70,6 +70,10 @@ class Game {
     this.enemySlowTimer = 0;
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
+    this.aiFocusActivations = 0;
+    this.aiFocusActivePieces = 0;
+    this.aiFocusLastPiece = null;
+    this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -522,6 +526,10 @@ class Game {
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
+    this.aiFocusActivations = 0;
+    this.aiFocusActivePieces = 0;
+    this.aiFocusLastPiece = null;
+    this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.paused = false;
@@ -1015,7 +1023,7 @@ class Game {
 
   currentEnemyDelay() {
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
-    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor());
+    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor());
   }
 
   resolveEnemyStep() {
@@ -1043,24 +1051,53 @@ class Game {
   }
 
   currentAiPressure() {
-    const fatigue = Math.min(0.24, Math.floor(this.battleClearedLines / 10) * 0.03);
-    const confidence = this.aiConfidenceMistake();
+    const confidence = this.aiConfidence();
+    const fatigue = Math.min(0.08, Math.floor(this.battleClearedLines / 12) * 0.015);
     return {
-      mistake: fatigue + confidence,
-      noise: fatigue * 0.5 + confidence * 0.6,
-      hold: fatigue * 1.2 + confidence * 1.35
+      mistake: Math.min(0.16, fatigue + confidence.mistake),
+      hesitate: confidence.hesitate,
+      focus: this.aiFocus()
     };
   }
 
-  aiConfidenceMistake() {
-    if (!this.player || !this.enemy) return 0;
+  aiFocus() {
+    if (!this.enemy) return 0;
+    if (this.enemy.pieceSerial !== this.aiFocusLastPiece) {
+      this.aiFocusLastPiece = this.enemy.pieceSerial;
+      if (this.aiFocusActivePieces > 0) this.aiFocusActivePieces--;
+    }
+    const enemyHeight = this.boardMaxHeight(this.enemy);
+    const danger = enemyHeight - (this.enemy.rows - 9);
+    if (danger <= 0) {
+      this.aiFocusInEpisode = false;
+      return 0;
+    }
+    if (!this.aiFocusInEpisode) {
+      this.aiFocusInEpisode = true;
+      this.aiFocusActivations++;
+      this.aiFocusActivePieces = 6;
+    }
+    if (this.aiFocusActivePieces > 0) return Math.min(1, Math.max(0.5, danger / 5));
+    return Math.min(1, danger / 5);
+  }
+
+  aiFocusSlowFactor() {
+    if (this.aiFocusActivePieces <= 0) return 1;
+    return 1 + Math.min(1.2, this.aiFocusActivations * 0.22);
+  }
+
+  aiConfidence() {
+    if (!this.player || !this.enemy) return { mistake: 0, hesitate: 0 };
     const playerHeight = this.boardMaxHeight(this.player);
     const enemyHeight = this.boardMaxHeight(this.enemy);
     const playerPressure = playerHeight + this.player.garbageQueue * 0.75 + this.player.readyGarbage() * 1.1;
     const enemyComfort = Math.max(0, this.enemy.rows - enemyHeight - 9);
     const gap = playerPressure - enemyHeight;
-    if (playerPressure < this.player.rows * 0.48 || enemyComfort < 3 || gap < 4) return 0;
-    return Math.min(0.22, 0.05 + gap * 0.012 + enemyComfort * 0.01);
+    if (playerPressure < this.player.rows * 0.48 || enemyComfort < 3 || gap < 4) return { mistake: 0, hesitate: 0 };
+    return {
+      mistake: Math.min(0.09, 0.02 + gap * 0.006 + enemyComfort * 0.005),
+      hesitate: Math.min(0.55, 0.1 + gap * 0.025 + enemyComfort * 0.02)
+    };
   }
 
   boardMaxHeight(board) {
