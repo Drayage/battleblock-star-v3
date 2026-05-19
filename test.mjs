@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
 import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
-import { AI } from './src/ai.js';
+import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
 import { RELICS, applyReward, grantEliteRelic, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
@@ -118,13 +118,28 @@ assert.equal(stalledEnemyBoard.defeated, true);
 
 const queuedMoveBoard = new Board({ rows: 20 });
 const queuedMoveAi = new AI('balanced');
-queuedMoveAi.lastPlanCard = `${queuedMoveBoard.current.card.id}-${queuedMoveBoard.current.x}-${queuedMoveBoard.current.y}-none`;
 queuedMoveAi.queue = ['left', 'hard'];
+queuedMoveAi.lastPlanCard = queuedMoveAi.cacheKey(queuedMoveBoard);
 const queuedMoveResult = queuedMoveAi.step(queuedMoveBoard);
 assert.equal(queuedMoveResult, null);
 assert.equal(queuedMoveAi.lastAction, 'left');
 assert.equal(queuedMoveBoard.current.x, 2);
 assert.equal(queuedMoveBoard.grid.some(row => row.some(Boolean)), false);
+
+const unreachableBoard = new Board({ rows: 20 });
+unreachableBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 3, 10);
+unreachableBoard.grid[10][2] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+unreachableBoard.grid[11][2] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+assert.equal(unreachableBoard.ok(new Mino(CARD_LIBRARY[TYPES.O], 0, 10)), true);
+assert.equal(canReachCandidate(unreachableBoard, { x: 0, rot: 0, hold: false }), false);
+
+const stalePlanBoard = new Board({ rows: 20 });
+const stalePlanAi = new AI('balanced');
+stalePlanAi.queue = ['left'];
+stalePlanAi.lastPlanCard = stalePlanAi.cacheKey(stalePlanBoard);
+stalePlanBoard.nextQueue[0] = CARD_LIBRARY[TYPES.Z];
+stalePlanAi.step(stalePlanBoard);
+assert.equal(stalePlanAi.lastPlanCard.includes('|none|Z/'), true);
 
 const nearCeilingBoard = new Board({ rows: 20 });
 nearCeilingBoard.grid = Array.from({ length: 20 }, (_, r) => Array.from({ length: 10 }, (_, c) => r >= 2 && c !== 5 ? { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] } : null));
@@ -140,13 +155,13 @@ assert.deepEqual(pressureAi.pressure, { mistake: 0.12, noise: 1.5, hold: 0.18 })
 const holdLimitBoard = new Board({ rows: 20 });
 const holdLimitAi = new AI('balanced');
 holdLimitAi.queue = ['hold'];
-holdLimitAi.lastPlanCard = `${holdLimitBoard.current.card.id}-${holdLimitBoard.current.x}-${holdLimitBoard.current.y}-none`;
+holdLimitAi.lastPlanCard = holdLimitAi.cacheKey(holdLimitBoard);
 holdLimitAi.step(holdLimitBoard);
 const heldOnce = holdLimitBoard.held.id;
 const currentAfterHold = holdLimitBoard.current.card.id;
 holdLimitBoard.holdUsed = false;
 holdLimitAi.queue = ['hold'];
-holdLimitAi.lastPlanCard = `${holdLimitBoard.current.card.id}-${holdLimitBoard.current.x}-${holdLimitBoard.current.y}-${heldOnce}`;
+holdLimitAi.lastPlanCard = holdLimitAi.cacheKey(holdLimitBoard);
 holdLimitAi.step(holdLimitBoard);
 assert.equal(holdLimitBoard.held.id, heldOnce);
 assert.equal(holdLimitBoard.current.card.id, currentAfterHold);

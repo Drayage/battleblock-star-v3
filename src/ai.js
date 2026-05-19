@@ -31,9 +31,13 @@ function analyzeGrid(grid) {
   const spire = Math.max(0, maxHeight - secondHeight - 2);
   const roughness = maxHeight - minHeight;
   const topCells = grid.slice(0, 3).reduce((sum, row) => sum + row.filter(Boolean).length, 0);
-  const rightWell = Math.max(0, Math.min(...heights.slice(0, -1)) - heights[COLS - 1]);
+  const bestWell = Math.max(...heights.map((height, c) => {
+    const left = c === 0 ? height + 4 : heights[c - 1];
+    const right = c === COLS - 1 ? height + 4 : heights[c + 1];
+    return Math.max(0, Math.min(left, right) - height);
+  }));
   const garbage = grid.reduce((sum, row) => sum + row.filter(c => c?.type === 'garbage').length, 0);
-  return { rows, heights, totalHeight, maxHeight, secondHeight, spire, roughness, topCells, holes, bump, lines, rightWell, garbage };
+  return { rows, heights, totalHeight, maxHeight, secondHeight, spire, roughness, topCells, holes, bump, lines, bestWell, garbage };
 }
 
 function scoreGrid(grid, cleared, profile) {
@@ -52,11 +56,34 @@ function scoreGrid(grid, cleared, profile) {
   };
   const burst = cleared >= 4 ? 24 : cleared >= 2 ? 8 : cleared > 0 ? 3 : 0;
   const dangerRows = Math.max(0, ev.maxHeight - (ev.rows - 5));
-  const survival = dangerRows * -30 + ev.topCells * -14;
+  const survival = dangerRows * -22 + ev.topCells * -10;
   const spirePenalty = ev.spire * ev.spire * -9;
   const roughnessPenalty = Math.max(0, ev.roughness - 7) * -5;
-  const wellReward = ev.maxHeight < ev.rows - 7 ? ev.rightWell * p.well : 0;
+  const wellReward = ev.maxHeight < ev.rows - 7 ? ev.bestWell * p.well : 0;
   return cleared * p.line + burst + ev.holes * p.hole + ev.totalHeight * p.height + ev.bump * p.bump + wellReward + ev.garbage * p.garbage + survival + spirePenalty + roughnessPenalty;
+}
+
+export function canReachCandidate(board, { x, rot, hold = false }) {
+  if (!board.current) return false;
+  const playCard = hold ? board.held || board.nextQueue[0] : board.current.card;
+  if (!playCard) return false;
+  const test = new Mino(playCard, hold ? 3 : board.current.x, board.current.y);
+  test.rot = hold ? 0 : board.current.rot;
+  if (!board.ok(test)) return false;
+  const sim = Object.create(Object.getPrototypeOf(board));
+  Object.assign(sim, board);
+  sim.current = test;
+  const turns = (rot - test.rot + 4) % 4;
+  for (let i = 0; i < turns; i++) {
+    if (!sim.rotate(1)) return false;
+  }
+  const dx = x - sim.current.x;
+  const step = dx > 0 ? 1 : -1;
+  for (let i = 0; i < Math.abs(dx); i++) {
+    if (!board.ok(sim.current, step, 0)) return false;
+    sim.current.x += step;
+  }
+  return sim.current.x === x && sim.current.rot === rot;
 }
 
 function simulate(board, mino, profile) {
@@ -103,20 +130,51 @@ export class AI {
     this.pressure = { mistake, noise, hold };
   }
 
+  cacheKey(board) {
+    const next = board.nextQueue.slice(0, 2).map(card => card?.id || 'none').join('/');
+    const held = board.held?.id || 'none';
+    const pressure = `${this.pressure.mistake.toFixed(2)}:${this.pressure.noise.toFixed(1)}:${this.pressure.hold.toFixed(2)}`;
+    return [
+      board.pieceSerial,
+      board.current?.card.id,
+      board.current?.x,
+      board.current?.y,
+      board.current?.rot,
+      board.holdUsed ? 'h1' : 'h0',
+      board.holdLocked ? 'l1' : 'l0',
+      held,
+      next,
+      pressure
+    ].join('|');
+  }
+
+  pickMistake(candidates) {
+    if (candidates.length <= 1) return candidates[0];
+    const pool = candidates.slice(1, Math.min(candidates.length, 9));
+    const total = pool.reduce((sum, _, i) => sum + 1 / (i + 2), 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < pool.length; i++) {
+      roll -= 1 / (i + 2);
+      if (roll <= 0) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }
+
   plan(board) {
     if (!board.current) return;
-    const cardKey = `${board.current.card.id}-${board.current.x}-${board.current.y}-${board.held?.id || 'none'}`;
+    const cardKey = this.cacheKey(board);
     if (this.queue.length && this.lastPlanCard === cardKey) return;
     this.lastPlanCard = cardKey;
     const mistakeRate = Math.min(0.75, this.mistakeRate + this.pressure.mistake);
     const holdMistakeRate = Math.min(0.85, this.holdMistakeRate + this.pressure.hold);
-    const noise = () => (this.profile === 'elite' ? Math.random() * 2 : 0) + Math.random() * (this.noise + this.pressure.noise);
+    const noise = () => Math.random() * (this.noise + this.pressure.noise);
     const candidates = [];
     for (let rot = 0; rot < 4; rot++) {
       for (let x = -2; x < COLS + 2; x++) {
         const m = new Mino(board.current.card, x, board.current.y);
         m.rot = rot;
         if (!board.ok(m)) continue;
+        if (!canReachCandidate(board, { x, rot, hold: false })) continue;
         const s = simulate(board, m, this.profile) + noise();
         candidates.push({ x, rot, hold: false, s });
       }
@@ -130,6 +188,7 @@ export class AI {
             const m = new Mino(playCard, x, board.current.y);
             m.rot = rot;
             if (!board.ok(m)) continue;
+            if (!canReachCandidate(board, { x, rot, hold: true })) continue;
             const s = simulate(board, m, this.profile) + noise();
             candidates.push({ x, rot, hold: true, s });
           }
@@ -137,8 +196,7 @@ export class AI {
       }
     }
     candidates.sort((a, b) => b.s - a.s);
-    const mistakeWindow = Math.min(candidates.length - 1, 2 + Math.floor(Math.random() * 7));
-    let best = Math.random() < mistakeRate ? candidates[Math.max(0, mistakeWindow)] : candidates[0];
+    let best = Math.random() < mistakeRate ? this.pickMistake(candidates) : candidates[0];
     if (best?.hold && Math.random() < holdMistakeRate) {
       best = candidates.find(candidate => !candidate.hold) || best;
     }
