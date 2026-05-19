@@ -54,12 +54,12 @@ export const SKILLS = {
     tier: 'bronze',
     cost: 30,
     cooldown: 6500,
-    desc: 'Lock the enemy hold slot for 5 seconds.',
+    desc: 'Lock the enemy hold slot for 20 seconds.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;
       game.scheduleBattleTimeout(() => {
         if (game.enemy === enemy) enemy.holdLocked = false;
-      }, 5000);
+      }, 20000);
       return true;
     }
   }
