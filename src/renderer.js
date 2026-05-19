@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-ko';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260519-ko2';
 
 export class Renderer {
   constructor(canvas) {
@@ -47,7 +47,11 @@ export class Renderer {
     ctx.fillText(`Round ${run.round} / 20`, L.w / 2, 26);
     ctx.font = '12px Courier New';
     ctx.fillStyle = '#7f8ca8';
-    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows}`, L.w / 2, 47);
+    let boardH = 0;
+    for (let r = 0; r < player.rows; r++) {
+      if (player.grid[r] && player.grid[r].some(c => c)) { boardH = player.rows - r; break; }
+    }
+    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${boardH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
     this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
@@ -254,6 +258,7 @@ export class Renderer {
       ctx.fillText(`${skill.cost}MP`, ox + 5, slotY + 17);
       ctx.globalAlpha = 1;
     });
+    ctx.font = '10px Courier New';
     run.consumables.forEach((id, i) => {
       const item = window.BBS_CONSUMABLES[id];
       ctx.fillStyle = '#1f1a2d';
