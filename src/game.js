@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260520-ko3';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260520-ko3';
-import { Deck } from './deck.js?v=20260520-ko3';
-import { AI } from './ai.js?v=20260520-ko3';
-import { Renderer } from './renderer.js?v=20260520-ko3';
-import { InputController } from './input.js?v=20260520-ko3';
-import { SKILLS } from './skills.js?v=20260520-ko3';
-import { CONSUMABLES } from './consumables.js?v=20260520-ko3';
+import { Board } from './board.js?v=20260520-ko4';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260520-ko4';
+import { Deck } from './deck.js?v=20260520-ko4';
+import { AI } from './ai.js?v=20260520-ko4';
+import { Renderer } from './renderer.js?v=20260520-ko4';
+import { InputController } from './input.js?v=20260520-ko4';
+import { SKILLS } from './skills.js?v=20260520-ko4';
+import { CONSUMABLES } from './consumables.js?v=20260520-ko4';
 import {
   RunState,
   RELICS,
@@ -20,7 +20,7 @@ import {
   makeShopItems,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260520-ko3';
+} from './progression.js?v=20260520-ko4';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1107,12 +1107,20 @@ class Game {
     return Math.max(0, 1 - (round - 10) / 7);
   }
 
+  playerIncomingPressure() {
+    if (!this.player) return 0;
+    const height = this.boardMaxHeight(this.player);
+    return this.player.garbageQueue + this.player.readyGarbage() + Math.max(0, height - (this.player.rows - 8)) * 0.5;
+  }
+
   playerPpsCatchup() {
     if (this.battleElapsedSec < 3.5 || this.battlePlayerPieces < 3) return 1;
     const pps = this.battlePlayerPieces / this.battleElapsedSec;
     if (pps >= 1) return 1;
+    const gate = Math.min(1, this.playerIncomingPressure() / 3);
+    if (gate <= 0) return 1;
     const deficit = Math.min(0.7, 1 - pps);
-    return 1 + deficit * 0.55 * this.roundCatchupFactor();
+    return 1 + deficit * 0.55 * this.roundCatchupFactor() * gate;
   }
 
   playerMercyDanger() {
@@ -1124,24 +1132,17 @@ class Game {
   playerMercyFactor() {
     const danger = this.playerMercyDanger();
     if (danger <= 0) return 1;
-    return 1 + Math.min(0.45, danger * 0.18) * this.roundCatchupFactor();
+    return 1 + Math.min(0.6, danger * 0.24) * this.roundCatchupFactor();
   }
 
   currentAiPressure() {
     const confidence = this.aiConfidence();
     const fatigue = Math.min(0.08, Math.floor(this.battleClearedLines / 12) * 0.015);
-    const mercy = this.playerMercyHesitate();
     return {
       mistake: Math.min(0.16, fatigue + confidence.mistake),
-      hesitate: Math.min(0.85, confidence.hesitate + mercy),
+      hesitate: Math.min(0.85, confidence.hesitate),
       focus: this.aiFocus()
     };
-  }
-
-  playerMercyHesitate() {
-    const danger = this.playerMercyDanger();
-    if (danger <= 0) return 0;
-    return Math.min(0.5, danger * 0.18) * this.roundCatchupFactor();
   }
 
   aiFocus() {
@@ -1278,6 +1279,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260520-ko3').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260520-ko4').catch(() => {});
   });
 }
