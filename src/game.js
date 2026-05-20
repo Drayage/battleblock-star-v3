@@ -665,8 +665,15 @@ class Game {
     else if (attacker === this.enemy) this.battleEnemyPieces++;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
     if (attacker === this.player) {
-      if (result.slow) this.enemySlowTimer = Math.max(this.enemySlowTimer, result.slow);
-      if (result.gold) this.run.gold += result.gold;
+      if (result.slow) this.enemySlowTimer += result.slow;
+      if (result.gold) {
+        this.bountyBank = (this.bountyBank || 0) + result.gold * 0.3;
+        const earned = Math.floor(this.bountyBank);
+        if (earned > 0) {
+          this.run.gold += earned;
+          this.bountyBank -= earned;
+        }
+      }
     }
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;

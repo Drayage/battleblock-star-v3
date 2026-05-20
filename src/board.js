@@ -343,7 +343,7 @@ export class Board {
     let bombRows = [];
     let bombCells = [];
     let purge = false;
-    let slow = false;
+    let coolantCells = 0;
     let gold = 0;
     let chargeGained = 0;
     for (let r = this.rows - 1; r >= 0; r--) {
@@ -357,7 +357,7 @@ export class Board {
         });
         if (row.some(c => c.traits.includes('bomb'))) bombRows.push(r);
         if (row.some(c => c.traits.includes('purgeGarbage'))) purge = true;
-        if (row.some(c => c.traits.includes('coolant'))) slow = true;
+        coolantCells += row.filter(c => c.traits.includes('coolant')).length;
         gold += row.filter(c => c.traits.includes('bounty')).length;
         chargeGained += row.filter(c => c.traits.includes('comboCharge')).length;
         this.grid.splice(r, 1);
@@ -375,8 +375,8 @@ export class Board {
       mana: Number(mana.toFixed(2)),
       bombRows,
       purge,
-      slow: slow ? GAME_TIMING.COOLANT_SLOW : 0,
-      gold: Math.min(gold, 4),
+      slow: coolantCells * GAME_TIMING.COOLANT_SLOW,
+      gold,
       chargeGained,
       tetris: false,
       tSpin: false

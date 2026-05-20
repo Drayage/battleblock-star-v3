@@ -416,17 +416,17 @@ assert.equal(bombGravity.cleared, 1);
 assert.equal(bombGravityBoard.grid[19][8].type, TYPES.I);
 assert.equal(bombGravityBoard.grid.slice(0, 19).every(row => row[8] === null), true);
 
-// 냉각 타일 — 제거 시 슬로우 플래그
+// 냉각 타일 — 셀당 500ms 누적
 const coolantBoard = new Board({ rows: 20 });
-coolantBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 0 ? TYPES.COOLANT : TYPES.I, attack: 0.1, traits: c === 0 ? ['coolant'] : [] }));
+coolantBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 3 ? TYPES.COOLANT : TYPES.I, attack: 0.1, traits: c < 3 ? ['coolant'] : [] }));
 const coolantClear = coolantBoard.clearLines();
 assert.equal(coolantClear.cleared, 1);
-assert.equal(coolantClear.slow > 0, true);
+assert.equal(coolantClear.slow, 1500);
 
-// 현상금 타일 — 제거 시 골드 (상한 4)
+// 현상금 타일 — 제거 시 셀 수 반환 (상한 없음)
 const bountyBoard = new Board({ rows: 20 });
-bountyBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 2 ? TYPES.BOUNTY : TYPES.I, attack: 0.1, traits: c < 2 ? ['bounty'] : [] }));
-assert.equal(bountyBoard.clearLines().gold, 2);
+bountyBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 6 ? TYPES.BOUNTY : TYPES.I, attack: 0.1, traits: c < 6 ? ['bounty'] : [] }));
+assert.equal(bountyBoard.clearLines().gold, 6);
 
 // 콤보 차지 — 누적 획득 + 다음 클리어 배수
 const chargeGainBoard = new Board({ rows: 20 });
