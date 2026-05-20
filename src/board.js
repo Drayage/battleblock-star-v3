@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko9';
-import { Deck } from './deck.js?v=20260521-ko9';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko10';
+import { Deck } from './deck.js?v=20260521-ko10';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -390,14 +390,18 @@ export class Board {
     this.grid = kept;
 
     const clearedBelow = y => rows.filter(r => r > y).length;
+    const drops = [];
     for (const { x, y } of bombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
       this.explodeBombAt(x, targetY, 1);
-      this.dropCellsAbove(x, targetY);
+      drops.push({ x, y: targetY, radius: 1 });
     }
     for (const { x, y } of timeBombCells) {
-      this.explodeBombAt(x, Math.min(this.rows - 1, y + clearedBelow(y)), 2);
+      const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
+      this.explodeBombAt(x, targetY, 2);
+      drops.push({ x, y: targetY, radius: 2 });
     }
+    for (const drop of drops) this.dropCellsAboveExplosion(drop.x, drop.y, drop.radius);
     if (purge) this.purgeGarbageRows(1);
     return {
       cleared: rows.length,
@@ -488,6 +492,13 @@ export class Board {
         }
         write--;
       }
+    }
+  }
+
+  dropCellsAboveExplosion(x, y, radius = 1) {
+    const bottomY = Math.min(this.rows - 1, y + radius);
+    for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
+      this.dropCellsAbove(c, bottomY);
     }
   }
 
