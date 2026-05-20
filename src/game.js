@@ -71,7 +71,7 @@ class Game {
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
     this.battlePlayerPieces = 0;
-    this.battleStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
     this.aiFocusLastPiece = null;
@@ -529,7 +529,7 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
     this.battlePlayerPieces = 0;
-    this.battleStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
     this.aiFocusLastPiece = null;
@@ -858,6 +858,11 @@ class Game {
         enemySlowTimer: this.enemySlowTimer,
         playerSlowTimer: this.playerSlowTimer,
         battleClearedLines: this.battleClearedLines,
+        battlePlayerPieces: this.battlePlayerPieces,
+        battleElapsedSec: this.battleElapsedSec,
+        aiFocusActivations: this.aiFocusActivations,
+        aiFocusActivePieces: this.aiFocusActivePieces,
+        aiFocusInEpisode: this.aiFocusInEpisode,
         battleEndDelay: this.battleEndDelay,
         battleEndResult: this.battleEndResult,
         skillCooldowns: { ...this.skillCooldowns },
@@ -893,6 +898,12 @@ class Game {
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
         this.battleClearedLines = state.battle.battleClearedLines || 0;
+        this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
+        this.battleElapsedSec = state.battle.battleElapsedSec || 0;
+        this.aiFocusActivations = state.battle.aiFocusActivations || 0;
+        this.aiFocusActivePieces = state.battle.aiFocusActivePieces || 0;
+        this.aiFocusInEpisode = state.battle.aiFocusInEpisode || false;
+        this.aiFocusLastPiece = null;
         this.autoSaveTimer = 0;
         this.battleEndDelay = state.battle.battleEndDelay || 0;
         this.battleEndResult = state.battle.battleEndResult || null;
@@ -983,6 +994,7 @@ class Game {
       });
       return;
     }
+    this.battleElapsedSec += dt / 1000;
     this.autoSaveTimer += dt;
     if (this.autoSaveTimer >= GAME_TIMING.AUTO_SAVE_INTERVAL) {
       this.autoSaveTimer = 0;
@@ -1062,9 +1074,8 @@ class Game {
   }
 
   playerPpsCatchup() {
-    const elapsedMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - this.battleStartTime;
-    if (elapsedMs < 3500 || this.battlePlayerPieces < 3) return 1;
-    const pps = this.battlePlayerPieces / (elapsedMs / 1000);
+    if (this.battleElapsedSec < 3.5 || this.battlePlayerPieces < 3) return 1;
+    const pps = this.battlePlayerPieces / this.battleElapsedSec;
     if (pps >= 1) return 1;
     const deficit = Math.min(0.7, 1 - pps);
     return 1 + deficit * 0.55 * this.roundCatchupFactor();
