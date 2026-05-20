@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260519-ko';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-ko';
-import { Deck } from './deck.js?v=20260519-ko';
-import { AI } from './ai.js?v=20260519-ko';
-import { Renderer } from './renderer.js?v=20260519-ko';
-import { InputController } from './input.js?v=20260519-ko';
-import { SKILLS } from './skills.js?v=20260519-ko';
-import { CONSUMABLES } from './consumables.js?v=20260519-ko';
+import { Board } from './board.js?v=20260519-ko2';
+import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260519-ko2';
+import { Deck } from './deck.js?v=20260519-ko2';
+import { AI } from './ai.js?v=20260519-ko2';
+import { Renderer } from './renderer.js?v=20260519-ko2';
+import { InputController } from './input.js?v=20260519-ko2';
+import { SKILLS } from './skills.js?v=20260519-ko2';
+import { CONSUMABLES } from './consumables.js?v=20260519-ko2';
 import {
   RunState,
   RELICS,
@@ -20,7 +20,7 @@ import {
   makeShopItems,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260519-ko';
+} from './progression.js?v=20260519-ko2';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -120,7 +120,7 @@ class Game {
   refreshMenu() {
     document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
     document.getElementById('menuGold').textContent = this.run.gold;
-    document.getElementById('menuHp').textContent = this.run.hpRows;
+    document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
     document.getElementById('menuDeck').textContent = `${this.run.deckCount()}장`;
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
@@ -158,7 +158,7 @@ class Game {
     if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `${this.run.round}라운드`;
-    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
+    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
@@ -186,7 +186,7 @@ class Game {
       document.getElementById('eventMeta').textContent = '런을 시작할 스킬을 선택하세요.';
     } else {
       document.getElementById('eventTitle').textContent = eventKey === 'start' ? '시작 이벤트' : `${completed}라운드 이후`;
-      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows} · 하나 선택`;
+      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 하나 선택`;
     }
     const wrap = document.getElementById('eventChoices');
     wrap.innerHTML = '';
@@ -762,13 +762,24 @@ class Game {
     return !!this.run.persistentGrid?.some(row => row.some(cell => cell?.type === 'garbage'));
   }
 
+  garbageRowCount() {
+    if (!this.run.persistentGrid) return 0;
+    return this.run.persistentGrid.filter(row => row.some(c => c?.type === 'garbage')).length;
+  }
+
   cleanCarriedGarbageRow() {
     if (!this.run.persistentGrid) return;
-    for (let r = this.run.persistentGrid.length - 1; r >= 0; r--) {
+    let removed = 0;
+    for (let r = this.run.persistentGrid.length - 1; r >= 0 && removed < 5; r--) {
       if (this.run.persistentGrid[r].some(cell => cell?.type === 'garbage')) {
         this.run.persistentGrid[r] = Array.from({ length: 10 }, () => null);
-        return;
+        removed++;
       }
+    }
+    if (removed > 0) {
+      const nullRows = this.run.persistentGrid.filter(row => !row.some(c => c?.type === 'garbage'));
+      const garbageRows = this.run.persistentGrid.filter(row => row.some(c => c?.type === 'garbage'));
+      this.run.persistentGrid = [...nullRows, ...garbageRows];
     }
   }
 
@@ -980,7 +991,8 @@ class Game {
         run: this.run,
         battle: this.battleEndResult === 'win' ? 'VICTORY' : 'DEFEAT',
         enemyCard: this.enemyCard,
-        message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated'
+        message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated',
+        skillCooldowns: this.skillCooldowns
       });
       if (this.battleEndDelay <= 0) {
         if (this.battleEndResult === 'win') this.winBattle();
@@ -998,7 +1010,8 @@ class Game {
         run: this.run,
         battle: 'PAUSED',
         enemyCard: this.enemyCard,
-        message: `Paused | PPS ${pps.toFixed(2)} | APM ${apm.toFixed(1)}`
+        message: `Paused | PPS ${pps.toFixed(2)} | APM ${apm.toFixed(1)}`,
+        skillCooldowns: this.skillCooldowns
       });
       return;
     }
@@ -1041,7 +1054,8 @@ class Game {
       run: this.run,
       battle: this.enemySlowTimer > 0 ? 'TIME WARP' : 'ACTIVE',
       enemyCard: this.enemyCard,
-      message: this.message
+      message: this.message,
+      skillCooldowns: this.skillCooldowns
     });
     this.message = '';
   }
@@ -1218,10 +1232,13 @@ class Game {
       const skill = SKILLS[id];
       if (!skill) return;
       const cd = this.skillCooldowns[id] || 0;
-      const pct = cd > 0 ? 1 - cd / skill.cooldown : 1;
+      const pct = cd > 0 ? 1 - cd / skill.cooldown : 0;
       btn.style.setProperty('--cd-pct', pct.toFixed(3));
+      btn.classList.toggle('has-mp', this.player.mp >= skill.cost);
       btn.classList.toggle('mp-ready', this.player.mp >= skill.cost && cd === 0);
       btn.classList.toggle('on-cooldown', cd > 0);
+      const small = btn.querySelector('small');
+      if (small) small.textContent = cd > 0 ? `${(cd / 1000).toFixed(1)}s` : `${skill.cost}MP`;
     });
   }
 
@@ -1249,6 +1266,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260519-ko').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260519-ko2').catch(() => {});
   });
 }
