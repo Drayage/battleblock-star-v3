@@ -63,7 +63,23 @@ export class Renderer {
       this.sidePanel(player, 20, L.y, L.cell, run, false, skillCooldowns);
     }
     if (battle === 'VICTORY' || battle === 'DEFEAT') this.battleOverlay(battle, L);
+    if (battle === 'PAUSED' && L.mobile) this.pauseOverlay(message, L);
     if (!L.mobile) this.status(player, enemy, run, battle, message);
+  }
+
+  pauseOverlay(message, L) {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(5,7,14,.62)';
+    ctx.fillRect(0, 0, L.w, L.h);
+    ctx.fillStyle = '#ffd97a';
+    ctx.font = 'bold 26px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', L.w / 2, 110);
+    ctx.fillStyle = '#d7e5ff';
+    ctx.font = '11px Courier New';
+    const parts = String(message || '').split('|').map(s => s.trim()).filter(s => s && s !== 'Paused');
+    parts.forEach((line, i) => ctx.fillText(line, L.w / 2, 140 + i * 18));
+    ctx.textAlign = 'left';
   }
 
   battleOverlay(kind, L) {
