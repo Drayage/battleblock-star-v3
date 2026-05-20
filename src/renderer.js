@@ -125,7 +125,7 @@ export class Renderer {
     }
     for (let r = 0; r < board.rows; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (board.grid[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, board.grid[r][c].type);
+        if (board.grid[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, board.grid[r][c].type, board.grid[r][c].fuse || 0);
       }
     }
     if (board.current && !board.defeated) {
@@ -136,7 +136,7 @@ export class Renderer {
       ctx.globalAlpha = 0.55;
       for (const { x, y } of ghost.cells) if (y >= 0) ctx.strokeRect(ox + x * cs + 3, oy + y * cs + 3, cs - 6, cs - 6);
       ctx.globalAlpha = 1;
-      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id);
+      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0);
     }
     if (board.flash > 0) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
@@ -146,14 +146,28 @@ export class Renderer {
       const alpha = Math.min(0.55, fx.timer / GAME_TIMING.BOMB_FX_FLASH);
       const px = ox + fx.x * cs;
       const py = oy + fx.y * cs;
-      ctx.fillStyle = `rgba(255,128,32,${alpha})`;
-      ctx.fillRect(px - cs, py - cs, cs * 3, cs * 3);
+      if (fx.kind === 'glass') {
+        ctx.strokeStyle = `rgba(190,239,255,${Math.min(1, alpha + 0.4)})`;
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          const a = (Math.PI / 2) * i + alpha;
+          ctx.beginPath();
+          ctx.moveTo(px + cs * 0.5, py + cs * 0.5);
+          ctx.lineTo(px + cs * 0.5 + Math.cos(a) * cs, py + cs * 0.5 + Math.sin(a) * cs);
+          ctx.stroke();
+        }
+        continue;
+      }
+      const radius = fx.radius == null ? 1 : fx.radius;
+      const span = radius * 2 + 1;
+      ctx.fillStyle = fx.kind === 'fuse' ? `rgba(255,80,80,${alpha})` : `rgba(255,128,32,${alpha})`;
+      ctx.fillRect(px - radius * cs, py - radius * cs, cs * span, cs * span);
       ctx.strokeStyle = `rgba(255,220,120,${Math.min(1, alpha + 0.25)})`;
       ctx.lineWidth = 2;
-      ctx.strokeRect(px - cs + 1, py - cs + 1, cs * 3 - 2, cs * 3 - 2);
+      ctx.strokeRect(px - radius * cs + 1, py - radius * cs + 1, cs * span - 2, cs * span - 2);
       ctx.fillStyle = `rgba(255,245,180,${Math.min(0.75, alpha + 0.15)})`;
       ctx.beginPath();
-      ctx.arc(px + cs * 0.5, py + cs * 0.5, cs * (1.35 - alpha * 0.35), 0, Math.PI * 2);
+      ctx.arc(px + cs * 0.5, py + cs * 0.5, cs * ((radius + 0.35) - alpha * 0.35), 0, Math.PI * 2);
       ctx.fill();
     }
     if (board.combo >= 2 || board.comboBreakFlash > 0) {
@@ -190,7 +204,7 @@ export class Renderer {
     }
   }
 
-  cell(x, y, cs, type) {
+  cell(x, y, cs, type, fuse = 0) {
     const ctx = this.ctx;
     const pad = Math.max(1, Math.floor(cs * 0.08));
     ctx.fillStyle = COLORS[type] || '#d9e0ef';
@@ -199,13 +213,22 @@ export class Renderer {
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
-      const mark = type === TYPES.BOMB || type === TYPES.BOMB_I ? 'B'
-        : type === TYPES.POWER_I || type === TYPES.POWER_T || type === TYPES.POWER_S || type === TYPES.POWER_CROSS ? 'P'
+      const mark = fuse > 0 ? String(fuse)
+        : type === TYPES.BOMB || type === TYPES.BOMB_I || type === TYPES.BOMB_Z ? 'B'
+        : type === TYPES.POWER_I || type === TYPES.POWER_T || type === TYPES.POWER_S || type === TYPES.POWER_CROSS || type === TYPES.POWER_Z || type === TYPES.POWER_PENTA ? 'P'
         : type === TYPES.CROSS ? '+'
-        : type === TYPES.MANA_T || type === TYPES.MANA_L || type === TYPES.INSTANT_MANA ? 'M'
-        : type === TYPES.PURGE_O || type === TYPES.CLEANSE_J || type === TYPES.INSTANT_PURGE ? 'C'
+        : type === TYPES.MANA_T || type === TYPES.MANA_L || type === TYPES.INSTANT_MANA || type === TYPES.MANA_Z ? 'M'
+        : type === TYPES.PURGE_O || type === TYPES.CLEANSE_J || type === TYPES.INSTANT_PURGE || type === TYPES.CLEANSE_Z ? 'C'
         : type === TYPES.INSTANT_STRIKE ? 'A'
         : type === TYPES.INSTANT_GUARD ? 'G'
+        : type === TYPES.COOLANT ? 'S'
+        : type === TYPES.COMBO_CHARGE ? 'X'
+        : type === TYPES.BOUNTY ? '$'
+        : type === TYPES.LEAD ? 'H'
+        : type === TYPES.UNSTABLE ? '?'
+        : type === TYPES.CHAIN ? '&'
+        : type === TYPES.GLASS ? 'V'
+        : type === TYPES.TIMEBOMB ? '0'
         : type === TYPES.HEAVY_JUNK || type === TYPES.WIDE_JUNK ? '!'
         : '';
       if (mark) {

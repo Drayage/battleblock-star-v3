@@ -376,4 +376,182 @@ fakeGame.enemy = {};
 scheduled();
 assert.equal(holdEnemy.holdLocked, true);
 
+// --- 1차 신규 콘텐츠 ---
+
+// Z 보강 4종
+assert.equal(CARD_LIBRARY[TYPES.POWER_Z].shapeId, 'Z');
+assert.equal(CARD_LIBRARY[TYPES.POWER_Z].abilityId, 'highPower');
+assert.equal(CARD_LIBRARY[TYPES.POWER_Z].cellAttack, 0.3);
+assert.equal(CARD_LIBRARY[TYPES.MANA_Z].abilityId, 'manaBonus');
+assert.equal(CARD_LIBRARY[TYPES.BOMB_Z].traits.includes('bomb'), true);
+assert.equal(CARD_LIBRARY[TYPES.CLEANSE_Z].abilityId, 'purgeGarbage');
+
+// 신규 펜토미노
+assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].cellCount, 5);
+assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shapeId, 'PENTA_T');
+assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shape.every(rot => rot.flat().filter(Boolean).length === 5), true);
+
+// 패널티/즉발 표식
+assert.equal(CARD_LIBRARY[TYPES.LEAD].cellAttack, 0.5);
+assert.equal(CARD_LIBRARY[TYPES.LEAD].traits.includes('heavy'), true);
+assert.equal(CARD_LIBRARY[TYPES.LEAD].penalty, true);
+assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].penalty, true);
+assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.selfGarbage, 1);
+assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.enemyGarbage, 1);
+
+// 봄브 폭발 후 열 중력 정렬
+const collapseBoard = new Board({ rows: 20 });
+collapseBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+collapseBoard.grid[5][2] = { type: TYPES.I, attack: 0.1, traits: [] };
+collapseBoard.collapseColumns();
+assert.equal(collapseBoard.grid[5][2], null);
+assert.equal(collapseBoard.grid[19][2].type, TYPES.I);
+
+const bombGravityBoard = new Board({ rows: 20 });
+bombGravityBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+bombGravityBoard.grid[10][8] = { type: TYPES.I, attack: 0.1, traits: [] };
+bombGravityBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+const bombGravity = bombGravityBoard.clearLines();
+assert.equal(bombGravity.cleared, 1);
+assert.equal(bombGravityBoard.grid[19][8].type, TYPES.I);
+assert.equal(bombGravityBoard.grid.slice(0, 19).every(row => row[8] === null), true);
+
+// 냉각 타일 — 셀당 500ms 누적
+const coolantBoard = new Board({ rows: 20 });
+coolantBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 3 ? TYPES.COOLANT : TYPES.I, attack: 0.1, traits: c < 3 ? ['coolant'] : [] }));
+const coolantClear = coolantBoard.clearLines();
+assert.equal(coolantClear.cleared, 1);
+assert.equal(coolantClear.slow, 1500);
+
+// 현상금 타일 — 제거 시 셀 수 반환 (상한 없음)
+const bountyBoard = new Board({ rows: 20 });
+bountyBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 6 ? TYPES.BOUNTY : TYPES.I, attack: 0.1, traits: c < 6 ? ['bounty'] : [] }));
+assert.equal(bountyBoard.clearLines().gold, 6);
+
+// 콤보 차지 — 누적 획득 + 다음 클리어 배수
+const chargeGainBoard = new Board({ rows: 20 });
+chargeGainBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 0 ? TYPES.COMBO_CHARGE : TYPES.I, attack: 0.1, traits: c === 0 ? ['comboCharge'] : [] }));
+assert.equal(chargeGainBoard.clearLines().chargeGained, 1);
+
+const chargeApplyBoard = new Board({ rows: 20 });
+chargeApplyBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+chargeApplyBoard.grid[19] = Array.from({ length: 10 }, (_, c) => [4, 5].includes(c) ? null : { type: TYPES.I, attack: 0.1, traits: [] });
+chargeApplyBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, 18);
+chargeApplyBoard.attackChargeStacks = 2;
+const chargeApply = chargeApplyBoard.lock();
+assert.equal(chargeApply.cleared, 1);
+assert.equal(chargeApply.attack, 1.4);
+assert.equal(chargeApplyBoard.attackChargeStacks, 0);
+
+// 불안정 타일 — 락 시 자기 필드 가비지 + 적 필드 가비지 신호
+const unstableBoard = new Board({ rows: 20 });
+unstableBoard.current = new Mino(CARD_LIBRARY[TYPES.UNSTABLE], 3, 8);
+const unstableRes = unstableBoard.lock();
+assert.equal(unstableRes.instant.enemyGarbage, 1);
+assert.equal(unstableBoard.garbageQueue, 1);
+
+// 납 타일 — 홀드 불가
+const leadHoldBoard = new Board({ rows: 20 });
+leadHoldBoard.current = new Mino(CARD_LIBRARY[TYPES.LEAD], 3, 5);
+assert.equal(leadHoldBoard.hold(), false);
+
+// Z 업그레이드 경로
+const zUpgradeRun = new RunState();
+zUpgradeRun.starterPicked = true;
+assert.equal(upgradeDeckCards(zUpgradeRun).some(u => u.from === TYPES.Z && u.to === TYPES.POWER_Z), true);
+
+// --- 2차 신규 콘텐츠 ---
+
+// 카드 속성
+assert.equal(CARD_LIBRARY[TYPES.GLASS].cellAttack, 0.5);
+assert.equal(CARD_LIBRARY[TYPES.GLASS].penalty, true);
+assert.equal(CARD_LIBRARY[TYPES.TIMEBOMB].fuse, 5);
+assert.equal(CARD_LIBRARY[TYPES.TIMEBOMB].penalty, true);
+assert.equal(CARD_LIBRARY[TYPES.CHAIN].traits.includes('chain'), true);
+
+// 2차 업그레이드 경로
+const phase2UpRun = new RunState();
+phase2UpRun.starterPicked = true;
+const phase2Ups = upgradeDeckCards(phase2UpRun);
+assert.equal(phase2Ups.some(u => u.from === TYPES.T && u.to === TYPES.CHAIN), true);
+assert.equal(phase2Ups.some(u => u.from === TYPES.S && u.to === TYPES.GLASS), true);
+assert.equal(phase2Ups.some(u => u.from === TYPES.O && u.to === TYPES.TIMEBOMB), true);
+
+// 사슬 캐스케이드 — 한 줄 클리어 시 연결된 다른 줄도 절반 효과로 제거
+const chainBoard = new Board({ rows: 20 });
+chainBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+chainBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
+chainBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
+for (let c = 1; c < 10; c++) chainBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+const chainClear = chainBoard.clearLines();
+assert.equal(chainClear.fullCleared, 1);
+assert.equal(chainClear.cleared, 2);
+assert.equal(chainClear.attack, 1.05);
+assert.equal(chainBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), false);
+
+// 사슬이 가득 찬 줄에 닿지 않으면 캐스케이드 없음
+const chainNoTriggerBoard = new Board({ rows: 20 });
+chainNoTriggerBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+chainNoTriggerBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
+chainNoTriggerBoard.grid[19] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
+const chainNoTrigger = chainNoTriggerBoard.clearLines();
+assert.equal(chainNoTrigger.fullCleared, 1);
+assert.equal(chainNoTrigger.cleared, 1);
+assert.equal(chainNoTriggerBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), true);
+
+// 유리 — 하드드롭 시 깨져 빈칸을 남김
+const glassBoard = new Board({ rows: 20 });
+glassBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+glassBoard.grid[19][0] = { type: TYPES.GLASS, attack: 0.5, traits: ['glass'] };
+glassBoard.current = new Mino(CARD_LIBRARY[TYPES.I], 3, 5);
+glassBoard.hardDrop();
+assert.equal(glassBoard.grid[19][0], null);
+assert.equal(glassBoard.bombFx.some(fx => fx.kind === 'glass'), true);
+
+// 시한폭탄 — 카운트다운 후 자기 칸만 소멸
+const fuseBoard = new Board({ rows: 20 });
+fuseBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+fuseBoard.grid[19][0] = { type: TYPES.TIMEBOMB, attack: 0.1, traits: ['timeBomb'], fuse: 2 };
+fuseBoard.tickTimeBombs();
+assert.equal(fuseBoard.grid[19][0].fuse, 1);
+fuseBoard.tickTimeBombs();
+assert.equal(fuseBoard.grid[19][0], null);
+
+// 시한폭탄 셀은 배치 시 fuse를 가짐
+const placeTimeBombBoard = new Board({ rows: 20 });
+placeTimeBombBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+placeTimeBombBoard.current = new Mino(CARD_LIBRARY[TYPES.TIMEBOMB], 3, 17);
+placeTimeBombBoard.lock();
+const placedFuses = placeTimeBombBoard.grid.flat().filter(c => c?.type === TYPES.TIMEBOMB);
+assert.equal(placedFuses.length > 0, true);
+assert.equal(placedFuses.every(c => c.fuse === 5), true);
+
+// 폭발 반경 — 5×5
+const radiusBoard = new Board({ rows: 20 });
+radiusBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+for (let r = 13; r <= 19; r++) for (let c = 1; c <= 7; c++) radiusBoard.grid[r][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+radiusBoard.explodeBombAt(4, 16, 2);
+for (let r = 14; r <= 18; r++) for (let c = 2; c <= 6; c++) assert.equal(radiusBoard.grid[r][c], null);
+assert.notEqual(radiusBoard.grid[13][4], null);
+
+// 시한폭탄 줄 제거 시 5×5 대폭발
+const tbLineBoard = new Board({ rows: 20 });
+tbLineBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+tbLineBoard.grid[16][4] = { type: TYPES.I, attack: 0.1, traits: [] };
+tbLineBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.TIMEBOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['timeBomb'] : [] }));
+tbLineBoard.clearLines();
+assert.equal(tbLineBoard.grid.flat().some(Boolean), false);
+
+// 패널티/즉발 카드 선택지 오염 방지 (세트당 각 최대 1개)
+for (let i = 0; i < 60; i++) {
+  const rewards = makeRewards('gold');
+  assert.equal(rewards.filter(r => CARD_LIBRARY[r.id].penalty).length <= 1, true);
+  assert.equal(rewards.filter(r => CARD_LIBRARY[r.id].onPlace).length <= 1, true);
+  const shopRunPenalty = new RunState();
+  shopRunPenalty.round = 15;
+  const shop = makeShopItems(shopRunPenalty).filter(item => item.kind === 'card');
+  assert.equal(shop.filter(item => CARD_LIBRARY[item.id].penalty).length <= 1, true);
+  assert.equal(shop.filter(item => CARD_LIBRARY[item.id].onPlace).length <= 1, true);
+}
+
 console.log('All Battle Block Star v3.0 checks passed.');

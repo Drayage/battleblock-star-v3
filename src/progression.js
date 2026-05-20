@@ -46,12 +46,13 @@ const SHOP_PRICE = {
 };
 
 export const BLOCK_UPGRADES = {
-  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I],
-  [TYPES.J]: [TYPES.CLEANSE_J],
-  [TYPES.L]: [TYPES.MANA_L],
-  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O],
-  [TYPES.S]: [TYPES.POWER_S],
-  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T]
+  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.COOLANT],
+  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.UNSTABLE],
+  [TYPES.L]: [TYPES.MANA_L, TYPES.BOUNTY],
+  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.LEAD, TYPES.TIMEBOMB],
+  [TYPES.S]: [TYPES.POWER_S, TYPES.GLASS],
+  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.COMBO_CHARGE, TYPES.CHAIN],
+  [TYPES.Z]: [TYPES.POWER_Z, TYPES.MANA_Z, TYPES.BOMB_Z, TYPES.CLEANSE_Z]
 };
 
 export class RunState {
@@ -147,6 +148,14 @@ function shopPrice(kind, tier) {
   return SHOP_PRICE[kind]?.[tier] || SHOP_PRICE[kind]?.bronze || 20;
 }
 
+// 한 선택 세트에 패널티/즉발 카드가 각각 최대 1개만 등장하도록, 한 장 뽑힌 뒤 같은 계열의 나머지를 제외한다.
+function categoryBlocklist(source, card) {
+  const blocked = [];
+  if (card.penalty) blocked.push(...Object.values(source).filter(c => c.penalty && c.id !== card.id).map(c => c.id));
+  if (card.onPlace) blocked.push(...Object.values(source).filter(c => c.onPlace && c.id !== card.id).map(c => c.id));
+  return blocked;
+}
+
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
@@ -211,10 +220,12 @@ export function makeRewards(pool = 'normal') {
     .filter(card => card.tier && card.rarity !== 'base' && card.rarity !== 'curse')
     .map(card => [card.id, card]));
   const picked = [];
+  const blocked = [];
   while (picked.length < 3) {
-    const card = pickByTier(rewardCards, elite ? TIERS.GOLD : sourceTier, { elite, exclude: picked });
+    const card = pickByTier(rewardCards, elite ? TIERS.GOLD : sourceTier, { elite, exclude: [...picked, ...blocked] });
     if (!card || picked.includes(card.id)) break;
     picked.push(card.id);
+    blocked.push(...categoryBlocklist(rewardCards, card));
   }
   return picked.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: 'Block reward' }));
 }
@@ -227,10 +238,12 @@ export function makeShopItems(run) {
     .filter(card => card.tier && card.rarity !== 'base' && card.rarity !== 'curse')
     .map(card => [card.id, card]));
   const cardItems = [];
+  const blocked = [];
   while (cardItems.length < 4) {
-    const card = pickByTier(rewardCards, tier, { exclude: cardItems });
+    const card = pickByTier(rewardCards, tier, { exclude: [...cardItems, ...blocked] });
     if (!card || cardItems.includes(card.id)) break;
     cardItems.push(card.id);
+    blocked.push(...categoryBlocklist(rewardCards, card));
   }
   const skill = pickByTier(SKILLS, tier, { exclude: run.ownedSkills });
   const consumable = pickByTier(CONSUMABLES, tier);

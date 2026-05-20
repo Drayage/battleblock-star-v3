@@ -664,6 +664,18 @@ class Game {
     if (attacker === this.player) this.battlePlayerPieces++;
     else if (attacker === this.enemy) this.battleEnemyPieces++;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    if (attacker === this.player) {
+      if (result.slow) this.enemySlowTimer += result.slow;
+      if (result.gold) {
+        this.bountyBank = (this.bountyBank || 0) + result.gold * 0.3;
+        const earned = Math.floor(this.bountyBank);
+        if (earned > 0) {
+          this.run.gold += earned;
+          this.bountyBank -= earned;
+        }
+      }
+    }
+    if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
@@ -1219,8 +1231,15 @@ class Game {
     if (!this.player?.current || this.player.defeated) return;
     if (this.isPlayerGrounded()) {
       this.groundTouched = true;
-      this.lockTimer += dt;
       this.fallTimer = 0;
+      if (this.player.current.card.traits.includes('heavy')) {
+        this.lockTimer = 0;
+        this.lockResets = 0;
+        this.groundTouched = false;
+        this.resolve(this.player.lock(), this.player);
+        return;
+      }
+      this.lockTimer += dt;
       if (this.lockTimer >= this.currentLockDelay()) {
         this.lockTimer = 0;
         this.lockResets = 0;
