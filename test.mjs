@@ -295,6 +295,9 @@ assert.equal(makeEnemy(11, false, { name: 'Line Hunter', style: '', profile: 'ba
 assert.equal(makeRewards('normal').every(reward => reward.kind === 'card'), true);
 assert.equal(makeRewards('elite').every(reward => reward.kind === 'card'), true);
 assert.equal(makeRewards('elite').some(reward => reward.tier !== TIERS.BRONZE), true);
+for (const pool of ['normal', 'silver', 'gold', 'elite', 'elite:gold']) {
+  for (let i = 0; i < 20; i++) assert.equal(makeRewards(pool).some(reward => reward.id === TYPES.CROSS), false);
+}
 assert.equal(Object.values(SKILLS).every(skill => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(skill.tier)), true);
 assert.equal(Object.values(CONSUMABLES).every(item => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(item.tier)), true);
 assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(relic.tier)), true);
@@ -305,6 +308,7 @@ const shopItems = makeShopItems(shopRun);
 const shopGoldCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.GOLD);
 const shopSilverCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.SILVER);
 if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilverCard.price, true);
+assert.equal(shopItems.some(item => item.kind === 'card' && item.id === TYPES.CROSS), false);
 const secondShopItems = makeShopItems(shopRun);
 assert.deepEqual(secondShopItems, shopItems);
 shopRun.shopStock[String(shopRun.round)].sold.push(shopItemKey(shopItems[0]));

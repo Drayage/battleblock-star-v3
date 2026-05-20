@@ -156,6 +156,10 @@ function categoryBlocklist(source, card) {
   return blocked;
 }
 
+function isPlayerRewardCard(card) {
+  return card.tier && card.rarity !== 'base' && card.rarity !== 'curse' && card.id !== TYPES.CROSS;
+}
+
 export function makeEnemyChoices(round) {
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
@@ -217,7 +221,7 @@ export function makeRewards(pool = 'normal') {
     : String(pool).includes(TIERS.SILVER) ? TIERS.SILVER
       : pool === 'normal' ? TIERS.BRONZE : pool;
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
-    .filter(card => card.tier && card.rarity !== 'base' && card.rarity !== 'curse')
+    .filter(isPlayerRewardCard)
     .map(card => [card.id, card]));
   const picked = [];
   const blocked = [];
@@ -235,7 +239,7 @@ export function makeShopItems(run) {
   if (run.shopStock?.[key]?.items) return run.shopStock[key].items;
   const tier = roundTier(run.round);
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
-    .filter(card => card.tier && card.rarity !== 'base' && card.rarity !== 'curse')
+    .filter(isPlayerRewardCard)
     .map(card => [card.id, card]));
   const cardItems = [];
   const blocked = [];
