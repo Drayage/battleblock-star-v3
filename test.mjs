@@ -529,6 +529,19 @@ const fuseLineClear = fuseLineBoard.clearLines();
 assert.equal(fuseLineClear.cleared, 1);
 assert.equal(fuseLineBoard.grid.flat().some(Boolean), false);
 
+// 실제 배치 경로에서도 fuse 1 시한폭탄 줄은 사라지기 전에 먼저 클리어됨
+const fuseLockBoard = new Board({ rows: 20 });
+fuseLockBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+for (let c = 0; c < 10; c++) {
+  if (c === 8 || c === 9) continue;
+  fuseLockBoard.grid[19][c] = { type: c === 4 ? TYPES.TIMEBOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['timeBomb'] : [], fuse: c === 4 ? 1 : undefined };
+}
+fuseLockBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 8, 18);
+const fuseLockClear = fuseLockBoard.lock();
+assert.equal(fuseLockClear.cleared, 1);
+assert.equal(fuseLockClear.fullCleared, 1);
+assert.equal(fuseLockBoard.grid.flat().some(c => c?.traits?.includes('timeBomb')), false);
+
 // 시한폭탄 셀은 배치 시 fuse를 가짐
 const placeTimeBombBoard = new Board({ rows: 20 });
 placeTimeBombBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));

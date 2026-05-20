@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260520-ko4';
-import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260520-ko4';
-import { Deck } from './deck.js?v=20260520-ko4';
-import { AI } from './ai.js?v=20260520-ko4';
-import { Renderer } from './renderer.js?v=20260520-ko4';
-import { InputController } from './input.js?v=20260520-ko4';
-import { SKILLS } from './skills.js?v=20260520-ko4';
-import { CONSUMABLES } from './consumables.js?v=20260520-ko4';
+import { Board } from './board.js?v=20260521-ko5';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260521-ko5';
+import { Deck } from './deck.js?v=20260521-ko5';
+import { AI } from './ai.js?v=20260521-ko5';
+import { Renderer } from './renderer.js?v=20260521-ko5';
+import { InputController } from './input.js?v=20260521-ko5';
+import { SKILLS } from './skills.js?v=20260521-ko5';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko5';
 import {
   RunState,
   RELICS,
@@ -20,7 +20,7 @@ import {
   makeShopItems,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260520-ko4';
+} from './progression.js?v=20260521-ko5';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -360,7 +360,7 @@ class Game {
   itemDesc(item) {
     if (item.kind === 'card') {
       const card = CARD_LIBRARY[item.id];
-      return `${card.shapeName} + ${card.abilityName} (${card.cellCount}칸): ${CARD_DESCRIPTIONS[item.id] || '이 블록을 덱에 추가합니다.'}`;
+      return `${card.name} (${card.cellCount}칸): ${CARD_DESCRIPTIONS[item.id] || '이 블록을 덱에 추가합니다.'}`;
     }
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
@@ -1281,6 +1281,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260520-ko4').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko5').catch(() => {});
   });
 }

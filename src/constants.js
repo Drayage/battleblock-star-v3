@@ -285,7 +285,7 @@ export const SHAPES = Object.fromEntries(Object.entries({
 export const ABILITY_LIBRARY = {
   none: { id: 'none', name: '일반', cellAttack: 0.1, traits: [], desc: '기본 테트로미노 셀.' },
   highPower: { id: 'highPower', name: '고출력', cellAttack: 0.3, traits: ['highPower'], desc: '클리어된 셀당 0.3 공격력.' },
-  oddPower: { id: 'oddPower', name: '특수', cellAttack: 0.16, traits: ['oddShape'], desc: '특수 모양. 더 높은 반환값.' },
+  oddPower: { id: 'oddPower', name: '고효율', cellAttack: 0.16, traits: ['oddShape'], desc: '배치가 까다로운 대신 기본보다 높은 공격력을 가집니다.' },
   bomb: { id: 'bomb', name: '폭탄', cellAttack: 0.1, traits: ['bomb'], desc: '클리어 시 중심 3×3 영역을 파괴합니다.' },
   manaBonus: { id: 'manaBonus', name: '마나', cellAttack: 0.1, traits: ['manaBonus'], desc: '클리어된 셀이 추가 MP를 제공합니다.' },
   purgeGarbage: { id: 'purgeGarbage', name: '클렌즈', cellAttack: 0.1, traits: ['purgeGarbage'], desc: '클리어 시 쓰레기 행을 제거합니다.' },
@@ -390,7 +390,7 @@ export const CARD_DESCRIPTIONS = {
   [TYPES.POWER_I]: 'I 모양 고출력 블록. 클리어된 셀당 0.3 공격력.',
   [TYPES.POWER_T]: 'T 모양 고출력 블록. T스핀 클리어와 공격 전환에 강합니다.',
   [TYPES.POWER_S]: 'S 모양 고출력 블록. 까다롭지만 클리어 시 공격력이 높습니다.',
-  [TYPES.CROSS]: '5칸 십자형 특수 블록. 배치 난도가 높지만 효율이 좋습니다.',
+  [TYPES.CROSS]: '5칸 십자형 블록. 배치 난도가 높지만 칸당 공격력이 기본 블록보다 높습니다.',
   [TYPES.BOMB]: 'O 모양 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.',
   [TYPES.BOMB_I]: 'I 모양 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.',
   [TYPES.MANA_T]: 'T 모양 마나 블록. 클리어된 셀이 추가 MP를 제공합니다.',
