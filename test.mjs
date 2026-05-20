@@ -302,6 +302,8 @@ assert.equal(isShopRound(5), false);
 assert.equal(isShopRound(6), true);
 assert.equal(isShopRound(10), false);
 assert.equal(isShopRound(11), true);
+assert.equal(isShopRound(19), false);
+assert.equal(isShopRound(20), true);
 assert.equal(Object.values(SKILLS).every(skill => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(skill.tier)), true);
 assert.equal(Object.values(CONSUMABLES).every(item => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(item.tier)), true);
 assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(relic.tier)), true);

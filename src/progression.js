@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko7';
-import { Deck, shuffle } from './deck.js?v=20260521-ko7';
-import { SKILLS } from './skills.js?v=20260521-ko7';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko7';
+import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko8';
+import { Deck, shuffle } from './deck.js?v=20260521-ko8';
+import { SKILLS } from './skills.js?v=20260521-ko8';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko8';
 
 export const RELICS = {
   combo_amp: {
@@ -401,7 +401,7 @@ export function randomConsumable(sourceTier = TIERS.BRONZE) {
 }
 
 export function isShopRound(round) {
-  return [6, 11, 16].includes(round);
+  return [6, 11, 16, 20].includes(round);
 }
 
 export function isRunComplete(run) {
