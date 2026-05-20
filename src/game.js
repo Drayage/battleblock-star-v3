@@ -70,6 +70,8 @@ class Game {
     this.enemySlowTimer = 0;
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
+    this.battlePlayerPieces = 0;
+    this.battleStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
     this.aiFocusLastPiece = null;
@@ -526,6 +528,8 @@ class Game {
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
+    this.battlePlayerPieces = 0;
+    this.battleStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
     this.aiFocusLastPiece = null;
@@ -651,6 +655,7 @@ class Game {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
+    if (attacker === this.player) this.battlePlayerPieces++;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
@@ -1023,7 +1028,7 @@ class Game {
 
   currentEnemyDelay() {
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
-    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor());
+    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
   }
 
   resolveEnemyStep() {
@@ -1050,14 +1055,46 @@ class Game {
     return Math.floor(this.battleClearedLines / 10) * 0.1;
   }
 
+  roundCatchupFactor() {
+    const round = this.run?.round || 1;
+    if (round <= 10) return 1;
+    return Math.max(0, 1 - (round - 10) / 7);
+  }
+
+  playerPpsCatchup() {
+    const elapsedMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - this.battleStartTime;
+    if (elapsedMs < 3500 || this.battlePlayerPieces < 3) return 1;
+    const pps = this.battlePlayerPieces / (elapsedMs / 1000);
+    if (pps >= 1) return 1;
+    const deficit = Math.min(0.7, 1 - pps);
+    return 1 + deficit * 0.55 * this.roundCatchupFactor();
+  }
+
+  playerMercyFactor() {
+    if (!this.player) return 1;
+    const maxHeight = this.boardMaxHeight(this.player);
+    const danger = maxHeight - (this.player.rows - 3);
+    if (danger <= 0) return 1;
+    return 1 + Math.min(0.45, danger * 0.18) * this.roundCatchupFactor();
+  }
+
   currentAiPressure() {
     const confidence = this.aiConfidence();
     const fatigue = Math.min(0.08, Math.floor(this.battleClearedLines / 12) * 0.015);
+    const mercy = this.playerMercyHesitate();
     return {
       mistake: Math.min(0.16, fatigue + confidence.mistake),
-      hesitate: confidence.hesitate,
+      hesitate: Math.min(0.85, confidence.hesitate + mercy),
       focus: this.aiFocus()
     };
+  }
+
+  playerMercyHesitate() {
+    if (!this.player) return 0;
+    const maxHeight = this.boardMaxHeight(this.player);
+    const danger = maxHeight - (this.player.rows - 3);
+    if (danger <= 0) return 0;
+    return Math.min(0.5, danger * 0.18) * this.roundCatchupFactor();
   }
 
   aiFocus() {
