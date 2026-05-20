@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko8';
-import { Deck } from './deck.js?v=20260521-ko8';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko9';
+import { Deck } from './deck.js?v=20260521-ko9';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -389,11 +389,15 @@ export class Board {
     while (kept.length < this.rows) kept.unshift(emptyRow());
     this.grid = kept;
 
+    const clearedBelow = y => rows.filter(r => r > y).length;
     for (const { x, y } of bombCells) {
-      this.explodeBombAt(x, y, 1);
-      this.dropCellsAbove(x, y);
+      const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
+      this.explodeBombAt(x, targetY, 1);
+      this.dropCellsAbove(x, targetY);
     }
-    for (const { x, y } of timeBombCells) this.explodeBombAt(x, y, 2);
+    for (const { x, y } of timeBombCells) {
+      this.explodeBombAt(x, Math.min(this.rows - 1, y + clearedBelow(y)), 2);
+    }
     if (purge) this.purgeGarbageRows(1);
     return {
       cleared: rows.length,

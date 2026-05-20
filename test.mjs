@@ -429,6 +429,16 @@ assert.equal(bombGravityBoard.grid[19][4].type, TYPES.I);
 assert.equal(bombGravityBoard.grid[18][4], null);
 assert.equal(bombGravityBoard.grid[11][8]?.type, TYPES.Z);
 
+const doubleBombGravityBoard = new Board({ rows: 20 });
+doubleBombGravityBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+doubleBombGravityBoard.grid[10][4] = { type: TYPES.I, attack: 0.1, traits: [] };
+doubleBombGravityBoard.grid[18] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+doubleBombGravityBoard.grid[19] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
+const doubleBombGravity = doubleBombGravityBoard.clearLines();
+assert.equal(doubleBombGravity.cleared, 2);
+assert.equal(doubleBombGravityBoard.grid[19][4].type, TYPES.I);
+assert.equal(doubleBombGravityBoard.grid[18][4], null);
+
 // 냉각 타일 — 셀당 500ms 누적
 const coolantBoard = new Board({ rows: 20 });
 coolantBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 3 ? TYPES.COOLANT : TYPES.I, attack: 0.1, traits: c < 3 ? ['coolant'] : [] }));
