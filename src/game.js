@@ -56,8 +56,6 @@ class Game {
     this.battleEnemyAttacks = 0;
     this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
-    this.aiFocusActivePieces = 0;
-    this.aiFocusLastPiece = null;
     this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
@@ -517,8 +515,6 @@ class Game {
     this.battleEnemyAttacks = 0;
     this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
-    this.aiFocusActivePieces = 0;
-    this.aiFocusLastPiece = null;
     this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
@@ -876,7 +872,6 @@ class Game {
         battleEnemyAttacks: this.battleEnemyAttacks,
         battleElapsedSec: this.battleElapsedSec,
         aiFocusActivations: this.aiFocusActivations,
-        aiFocusActivePieces: this.aiFocusActivePieces,
         aiFocusInEpisode: this.aiFocusInEpisode,
         battleEndDelay: this.battleEndDelay,
         battleEndResult: this.battleEndResult,
@@ -919,9 +914,7 @@ class Game {
         this.battleEnemyAttacks = state.battle.battleEnemyAttacks || 0;
         this.battleElapsedSec = state.battle.battleElapsedSec || 0;
         this.aiFocusActivations = state.battle.aiFocusActivations || 0;
-        this.aiFocusActivePieces = state.battle.aiFocusActivePieces || 0;
         this.aiFocusInEpisode = state.battle.aiFocusInEpisode || false;
-        this.aiFocusLastPiece = null;
         this.autoSaveTimer = 0;
         this.battleEndDelay = state.battle.battleEndDelay || 0;
         this.battleEndResult = state.battle.battleEndResult || null;
@@ -1044,11 +1037,11 @@ class Game {
       this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
     });
     this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * GAME_TIMING.PLAYER_SLOW_FACTOR : dt);
+    this.ai.setPressure(this.currentAiPressure());
     this.enemyTimer += dt;
     const enemyDelay = this.currentEnemyDelay();
     if (this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
-      this.ai.setPressure(this.currentAiPressure());
       this.resolve(this.resolveEnemyStep(), this.enemy);
     }
     this.updateEnemyAbility(dt);
@@ -1078,7 +1071,7 @@ class Game {
     const enemy = [];
     if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
     if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
-    if (this.aiFocusActivePieces > 0) enemy.push(`FOCUS ${this.aiFocusActivePieces}`);
+    if (this.aiFocusInEpisode) enemy.push(`FOCUS x${this.aiFocusActivations}`);
     if (this.player?.holdLocked) player.push('HOLD LOCK');
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
     return { player, enemy };
@@ -1154,28 +1147,23 @@ class Game {
 
   aiFocus() {
     if (!this.enemy) return 0;
-    if (this.enemy.pieceSerial !== this.aiFocusLastPiece) {
-      this.aiFocusLastPiece = this.enemy.pieceSerial;
-      if (this.aiFocusActivePieces > 0) this.aiFocusActivePieces--;
-    }
     const enemyHeight = this.boardMaxHeight(this.enemy);
-    const danger = enemyHeight - (this.enemy.rows - 9);
-    if (danger <= 0) {
+    const projectedHeight = enemyHeight + this.enemy.garbageQueue;
+    const danger = projectedHeight - (this.enemy.rows - 3);
+    if (danger < 0) {
       this.aiFocusInEpisode = false;
       return 0;
     }
     if (!this.aiFocusInEpisode) {
       this.aiFocusInEpisode = true;
       this.aiFocusActivations++;
-      this.aiFocusActivePieces = 6;
     }
-    if (this.aiFocusActivePieces > 0) return Math.min(1, Math.max(0.5, danger / 5));
-    return Math.min(1, danger / 5);
+    return Math.min(1, Math.max(0.5, (danger + 1) / 3));
   }
 
   aiFocusSlowFactor() {
-    if (this.aiFocusActivePieces <= 0) return 1;
-    return 1 + Math.min(1.2, this.aiFocusActivations * 0.22);
+    if (!this.aiFocusInEpisode || this.aiFocusActivations < 2) return 1;
+    return 1 + Math.min(1.2, (this.aiFocusActivations - 1) * 0.22);
   }
 
   aiConfidence() {
