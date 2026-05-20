@@ -1070,10 +1070,14 @@ class Game {
     return 1 + deficit * 0.55 * this.roundCatchupFactor();
   }
 
+  playerMercyDanger() {
+    if (!this.player) return 0;
+    const projected = this.boardMaxHeight(this.player) + this.player.garbageQueue;
+    return projected - (this.player.rows - 3);
+  }
+
   playerMercyFactor() {
-    if (!this.player) return 1;
-    const maxHeight = this.boardMaxHeight(this.player);
-    const danger = maxHeight - (this.player.rows - 3);
+    const danger = this.playerMercyDanger();
     if (danger <= 0) return 1;
     return 1 + Math.min(0.45, danger * 0.18) * this.roundCatchupFactor();
   }
@@ -1090,9 +1094,7 @@ class Game {
   }
 
   playerMercyHesitate() {
-    if (!this.player) return 0;
-    const maxHeight = this.boardMaxHeight(this.player);
-    const danger = maxHeight - (this.player.rows - 3);
+    const danger = this.playerMercyDanger();
     if (danger <= 0) return 0;
     return Math.min(0.5, danger * 0.18) * this.roundCatchupFactor();
   }
