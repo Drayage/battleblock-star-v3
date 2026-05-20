@@ -62,7 +62,10 @@ export const TYPES = {
   COMBO_CHARGE: 'COMBO_CHARGE',
   BOUNTY: 'BOUNTY',
   UNSTABLE: 'UNSTABLE',
-  LEAD: 'LEAD'
+  LEAD: 'LEAD',
+  CHAIN: 'CHAIN',
+  GLASS: 'GLASS',
+  TIMEBOMB: 'TIMEBOMB'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -113,6 +116,9 @@ export const COLORS = {
   [TYPES.BOUNTY]: '#f4c025',
   [TYPES.UNSTABLE]: '#d23bff',
   [TYPES.LEAD]: '#8a8f9c',
+  [TYPES.CHAIN]: '#7fb0ff',
+  [TYPES.GLASS]: '#bfefff',
+  [TYPES.TIMEBOMB]: '#ff4d4d',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -270,7 +276,10 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.COMBO_CHARGE]: 'T',
   [TYPES.BOUNTY]: 'L',
   [TYPES.UNSTABLE]: 'J',
-  [TYPES.LEAD]: 'O'
+  [TYPES.LEAD]: 'O',
+  [TYPES.CHAIN]: 'T',
+  [TYPES.GLASS]: 'S',
+  [TYPES.TIMEBOMB]: 'O'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
@@ -290,7 +299,10 @@ export const ABILITY_LIBRARY = {
   comboCharge: { id: 'comboCharge', name: '콤보 차지', cellAttack: 0.1, traits: ['comboCharge'], desc: '클리어 시 다음 클리어의 공격력이 누적 증가합니다.' },
   bounty: { id: 'bounty', name: '현상금', cellAttack: 0.1, traits: ['bounty'], desc: '라인 클리어 시 골드를 획득합니다.' },
   unstable: { id: 'unstable', name: '불안정', cellAttack: 0.1, traits: ['unstable'], onPlace: { selfGarbage: 1, enemyGarbage: 1 }, penalty: true, desc: '배치 시 내 필드와 적 필드에 각각 쓰레기 1줄이 추가됩니다.' },
-  leadPower: { id: 'leadPower', name: '중량', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' }
+  leadPower: { id: 'leadPower', name: '중량', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' },
+  chain: { id: 'chain', name: '사슬', cellAttack: 0.1, traits: ['chain'], desc: '연결된 사슬 중 한 줄이라도 클리어되면 연결된 모든 줄이 함께 제거됩니다(추가 줄은 절반 효과).' },
+  glass: { id: 'glass', name: '유리', cellAttack: 0.5, traits: ['glass'], penalty: true, desc: '셀당 0.5 공격력. 하드드롭이 일어나면 깨져 빈칸을 남깁니다.' },
+  timeBomb: { id: 'timeBomb', name: '시한폭탄', cellAttack: 0.1, traits: ['timeBomb'], fuse: 5, penalty: true, desc: '배치 후 매 턴 카운트다운. 0이 되면 그 칸만 사라지고, 줄로 제거하면 5×5 대폭발.' }
 };
 
 function tierFromRarity(rarity) {
@@ -315,6 +327,7 @@ function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
     traits: [...ability.traits],
     onPlace: ability.onPlace ? { ...ability.onPlace } : null,
     penalty: !!ability.penalty,
+    fuse: ability.fuse || 0,
     rarity,
     tier: tierFromRarity(rarity)
   };
@@ -354,5 +367,8 @@ export const CARD_LIBRARY = {
   [TYPES.COMBO_CHARGE]: blockCard(TYPES.COMBO_CHARGE, '콤보 T', 'T', 'comboCharge', 'rare'),
   [TYPES.BOUNTY]: blockCard(TYPES.BOUNTY, '현상금 L', 'L', 'bounty', 'uncommon'),
   [TYPES.UNSTABLE]: blockCard(TYPES.UNSTABLE, '불안정 J', 'J', 'unstable', 'rare'),
-  [TYPES.LEAD]: blockCard(TYPES.LEAD, '납 O', 'O', 'leadPower', 'rare')
+  [TYPES.LEAD]: blockCard(TYPES.LEAD, '납 O', 'O', 'leadPower', 'rare'),
+  [TYPES.CHAIN]: blockCard(TYPES.CHAIN, '사슬 T', 'T', 'chain', 'rare'),
+  [TYPES.GLASS]: blockCard(TYPES.GLASS, '유리 S', 'S', 'glass', 'rare'),
+  [TYPES.TIMEBOMB]: blockCard(TYPES.TIMEBOMB, '시한폭탄 O', 'O', 'timeBomb', 'rare')
 };

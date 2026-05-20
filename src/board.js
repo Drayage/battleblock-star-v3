@@ -18,7 +18,9 @@ function normalizeGrid(source, rows) {
 }
 
 function cell(card) {
-  return { type: card.id, attack: card.cellAttack, traits: [...card.traits] };
+  const made = { type: card.id, attack: card.cellAttack, traits: [...card.traits] };
+  if (card.fuse) made.fuse = card.fuse;
+  return made;
 }
 
 export class Mino {
@@ -217,7 +219,9 @@ export class Board {
   hardDrop() {
     if (!this.current || this.defeated) return null;
     while (this.ok(this.current, 0, 1)) this.current.y++;
-    return this.lock();
+    const result = this.lock();
+    this.shatterGlass();
+    return result;
   }
 
   emergencyShard() {
@@ -242,6 +246,7 @@ export class Board {
       this.defeated = true;
       return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, tetris: false, tSpin: false, topOut: true };
     }
+    this.tickTimeBombs();
     for (const pos of cells) {
       this.grid[pos.y][pos.x] = cell(this.current.card);
       placed.push({ ...pos, card: this.current.card });
@@ -250,7 +255,7 @@ export class Board {
     const result = this.clearLines();
     if (result.cleared > 0) {
       result.tSpin = wasTSpin;
-      result.tetris = result.cleared === 4;
+      result.tetris = result.fullCleared === 4;
       result.clearText = this.clearLabel(result);
       const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
@@ -337,40 +342,60 @@ export class Board {
   }
 
   clearLines() {
-    let cleared = 0;
+    const empty = { cleared: 0, fullCleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, slow: 0, gold: 0, chargeGained: 0, tetris: false, tSpin: false };
+    const fullRows = new Set();
+    for (let r = 0; r < this.rows; r++) if (this.grid[r].every(Boolean)) fullRows.add(r);
+    if (!fullRows.size) return empty;
+
+    // 사슬 캐스케이드: 클리어되는 줄에 닿은 사슬 그룹이 점유한 다른 줄도 함께 제거한다.
+    const bonusRows = new Set();
+    for (const comp of this.chainComponents()) {
+      if (comp.some(({ y }) => fullRows.has(y))) {
+        for (const { y } of comp) if (!fullRows.has(y)) bonusRows.add(y);
+      }
+    }
+
     let attack = 0;
     let mana = 0;
-    let bombRows = [];
-    let bombCells = [];
-    let purge = false;
     let coolantCells = 0;
     let gold = 0;
     let chargeGained = 0;
-    for (let r = this.rows - 1; r >= 0; r--) {
-      if (this.grid[r].every(Boolean)) {
-        const row = this.grid[r];
-        attack += row.reduce((sum, c) => sum + c.attack, 0);
-        mana += row.reduce((sum, c) => sum + (c.traits.includes('garbage') ? 0.4 : 0.5), 0)
-               + row.filter(c => c.traits.includes('manaBonus')).length * 4;
-        row.forEach((c, x) => {
-          if (c.traits.includes('bomb')) bombCells.push({ x, y: r });
-        });
-        if (row.some(c => c.traits.includes('bomb'))) bombRows.push(r);
-        if (row.some(c => c.traits.includes('purgeGarbage'))) purge = true;
-        coolantCells += row.filter(c => c.traits.includes('coolant')).length;
-        gold += row.filter(c => c.traits.includes('bounty')).length;
-        chargeGained += row.filter(c => c.traits.includes('comboCharge')).length;
-        this.grid.splice(r, 1);
-        this.grid.unshift(emptyRow());
-        cleared++;
-        r++;
-      }
+    const bombRows = [];
+    const bombCells = [];
+    const timeBombCells = [];
+    let purge = false;
+
+    const rows = [...fullRows, ...bonusRows];
+    for (const r of rows) {
+      const row = this.grid[r];
+      const factor = bonusRows.has(r) ? 0.5 : 1;
+      attack += row.reduce((sum, c) => sum + (c ? c.attack : 0), 0) * factor;
+      mana += (row.reduce((sum, c) => sum + (c ? (c.traits.includes('garbage') ? 0.4 : 0.5) : 0), 0)
+              + row.filter(c => c && c.traits.includes('manaBonus')).length * 4) * factor;
+      row.forEach((c, x) => {
+        if (!c) return;
+        if (c.traits.includes('bomb')) bombCells.push({ x, y: r });
+        if (c.traits.includes('timeBomb')) timeBombCells.push({ x, y: r });
+      });
+      if (row.some(c => c?.traits.includes('bomb'))) bombRows.push(r);
+      if (row.some(c => c?.traits.includes('purgeGarbage'))) purge = true;
+      coolantCells += row.filter(c => c?.traits.includes('coolant')).length;
+      gold += row.filter(c => c?.traits.includes('bounty')).length;
+      chargeGained += row.filter(c => c?.traits.includes('comboCharge')).length;
     }
-    for (const { x, y } of bombCells) this.explodeBombAt(x, y);
-    if (bombCells.length) this.collapseColumns();
+
+    const clearSet = new Set(rows);
+    const kept = this.grid.filter((_, r) => !clearSet.has(r));
+    while (kept.length < this.rows) kept.unshift(emptyRow());
+    this.grid = kept;
+
+    for (const { x, y } of bombCells) this.explodeBombAt(x, y, 1);
+    for (const { x, y } of timeBombCells) this.explodeBombAt(x, y, 2);
+    if (bombCells.length || timeBombCells.length) this.collapseColumns();
     if (purge) this.purgeGarbageRows(1);
     return {
-      cleared,
+      cleared: rows.length,
+      fullCleared: fullRows.size,
       attack: Number(attack.toFixed(2)),
       mana: Number(mana.toFixed(2)),
       bombRows,
@@ -383,10 +408,63 @@ export class Board {
     };
   }
 
-  explodeBombAt(x, y) {
-    this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH });
-    for (let r = Math.max(0, y - 1); r <= Math.min(this.rows - 1, y + 1); r++) {
-      for (let c = Math.max(0, x - 1); c <= Math.min(this.cols - 1, x + 1); c++) {
+  chainComponents() {
+    const seen = Array.from({ length: this.rows }, () => new Array(this.cols).fill(false));
+    const comps = [];
+    const isChain = (y, x) => y >= 0 && y < this.rows && x >= 0 && x < this.cols && !!this.grid[y][x]?.traits.includes('chain');
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (!isChain(r, c) || seen[r][c]) continue;
+        const comp = [];
+        const stack = [[r, c]];
+        seen[r][c] = true;
+        while (stack.length) {
+          const [y, x] = stack.pop();
+          comp.push({ x, y });
+          for (const [dy, dx] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const ny = y + dy;
+            const nx = x + dx;
+            if (isChain(ny, nx) && !seen[ny][nx]) {
+              seen[ny][nx] = true;
+              stack.push([ny, nx]);
+            }
+          }
+        }
+        comps.push(comp);
+      }
+    }
+    return comps;
+  }
+
+  tickTimeBombs() {
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const target = this.grid[r][c];
+        if (!target || !(target.fuse > 0)) continue;
+        target.fuse -= 1;
+        if (target.fuse <= 0) {
+          this.grid[r][c] = null;
+          this.bombFx.push({ x: c, y: r, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'fuse', radius: 0 });
+        }
+      }
+    }
+  }
+
+  shatterGlass() {
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.grid[r][c]?.traits.includes('glass')) {
+          this.grid[r][c] = null;
+          this.bombFx.push({ x: c, y: r, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'glass', radius: 0 });
+        }
+      }
+    }
+  }
+
+  explodeBombAt(x, y, radius = 1) {
+    this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH, radius });
+    for (let r = Math.max(0, y - radius); r <= Math.min(this.rows - 1, y + radius); r++) {
+      for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
         if (r >= 0 && r < this.rows) this.grid[r][c] = null;
       }
     }
