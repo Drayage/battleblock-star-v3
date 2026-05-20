@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko10';
-import { Deck } from './deck.js?v=20260521-ko10';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko11';
+import { Deck } from './deck.js?v=20260521-ko11';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -583,6 +583,8 @@ export class Board {
         return;
       }
       this.grid.shift();
+      this.bombFx.forEach(fx => { fx.y -= 1; });
+      this.bombFx = this.bombFx.filter(fx => fx.y >= 0);
       this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage'] }));
     }
   }

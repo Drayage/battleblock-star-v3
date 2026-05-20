@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko10';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko11';
 
 export function shuffle(items) {
   const out = [...items];

@@ -544,6 +544,16 @@ assert.equal(fuseBoard.grid[19][0].fuse, 1);
 fuseBoard.tickTimeBombs();
 assert.equal(fuseBoard.grid[19][0], null);
 
+const fuseFxGarbageBoard = new Board({ rows: 20 });
+fuseFxGarbageBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+fuseFxGarbageBoard.grid[18][0] = { type: TYPES.TIMEBOMB, attack: 0.1, traits: ['timeBomb'], fuse: 1 };
+fuseFxGarbageBoard.receiveGarbage(1);
+fuseFxGarbageBoard.tickGarbage(3000);
+fuseFxGarbageBoard.tickTimeBombs();
+fuseFxGarbageBoard.applyReadyGarbage();
+assert.equal(fuseFxGarbageBoard.bombFx[0].kind, 'fuse');
+assert.equal(fuseFxGarbageBoard.bombFx[0].y, 17);
+
 // 시한폭탄 fuse 1이어도 줄 완성 판정이 먼저 적용됨
 const fuseLineBoard = new Board({ rows: 20 });
 fuseLineBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
