@@ -80,6 +80,7 @@ export class Board {
     this.flash = 0;
     this.attackPool = 0;
     this.nextAttackDouble = false;
+    this.attackChargeStacks = 0;
     this.fillQueue();
     this.spawn();
   }
@@ -109,6 +110,7 @@ export class Board {
     board.flash = state.flash || 0;
     board.attackPool = state.attackPool || 0;
     board.nextAttackDouble = !!state.nextAttackDouble;
+    board.attackChargeStacks = state.attackChargeStacks || 0;
     board.fillQueue();
     return board;
   }
@@ -191,6 +193,7 @@ export class Board {
 
   hold() {
     if (!this.current || this.holdUsed || this.holdLocked || this.defeated) return false;
+    if (this.current.card.traits.includes('heavy')) return false;
     if (!this.held) {
       this.held = this.current.card;
       this.spawn();
@@ -263,6 +266,11 @@ export class Board {
         result.attack = Number((result.attack * 2).toFixed(2));
         this.nextAttackDouble = false;
       }
+      if (this.attackChargeStacks > 0) {
+        result.attack = Number((result.attack * (1 + 0.2 * this.attackChargeStacks)).toFixed(2));
+        this.attackChargeStacks = 0;
+      }
+      this.attackChargeStacks = Math.min(3, this.attackChargeStacks + (result.chargeGained || 0));
       this.attackPool += result.attack;
       const cancel = Math.min(this.garbageQueue, Math.floor(this.attackPool));
       this.cancelGarbage(cancel);
@@ -315,6 +323,14 @@ export class Board {
       if (result.purgedRows > 0) labels.push(`GARBAGE -${result.purgedRows}`);
       else labels.push('PURGE READY');
     }
+    if (effect.selfGarbage) {
+      this.receiveGarbage(effect.selfGarbage);
+      labels.push(`SELF +${effect.selfGarbage}`);
+    }
+    if (effect.enemyGarbage) {
+      result.enemyGarbage = effect.enemyGarbage;
+      labels.push(`ENEMY +${effect.enemyGarbage}`);
+    }
     result.triggered = labels.length > 0;
     result.text = labels.join(' ');
     return result;
@@ -327,6 +343,9 @@ export class Board {
     let bombRows = [];
     let bombCells = [];
     let purge = false;
+    let slow = false;
+    let gold = 0;
+    let chargeGained = 0;
     for (let r = this.rows - 1; r >= 0; r--) {
       if (this.grid[r].every(Boolean)) {
         const row = this.grid[r];
@@ -338,6 +357,9 @@ export class Board {
         });
         if (row.some(c => c.traits.includes('bomb'))) bombRows.push(r);
         if (row.some(c => c.traits.includes('purgeGarbage'))) purge = true;
+        if (row.some(c => c.traits.includes('coolant'))) slow = true;
+        gold += row.filter(c => c.traits.includes('bounty')).length;
+        chargeGained += row.filter(c => c.traits.includes('comboCharge')).length;
         this.grid.splice(r, 1);
         this.grid.unshift(emptyRow());
         cleared++;
@@ -345,8 +367,20 @@ export class Board {
       }
     }
     for (const { x, y } of bombCells) this.explodeBombAt(x, y);
+    if (bombCells.length) this.collapseColumns();
     if (purge) this.purgeGarbageRows(1);
-    return { cleared, attack: Number(attack.toFixed(2)), mana: Number(mana.toFixed(2)), bombRows, purge, tetris: false, tSpin: false };
+    return {
+      cleared,
+      attack: Number(attack.toFixed(2)),
+      mana: Number(mana.toFixed(2)),
+      bombRows,
+      purge,
+      slow: slow ? GAME_TIMING.COOLANT_SLOW : 0,
+      gold: Math.min(gold, 4),
+      chargeGained,
+      tetris: false,
+      tSpin: false
+    };
   }
 
   explodeBombAt(x, y) {
@@ -463,12 +497,16 @@ export class Board {
     return removed;
   }
 
-  magneticCollapse() {
+  collapseColumns() {
     for (let c = 0; c < this.cols; c++) {
       const stack = [];
       for (let r = 0; r < this.rows; r++) if (this.grid[r][c]) stack.push(this.grid[r][c]);
       for (let r = this.rows - 1; r >= 0; r--) this.grid[r][c] = stack.pop() || null;
     }
+  }
+
+  magneticCollapse() {
+    this.collapseColumns();
   }
 
   toState() {
@@ -495,7 +533,8 @@ export class Board {
       lastMoveWasRotate: this.lastMoveWasRotate,
       flash: this.flash,
       attackPool: this.attackPool,
-      nextAttackDouble: this.nextAttackDouble
+      nextAttackDouble: this.nextAttackDouble,
+      attackChargeStacks: this.attackChargeStacks
     };
   }
 }

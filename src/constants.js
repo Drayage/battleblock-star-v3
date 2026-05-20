@@ -9,6 +9,7 @@ export const GAME_TIMING = {
   PLAYER_SLOW_FACTOR: 0.55,
   ENEMY_SLOW_FACTOR: 2.8,
   GARBAGE_ARM_DELAY: 3000,
+  COOLANT_SLOW: 2800,
   AUTO_SAVE_INTERVAL: 5000,
   ENEMY_ABILITY_INTERVAL: 6500,
   BATTLE_WIN_DELAY: 1400,
@@ -51,7 +52,17 @@ export const TYPES = {
   INSTANT_STRIKE: 'INSTANT_STRIKE',
   INSTANT_GUARD: 'INSTANT_GUARD',
   INSTANT_MANA: 'INSTANT_MANA',
-  INSTANT_PURGE: 'INSTANT_PURGE'
+  INSTANT_PURGE: 'INSTANT_PURGE',
+  POWER_Z: 'POWER_Z',
+  MANA_Z: 'MANA_Z',
+  BOMB_Z: 'BOMB_Z',
+  CLEANSE_Z: 'CLEANSE_Z',
+  POWER_PENTA: 'POWER_PENTA',
+  COOLANT: 'COOLANT',
+  COMBO_CHARGE: 'COMBO_CHARGE',
+  BOUNTY: 'BOUNTY',
+  UNSTABLE: 'UNSTABLE',
+  LEAD: 'LEAD'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -92,6 +103,16 @@ export const COLORS = {
   [TYPES.INSTANT_GUARD]: '#80a8ff',
   [TYPES.INSTANT_MANA]: '#63ffdd',
   [TYPES.INSTANT_PURGE]: '#f4f7ff',
+  [TYPES.POWER_Z]: '#ff5a6f',
+  [TYPES.MANA_Z]: '#4ad0a8',
+  [TYPES.BOMB_Z]: '#ff7a3a',
+  [TYPES.CLEANSE_Z]: '#d8e4ff',
+  [TYPES.POWER_PENTA]: '#ff79c0',
+  [TYPES.COOLANT]: '#9fe8ff',
+  [TYPES.COMBO_CHARGE]: '#ffd84a',
+  [TYPES.BOUNTY]: '#f4c025',
+  [TYPES.UNSTABLE]: '#d23bff',
+  [TYPES.LEAD]: '#8a8f9c',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -202,6 +223,16 @@ export const SHAPE_LIBRARY = {
       [[1,1,1],[0,0,1],[0,0,1]],
       [[0,0,1],[0,0,1],[1,1,1]]
     ]
+  },
+  PENTA_T: {
+    name: 'T펜토형',
+    cells: 5,
+    shape: [
+      [[1,1,1],[0,1,0],[0,1,0]],
+      [[0,0,1],[1,1,1],[0,0,1]],
+      [[0,1,0],[0,1,0],[1,1,1]],
+      [[1,0,0],[1,1,1],[1,0,0]]
+    ]
   }
 };
 
@@ -229,7 +260,17 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.INSTANT_STRIKE]: 'HOOK5',
   [TYPES.INSTANT_GUARD]: 'WIDE6',
   [TYPES.INSTANT_MANA]: 'CROSS5',
-  [TYPES.INSTANT_PURGE]: 'HEAVY5'
+  [TYPES.INSTANT_PURGE]: 'HEAVY5',
+  [TYPES.POWER_Z]: 'Z',
+  [TYPES.MANA_Z]: 'Z',
+  [TYPES.BOMB_Z]: 'Z',
+  [TYPES.CLEANSE_Z]: 'Z',
+  [TYPES.POWER_PENTA]: 'PENTA_T',
+  [TYPES.COOLANT]: 'I',
+  [TYPES.COMBO_CHARGE]: 'T',
+  [TYPES.BOUNTY]: 'L',
+  [TYPES.UNSTABLE]: 'J',
+  [TYPES.LEAD]: 'O'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
@@ -244,7 +285,12 @@ export const ABILITY_LIBRARY = {
   instantMana: { id: 'instantMana', name: '즉발 마나', cellAttack: 0.1, traits: [], onPlace: { mana: 18 }, desc: '배치 즉시 MP를 18 회복합니다.' },
   instantPurge: { id: 'instantPurge', name: '즉발 퍼지', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 1 }, desc: '배치 즉시 쓰레기 행 1줄을 제거합니다.' },
   curse: { id: 'curse', name: '방해', cellAttack: 0.1, traits: ['curse'], desc: '덱을 막는 방해형 블록.' },
-  wideCurse: { id: 'wideCurse', name: '광역 방해', cellAttack: 0.1, traits: ['curse', 'wide'], desc: '덱을 막는 6칸 방해형 블록.' }
+  wideCurse: { id: 'wideCurse', name: '광역 방해', cellAttack: 0.1, traits: ['curse', 'wide'], desc: '덱을 막는 6칸 방해형 블록.' },
+  coolant: { id: 'coolant', name: '냉각', cellAttack: 0.1, traits: ['coolant'], desc: '라인 클리어 시 적의 행동 속도를 잠시 늦춥니다.' },
+  comboCharge: { id: 'comboCharge', name: '콤보 차지', cellAttack: 0.1, traits: ['comboCharge'], desc: '클리어 시 다음 클리어의 공격력이 누적 증가합니다.' },
+  bounty: { id: 'bounty', name: '현상금', cellAttack: 0.1, traits: ['bounty'], desc: '라인 클리어 시 골드를 획득합니다.' },
+  unstable: { id: 'unstable', name: '불안정', cellAttack: 0.1, traits: ['unstable'], onPlace: { selfGarbage: 1, enemyGarbage: 1 }, penalty: true, desc: '배치 시 내 필드와 적 필드에 각각 쓰레기 1줄이 추가됩니다.' },
+  leadPower: { id: 'leadPower', name: '중량', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' }
 };
 
 function tierFromRarity(rarity) {
@@ -268,6 +314,7 @@ function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
     cellAttack: ability.cellAttack,
     traits: [...ability.traits],
     onPlace: ability.onPlace ? { ...ability.onPlace } : null,
+    penalty: !!ability.penalty,
     rarity,
     tier: tierFromRarity(rarity)
   };
@@ -297,5 +344,15 @@ export const CARD_LIBRARY = {
   [TYPES.INSTANT_STRIKE]: blockCard(TYPES.INSTANT_STRIKE, '스트라이크 훅', 'HOOK5', 'instantAttack', 'uncommon'),
   [TYPES.INSTANT_GUARD]: blockCard(TYPES.INSTANT_GUARD, '가드 와이드', 'WIDE6', 'instantGuard', 'uncommon'),
   [TYPES.INSTANT_MANA]: blockCard(TYPES.INSTANT_MANA, '마나 크로스', 'CROSS5', 'instantMana', 'uncommon'),
-  [TYPES.INSTANT_PURGE]: blockCard(TYPES.INSTANT_PURGE, '퍼지 헤비', 'HEAVY5', 'instantPurge', 'rare')
+  [TYPES.INSTANT_PURGE]: blockCard(TYPES.INSTANT_PURGE, '퍼지 헤비', 'HEAVY5', 'instantPurge', 'rare'),
+  [TYPES.POWER_Z]: blockCard(TYPES.POWER_Z, '파워 Z', 'Z', 'highPower', 'rare'),
+  [TYPES.MANA_Z]: blockCard(TYPES.MANA_Z, '마나 Z', 'Z', 'manaBonus', 'uncommon'),
+  [TYPES.BOMB_Z]: blockCard(TYPES.BOMB_Z, '봄브 Z', 'Z', 'bomb', 'uncommon'),
+  [TYPES.CLEANSE_Z]: blockCard(TYPES.CLEANSE_Z, '클렌즈 Z', 'Z', 'purgeGarbage', 'rare'),
+  [TYPES.POWER_PENTA]: blockCard(TYPES.POWER_PENTA, '파워 펜토', 'PENTA_T', 'highPower', 'rare'),
+  [TYPES.COOLANT]: blockCard(TYPES.COOLANT, '냉각 I', 'I', 'coolant', 'uncommon'),
+  [TYPES.COMBO_CHARGE]: blockCard(TYPES.COMBO_CHARGE, '콤보 T', 'T', 'comboCharge', 'rare'),
+  [TYPES.BOUNTY]: blockCard(TYPES.BOUNTY, '현상금 L', 'L', 'bounty', 'uncommon'),
+  [TYPES.UNSTABLE]: blockCard(TYPES.UNSTABLE, '불안정 J', 'J', 'unstable', 'rare'),
+  [TYPES.LEAD]: blockCard(TYPES.LEAD, '납 O', 'O', 'leadPower', 'rare')
 };

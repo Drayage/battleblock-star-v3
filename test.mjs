@@ -376,4 +376,100 @@ fakeGame.enemy = {};
 scheduled();
 assert.equal(holdEnemy.holdLocked, true);
 
+// --- 1차 신규 콘텐츠 ---
+
+// Z 보강 4종
+assert.equal(CARD_LIBRARY[TYPES.POWER_Z].shapeId, 'Z');
+assert.equal(CARD_LIBRARY[TYPES.POWER_Z].abilityId, 'highPower');
+assert.equal(CARD_LIBRARY[TYPES.POWER_Z].cellAttack, 0.3);
+assert.equal(CARD_LIBRARY[TYPES.MANA_Z].abilityId, 'manaBonus');
+assert.equal(CARD_LIBRARY[TYPES.BOMB_Z].traits.includes('bomb'), true);
+assert.equal(CARD_LIBRARY[TYPES.CLEANSE_Z].abilityId, 'purgeGarbage');
+
+// 신규 펜토미노
+assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].cellCount, 5);
+assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shapeId, 'PENTA_T');
+assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shape.every(rot => rot.flat().filter(Boolean).length === 5), true);
+
+// 패널티/즉발 표식
+assert.equal(CARD_LIBRARY[TYPES.LEAD].cellAttack, 0.5);
+assert.equal(CARD_LIBRARY[TYPES.LEAD].traits.includes('heavy'), true);
+assert.equal(CARD_LIBRARY[TYPES.LEAD].penalty, true);
+assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].penalty, true);
+assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.selfGarbage, 1);
+assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.enemyGarbage, 1);
+
+// 봄브 폭발 후 열 중력 정렬
+const collapseBoard = new Board({ rows: 20 });
+collapseBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+collapseBoard.grid[5][2] = { type: TYPES.I, attack: 0.1, traits: [] };
+collapseBoard.collapseColumns();
+assert.equal(collapseBoard.grid[5][2], null);
+assert.equal(collapseBoard.grid[19][2].type, TYPES.I);
+
+const bombGravityBoard = new Board({ rows: 20 });
+bombGravityBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+bombGravityBoard.grid[10][8] = { type: TYPES.I, attack: 0.1, traits: [] };
+bombGravityBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+const bombGravity = bombGravityBoard.clearLines();
+assert.equal(bombGravity.cleared, 1);
+assert.equal(bombGravityBoard.grid[19][8].type, TYPES.I);
+assert.equal(bombGravityBoard.grid.slice(0, 19).every(row => row[8] === null), true);
+
+// 냉각 타일 — 제거 시 슬로우 플래그
+const coolantBoard = new Board({ rows: 20 });
+coolantBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 0 ? TYPES.COOLANT : TYPES.I, attack: 0.1, traits: c === 0 ? ['coolant'] : [] }));
+const coolantClear = coolantBoard.clearLines();
+assert.equal(coolantClear.cleared, 1);
+assert.equal(coolantClear.slow > 0, true);
+
+// 현상금 타일 — 제거 시 골드 (상한 4)
+const bountyBoard = new Board({ rows: 20 });
+bountyBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 2 ? TYPES.BOUNTY : TYPES.I, attack: 0.1, traits: c < 2 ? ['bounty'] : [] }));
+assert.equal(bountyBoard.clearLines().gold, 2);
+
+// 콤보 차지 — 누적 획득 + 다음 클리어 배수
+const chargeGainBoard = new Board({ rows: 20 });
+chargeGainBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 0 ? TYPES.COMBO_CHARGE : TYPES.I, attack: 0.1, traits: c === 0 ? ['comboCharge'] : [] }));
+assert.equal(chargeGainBoard.clearLines().chargeGained, 1);
+
+const chargeApplyBoard = new Board({ rows: 20 });
+chargeApplyBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+chargeApplyBoard.grid[19] = Array.from({ length: 10 }, (_, c) => [4, 5].includes(c) ? null : { type: TYPES.I, attack: 0.1, traits: [] });
+chargeApplyBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, 18);
+chargeApplyBoard.attackChargeStacks = 2;
+const chargeApply = chargeApplyBoard.lock();
+assert.equal(chargeApply.cleared, 1);
+assert.equal(chargeApply.attack, 1.4);
+assert.equal(chargeApplyBoard.attackChargeStacks, 0);
+
+// 불안정 타일 — 락 시 자기 필드 가비지 + 적 필드 가비지 신호
+const unstableBoard = new Board({ rows: 20 });
+unstableBoard.current = new Mino(CARD_LIBRARY[TYPES.UNSTABLE], 3, 8);
+const unstableRes = unstableBoard.lock();
+assert.equal(unstableRes.instant.enemyGarbage, 1);
+assert.equal(unstableBoard.garbageQueue, 1);
+
+// 납 타일 — 홀드 불가
+const leadHoldBoard = new Board({ rows: 20 });
+leadHoldBoard.current = new Mino(CARD_LIBRARY[TYPES.LEAD], 3, 5);
+assert.equal(leadHoldBoard.hold(), false);
+
+// Z 업그레이드 경로
+const zUpgradeRun = new RunState();
+zUpgradeRun.starterPicked = true;
+assert.equal(upgradeDeckCards(zUpgradeRun).some(u => u.from === TYPES.Z && u.to === TYPES.POWER_Z), true);
+
+// 패널티/즉발 카드 선택지 오염 방지 (세트당 각 최대 1개)
+for (let i = 0; i < 60; i++) {
+  const rewards = makeRewards('gold');
+  assert.equal(rewards.filter(r => CARD_LIBRARY[r.id].penalty).length <= 1, true);
+  assert.equal(rewards.filter(r => CARD_LIBRARY[r.id].onPlace).length <= 1, true);
+  const shopRunPenalty = new RunState();
+  shopRunPenalty.round = 15;
+  const shop = makeShopItems(shopRunPenalty).filter(item => item.kind === 'card');
+  assert.equal(shop.filter(item => CARD_LIBRARY[item.id].penalty).length <= 1, true);
+  assert.equal(shop.filter(item => CARD_LIBRARY[item.id].onPlace).length <= 1, true);
+}
+
 console.log('All Battle Block Star v3.0 checks passed.');
