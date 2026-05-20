@@ -72,6 +72,8 @@ class Game {
     this.battleClearedLines = 0;
     this.battlePlayerPieces = 0;
     this.battlePlayerAttacks = 0;
+    this.battleEnemyPieces = 0;
+    this.battleEnemyAttacks = 0;
     this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
@@ -531,6 +533,8 @@ class Game {
     this.battleClearedLines = 0;
     this.battlePlayerPieces = 0;
     this.battlePlayerAttacks = 0;
+    this.battleEnemyPieces = 0;
+    this.battleEnemyAttacks = 0;
     this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
@@ -658,6 +662,7 @@ class Game {
     const defender = attacker === this.player ? this.enemy : this.player;
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (attacker === this.player) this.battlePlayerPieces++;
+    else if (attacker === this.enemy) this.battleEnemyPieces++;
     const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
@@ -666,6 +671,7 @@ class Game {
     if (result.attack > 0) {
       const attack = (result.attack + this.battleHeatAttackBonus()) * mult;
       if (attacker === this.player) this.battlePlayerAttacks += attack;
+      else if (attacker === this.enemy) this.battleEnemyAttacks += attack;
       const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
@@ -874,6 +880,8 @@ class Game {
         battleClearedLines: this.battleClearedLines,
         battlePlayerPieces: this.battlePlayerPieces,
         battlePlayerAttacks: this.battlePlayerAttacks,
+        battleEnemyPieces: this.battleEnemyPieces,
+        battleEnemyAttacks: this.battleEnemyAttacks,
         battleElapsedSec: this.battleElapsedSec,
         aiFocusActivations: this.aiFocusActivations,
         aiFocusActivePieces: this.aiFocusActivePieces,
@@ -915,6 +923,8 @@ class Game {
         this.battleClearedLines = state.battle.battleClearedLines || 0;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
         this.battlePlayerAttacks = state.battle.battlePlayerAttacks || 0;
+        this.battleEnemyPieces = state.battle.battleEnemyPieces || 0;
+        this.battleEnemyAttacks = state.battle.battleEnemyAttacks || 0;
         this.battleElapsedSec = state.battle.battleElapsedSec || 0;
         this.aiFocusActivations = state.battle.aiFocusActivations || 0;
         this.aiFocusActivePieces = state.battle.aiFocusActivePieces || 0;
@@ -1004,13 +1014,15 @@ class Game {
       const sec = Math.max(0.0001, this.battleElapsedSec);
       const pps = this.battlePlayerPieces / sec;
       const apm = this.battlePlayerAttacks / (sec / 60);
+      const ePps = this.battleEnemyPieces / sec;
+      const eApm = this.battleEnemyAttacks / (sec / 60);
       this.renderer.draw({
         player: this.player,
         enemy: this.enemy,
         run: this.run,
         battle: 'PAUSED',
         enemyCard: this.enemyCard,
-        message: `Paused | PPS ${pps.toFixed(2)} | APM ${apm.toFixed(1)}`,
+        message: `Paused | YOU ${pps.toFixed(2)}pps ${apm.toFixed(1)}apm | ENEMY ${ePps.toFixed(2)}pps ${eApm.toFixed(1)}apm`,
         skillCooldowns: this.skillCooldowns
       });
       return;
