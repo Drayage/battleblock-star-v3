@@ -71,6 +71,7 @@ class Game {
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
     this.battlePlayerPieces = 0;
+    this.battlePlayerAttacks = 0;
     this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
@@ -529,6 +530,7 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
     this.battlePlayerPieces = 0;
+    this.battlePlayerAttacks = 0;
     this.battleElapsedSec = 0;
     this.aiFocusActivations = 0;
     this.aiFocusActivePieces = 0;
@@ -663,6 +665,7 @@ class Game {
     }
     if (result.attack > 0) {
       const attack = (result.attack + this.battleHeatAttackBonus()) * mult;
+      if (attacker === this.player) this.battlePlayerAttacks += attack;
       const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
@@ -870,6 +873,7 @@ class Game {
         playerSlowTimer: this.playerSlowTimer,
         battleClearedLines: this.battleClearedLines,
         battlePlayerPieces: this.battlePlayerPieces,
+        battlePlayerAttacks: this.battlePlayerAttacks,
         battleElapsedSec: this.battleElapsedSec,
         aiFocusActivations: this.aiFocusActivations,
         aiFocusActivePieces: this.aiFocusActivePieces,
@@ -910,6 +914,7 @@ class Game {
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
         this.battleClearedLines = state.battle.battleClearedLines || 0;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
+        this.battlePlayerAttacks = state.battle.battlePlayerAttacks || 0;
         this.battleElapsedSec = state.battle.battleElapsedSec || 0;
         this.aiFocusActivations = state.battle.aiFocusActivations || 0;
         this.aiFocusActivePieces = state.battle.aiFocusActivePieces || 0;
@@ -996,13 +1001,16 @@ class Game {
       return;
     }
     if (this.paused) {
+      const sec = Math.max(0.0001, this.battleElapsedSec);
+      const pps = this.battlePlayerPieces / sec;
+      const apm = this.battlePlayerAttacks / (sec / 60);
       this.renderer.draw({
         player: this.player,
         enemy: this.enemy,
         run: this.run,
         battle: 'PAUSED',
         enemyCard: this.enemyCard,
-        message: 'Paused',
+        message: `Paused | PPS ${pps.toFixed(2)} | APM ${apm.toFixed(1)}`,
         skillCooldowns: this.skillCooldowns
       });
       return;
