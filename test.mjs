@@ -5,7 +5,7 @@ import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, grantEliteRelic, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, grantEliteRelic, isShopRound, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -298,6 +298,10 @@ assert.equal(makeRewards('elite').some(reward => reward.tier !== TIERS.BRONZE), 
 for (const pool of ['normal', 'silver', 'gold', 'elite', 'elite:gold']) {
   for (let i = 0; i < 20; i++) assert.equal(makeRewards(pool).some(reward => reward.id === TYPES.CROSS), false);
 }
+assert.equal(isShopRound(5), false);
+assert.equal(isShopRound(6), true);
+assert.equal(isShopRound(10), false);
+assert.equal(isShopRound(11), true);
 assert.equal(Object.values(SKILLS).every(skill => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(skill.tier)), true);
 assert.equal(Object.values(CONSUMABLES).every(item => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(item.tier)), true);
 assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(relic.tier)), true);
