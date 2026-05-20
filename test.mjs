@@ -175,8 +175,8 @@ assert.equal(expandedBoard.defeated, false);
 
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].shapeId, 'CROSS5');
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].abilityId, 'highPower');
-assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].tier, TIERS.GOLD);
-assert.equal(CARD_LIBRARY[TYPES.MANA_T].tier, TIERS.SILVER);
+assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].tier, TIERS.SILVER);
+assert.equal(CARD_LIBRARY[TYPES.MANA_T].tier, TIERS.GOLD);
 assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
 assert.equal(CARD_LIBRARY[TYPES.POWER_T].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.BOMB_I].shapeId, 'I');
@@ -399,7 +399,7 @@ assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].penalty, true);
 assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.selfGarbage, 1);
 assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.enemyGarbage, 1);
 
-// 봄브 폭발 후 열 중력 정렬
+// 봄브 폭발 후 해당 폭탄 열의 위쪽만 아래로 당김
 const collapseBoard = new Board({ rows: 20 });
 collapseBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
 collapseBoard.grid[5][2] = { type: TYPES.I, attack: 0.1, traits: [] };
@@ -409,12 +409,15 @@ assert.equal(collapseBoard.grid[19][2].type, TYPES.I);
 
 const bombGravityBoard = new Board({ rows: 20 });
 bombGravityBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-bombGravityBoard.grid[10][8] = { type: TYPES.I, attack: 0.1, traits: [] };
+bombGravityBoard.grid[10][4] = { type: TYPES.I, attack: 0.1, traits: [] };
+bombGravityBoard.grid[10][8] = { type: TYPES.Z, attack: 0.1, traits: [] };
+bombGravityBoard.grid[18][4] = { type: TYPES.L, attack: 0.1, traits: [] };
 bombGravityBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
 const bombGravity = bombGravityBoard.clearLines();
 assert.equal(bombGravity.cleared, 1);
-assert.equal(bombGravityBoard.grid[19][8].type, TYPES.I);
-assert.equal(bombGravityBoard.grid.slice(0, 19).every(row => row[8] === null), true);
+assert.equal(bombGravityBoard.grid[19][4].type, TYPES.I);
+assert.equal(bombGravityBoard.grid[18][4], null);
+assert.equal(bombGravityBoard.grid[11][8]?.type, TYPES.Z);
 
 // 냉각 타일 — 셀당 500ms 누적
 const coolantBoard = new Board({ rows: 20 });
@@ -516,6 +519,15 @@ fuseBoard.tickTimeBombs();
 assert.equal(fuseBoard.grid[19][0].fuse, 1);
 fuseBoard.tickTimeBombs();
 assert.equal(fuseBoard.grid[19][0], null);
+
+// 시한폭탄 fuse 1이어도 줄 완성 판정이 먼저 적용됨
+const fuseLineBoard = new Board({ rows: 20 });
+fuseLineBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+fuseLineBoard.grid[16][4] = { type: TYPES.I, attack: 0.1, traits: [] };
+fuseLineBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.TIMEBOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['timeBomb'] : [], fuse: c === 4 ? 1 : undefined }));
+const fuseLineClear = fuseLineBoard.clearLines();
+assert.equal(fuseLineClear.cleared, 1);
+assert.equal(fuseLineBoard.grid.flat().some(Boolean), false);
 
 // 시한폭탄 셀은 배치 시 fuse를 가짐
 const placeTimeBombBoard = new Board({ rows: 20 });

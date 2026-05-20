@@ -246,7 +246,6 @@ export class Board {
       this.defeated = true;
       return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, tetris: false, tSpin: false, topOut: true };
     }
-    this.tickTimeBombs();
     for (const pos of cells) {
       this.grid[pos.y][pos.x] = cell(this.current.card);
       placed.push({ ...pos, card: this.current.card });
@@ -297,6 +296,7 @@ export class Board {
         this.clearTextFlash = GAME_TIMING.CLEAR_FEEDBACK_FLASH;
       }
     }
+    this.tickTimeBombs(new Set(placed.map(pos => `${pos.x},${pos.y}`)));
     this.applyReadyGarbage();
     this.lastAttack = result.attack;
     if (this.defeated) return result;
@@ -389,9 +389,11 @@ export class Board {
     while (kept.length < this.rows) kept.unshift(emptyRow());
     this.grid = kept;
 
-    for (const { x, y } of bombCells) this.explodeBombAt(x, y, 1);
+    for (const { x, y } of bombCells) {
+      this.explodeBombAt(x, y, 1);
+      this.dropCellsAbove(x, y);
+    }
     for (const { x, y } of timeBombCells) this.explodeBombAt(x, y, 2);
-    if (bombCells.length || timeBombCells.length) this.collapseColumns();
     if (purge) this.purgeGarbageRows(1);
     return {
       cleared: rows.length,
@@ -436,10 +438,11 @@ export class Board {
     return comps;
   }
 
-  tickTimeBombs() {
+  tickTimeBombs(skip = new Set()) {
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
         const target = this.grid[r][c];
+        if (skip.has(`${c},${r}`)) continue;
         if (!target || !(target.fuse > 0)) continue;
         target.fuse -= 1;
         if (target.fuse <= 0) {
@@ -466,6 +469,20 @@ export class Board {
     for (let r = Math.max(0, y - radius); r <= Math.min(this.rows - 1, y + radius); r++) {
       for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
         if (r >= 0 && r < this.rows) this.grid[r][c] = null;
+      }
+    }
+  }
+
+  dropCellsAbove(x, y) {
+    const targetY = Math.min(this.rows - 1, y);
+    let write = targetY;
+    for (let r = targetY; r >= 0; r--) {
+      if (this.grid[r][x]) {
+        if (write !== r) {
+          this.grid[write][x] = this.grid[r][x];
+          this.grid[r][x] = null;
+        }
+        write--;
       }
     }
   }

@@ -1,5 +1,5 @@
 import { Board } from './board.js?v=20260520-ko4';
-import { CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260520-ko4';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260520-ko4';
 import { Deck } from './deck.js?v=20260520-ko4';
 import { AI } from './ai.js?v=20260520-ko4';
 import { Renderer } from './renderer.js?v=20260520-ko4';
@@ -28,26 +28,6 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
-const CARD_DESCRIPTIONS = {
-  POWER_I: '고출력 셀. 클리어된 셀당 0.3 공격력.',
-  POWER_T: '고출력 T형. T스핀 클리어에 강합니다.',
-  POWER_S: '고출력 S형. 배치가 까다롭지만 강력한 클리어.',
-  CROSS: '5칸 십자형. 배치가 어렵지만 클리어 가치가 높습니다.',
-  BOMB: '클리어 시 주변 쓰레기를 파괴합니다.',
-  BOMB_I: '클리어 시 주변 쓰레기를 파괴하는 I형.',
-  MANA_T: '클리어된 셀이 추가 MP를 제공합니다.',
-  MANA_L: '클리어 시 추가 MP를 제공하는 L형.',
-  PURGE_O: '클리어 시 쓰레기 행을 제거합니다.',
-  CLEANSE_J: '클리어 시 쓰레기 행을 제거하는 J형.',
-  HEAVY_JUNK: '5칸 방해형. 배치가 까다롭고 덱의 부담이 됩니다.',
-  POWER_CROSS: '고출력 5칸 십자형.',
-  WIDE_JUNK: '6칸 방해형. 까다로운 모양으로 덱을 막습니다.',
-  INSTANT_STRIKE: '배치 즉시 1.2 공격력을 발사합니다.',
-  INSTANT_GUARD: '배치 즉시 들어오는 공격 게이지를 최대 3 차단합니다.',
-  INSTANT_MANA: '배치 즉시 MP를 18 회복합니다.',
-  INSTANT_PURGE: '배치 즉시 쓰레기 행 1줄을 제거합니다.'
-};
-
 class Game {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -1014,7 +994,8 @@ class Game {
         battle: this.battleEndResult === 'win' ? 'VICTORY' : 'DEFEAT',
         enemyCard: this.enemyCard,
         message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated',
-        skillCooldowns: this.skillCooldowns
+        skillCooldowns: this.skillCooldowns,
+        effects: this.currentEffectBadges()
       });
       if (this.battleEndDelay <= 0) {
         if (this.battleEndResult === 'win') this.winBattle();
@@ -1035,7 +1016,8 @@ class Game {
         battle: 'PAUSED',
         enemyCard: this.enemyCard,
         message: `Paused | YOU ${pps.toFixed(2)}pps ${apm.toFixed(1)}apm | ENEMY ${ePps.toFixed(2)}pps ${eApm.toFixed(1)}apm`,
-        skillCooldowns: this.skillCooldowns
+        skillCooldowns: this.skillCooldowns,
+        effects: this.currentEffectBadges()
       });
       return;
     }
@@ -1079,7 +1061,8 @@ class Game {
       battle: this.enemySlowTimer > 0 ? 'TIME WARP' : 'ACTIVE',
       enemyCard: this.enemyCard,
       message: this.message,
-      skillCooldowns: this.skillCooldowns
+      skillCooldowns: this.skillCooldowns,
+      effects: this.currentEffectBadges()
     });
     this.message = '';
   }
@@ -1087,6 +1070,18 @@ class Game {
   currentEnemyDelay() {
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
     return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
+  }
+
+  currentEffectBadges() {
+    const fmt = ms => `${Math.ceil(ms / 1000)}s`;
+    const player = [];
+    const enemy = [];
+    if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
+    if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
+    if (this.aiFocusActivePieces > 0) enemy.push(`FOCUS ${this.aiFocusActivePieces}`);
+    if (this.player?.holdLocked) player.push('HOLD LOCK');
+    if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
+    return { player, enemy };
   }
 
   resolveEnemyStep() {

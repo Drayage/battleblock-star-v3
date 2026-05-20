@@ -29,13 +29,13 @@ export class Renderer {
     this.canvas.width = this.layout.w;
     this.canvas.height = this.layout.h;
     const scale = mobile
-      ? Math.min(1, (window.innerWidth - 4) / this.layout.w, (viewportH - 168) / this.layout.h)
+      ? Math.min(1, (window.innerWidth - 4) / this.layout.w, (viewportH - 190) / this.layout.h)
       : Math.min(1, (window.innerWidth - 8) / this.layout.w, (window.innerHeight - 162) / this.layout.h);
     this.canvas.style.transform = `scale(${scale})`;
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
 
-  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {} }) {
+  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] } }) {
     if (!this.layout) this.resize(player.rows, enemy.rows);
     const L = this.layout;
     const ctx = this.ctx;
@@ -55,11 +55,13 @@ export class Renderer {
     ctx.textAlign = 'left';
     this.board(player, L.pX, L.y, L.cell, 'YOU');
     this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
+    this.effectBadges(effects.player, L.pX, L.y + player.rows * L.cell + 6, L.cell);
     if (L.mobile) {
-      this.mobileInfo(player, enemy, run, L.pX, L.y + player.rows * L.cell + 18, L.cell, skillCooldowns);
+      this.mobileInfo(player, enemy, run, L.pX, L.y + player.rows * L.cell + 18, L.cell, effects.enemy);
     } else {
       this.board(enemy, L.eX, L.y, L.cell, 'ENEMY');
       this.garbageMeter(enemy, L.eX - 12, L.y, enemy.rows * L.cell);
+      this.effectBadges(effects.enemy, L.eX, L.y + enemy.rows * L.cell + 6, L.cell);
       this.sidePanel(player, 20, L.y, L.cell, run, false, skillCooldowns);
     }
     if (battle === 'VICTORY' || battle === 'DEFEAT') this.battleOverlay(battle, L);
@@ -95,6 +97,23 @@ export class Renderer {
     ctx.fillStyle = '#d7e5ff';
     ctx.fillText(kind === 'VICTORY' ? 'Reward incoming...' : 'Run ending...', L.w / 2, L.mobile ? 146 : L.h / 2 + 38);
     ctx.textAlign = 'left';
+  }
+
+  effectBadges(items, ox, oy, cs) {
+    if (!items?.length) return;
+    const ctx = this.ctx;
+    ctx.font = `bold ${Math.max(8, Math.floor(cs * 0.38))}px Courier New`;
+    let x = ox;
+    for (const item of items.slice(0, 3)) {
+      const w = Math.max(42, ctx.measureText(item).width + 12);
+      ctx.fillStyle = '#182538';
+      ctx.fillRect(x, oy, w, 14);
+      ctx.strokeStyle = '#456990';
+      ctx.strokeRect(x, oy, w, 14);
+      ctx.fillStyle = '#bfe8ff';
+      ctx.fillText(item, x + 6, oy + 10);
+      x += w + 4;
+    }
   }
 
   board(board, ox, oy, cs, label) {
@@ -327,9 +346,12 @@ export class Renderer {
     this.garbageMeter(enemy, ox + COLS * cs + 5, oy, enemy.rows * cs);
   }
 
-  mobileInfo(player, enemy, run, ox, oy, cs, skillCooldowns = {}) {
+  mobileInfo(player, enemy, run, ox, oy, cs, enemyEffects = []) {
     const ctx = this.ctx;
     const panelW = COLS * cs;
+    const enemyCs = Math.max(2, Math.min(4, Math.floor(88 / Math.max(1, enemy.rows))));
+    const enemyX = ox + Math.floor(panelW * 0.73);
+    const leftW = Math.max(150, enemyX - ox - 12);
     ctx.fillStyle = '#0f1424';
     ctx.fillRect(ox, oy, panelW, 158);
     ctx.strokeStyle = '#26375f';
@@ -338,61 +360,33 @@ export class Renderer {
     ctx.font = 'bold 10px Courier New';
     ctx.fillText('HOLD', ox + 8, oy + 17);
     ctx.fillText('NEXT', ox + Math.floor(panelW * 0.38), oy + 17);
-    ctx.fillText('ENEMY', ox + Math.floor(panelW * 0.72), oy + 17);
+    ctx.fillText('ENEMY', enemyX, oy + 17);
     if (player.held) this.preview(player.held, ox + 10, oy + 28, 8);
     player.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + Math.floor(panelW * 0.38) + i * 28, oy + 28, 7));
-    this.board(enemy, ox + Math.floor(panelW * 0.72), oy + 27, 4, '');
-    this.garbageMeter(enemy, ox + panelW - 12, oy + 27, enemy.rows * 4);
+    this.board(enemy, enemyX, oy + 27, enemyCs, '');
+    this.garbageMeter(enemy, ox + panelW - 12, oy + 27, enemy.rows * enemyCs);
+    this.effectBadges(enemyEffects, enemyX, oy + 120, enemyCs + 10);
 
     const mpY = oy + 96;
     ctx.fillStyle = '#10192d';
-    ctx.fillRect(ox + 8, mpY, panelW - 16, 12);
+    ctx.fillRect(ox + 8, mpY, leftW - 8, 10);
     ctx.fillStyle = '#38d0ff';
-    ctx.fillRect(ox + 8, mpY, Math.min(panelW - 16, player.mp * ((panelW - 16) / 100)), 12);
+    ctx.fillRect(ox + 8, mpY, Math.min(leftW - 8, player.mp * ((leftW - 8) / 100)), 10);
     ctx.strokeStyle = '#26375f';
-    ctx.strokeRect(ox + 8, mpY, panelW - 16, 12);
+    ctx.strokeRect(ox + 8, mpY, leftW - 8, 10);
     ctx.fillStyle = '#e2efff';
     ctx.font = '9px Courier New';
-    ctx.fillText(`MP ${Math.floor(player.mp)}`, ox + 12, mpY + 9);
-    run.equippedSkills.forEach((id, i) => {
-      const skill = window.BBS_SKILLS[id];
-      if (!skill) return;
-      const x = ox + 8 + i * Math.floor((panelW - 16) / 3);
-      const w = Math.floor((panelW - 24) / 3);
-      const cd = skillCooldowns[id] || 0;
-      const hasMp = player.mp >= skill.cost;
-      ctx.globalAlpha = (!hasMp && cd === 0) ? 0.35 : 1;
-      if (cd > 0) {
-        const pct = 1 - cd / skill.cooldown;
-        ctx.fillStyle = '#0c1318';
-        ctx.fillRect(x, oy + 112, w, 18);
-        ctx.fillStyle = hasMp ? '#1a4268' : '#152035';
-        ctx.fillRect(x, oy + 112, Math.ceil(w * pct), 18);
-        ctx.strokeStyle = '#1a2a3a';
-        ctx.strokeRect(x, oy + 112, w, 18);
-      } else if (hasMp) {
-        ctx.fillStyle = '#172d44';
-        ctx.fillRect(x, oy + 112, w, 18);
-        ctx.strokeStyle = '#24415d';
-        ctx.strokeRect(x, oy + 112, w, 18);
-      } else {
-        ctx.fillStyle = '#111522';
-        ctx.fillRect(x, oy + 112, w, 18);
-        ctx.strokeStyle = '#24415d';
-        ctx.strokeRect(x, oy + 112, w, 18);
-      }
-      ctx.globalAlpha = 1;
-    });
+    ctx.fillText(`MP ${Math.floor(player.mp)}`, ox + 12, mpY + 8);
     run.consumables.forEach((id, i) => {
-      const x = ox + 8 + i * Math.floor((panelW - 16) / 3);
-      const w = Math.floor((panelW - 24) / 3);
+      const x = ox + 8 + i * Math.floor((leftW - 8) / 3);
+      const w = Math.floor((leftW - 18) / 3);
       ctx.fillStyle = '#1f1a2d';
-      ctx.fillRect(x, oy + 134, w, 18);
+      ctx.fillRect(x, oy + 116, w, 18);
       ctx.strokeStyle = '#534875';
-      ctx.strokeRect(x, oy + 134, w, 18);
+      ctx.strokeRect(x, oy + 116, w, 18);
       ctx.fillStyle = '#ded4ff';
       ctx.font = '9px Courier New';
-      ctx.fillText(`${i + 4}.${window.BBS_CONSUMABLES[id]?.short || id}`, x + 4, oy + 147);
+      ctx.fillText(`${i + 4}.${window.BBS_CONSUMABLES[id]?.short || id}`, x + 4, oy + 129);
     });
   }
 

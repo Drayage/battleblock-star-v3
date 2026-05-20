@@ -305,7 +305,13 @@ export const ABILITY_LIBRARY = {
   timeBomb: { id: 'timeBomb', name: '시한폭탄', cellAttack: 0.1, traits: ['timeBomb'], fuse: 5, penalty: true, desc: '배치 후 매 턴 카운트다운. 0이 되면 그 칸만 사라지고, 줄로 제거하면 5×5 대폭발.' }
 };
 
-function tierFromRarity(rarity) {
+function tierFromShapeAbility(shapeId, abilityId, rarity) {
+  if (rarity === 'curse') return TIERS.BRONZE;
+  if (shapeId === 'I') return TIERS.GOLD;
+  if (['J', 'L', 'T'].includes(shapeId)) return abilityId === 'none' ? TIERS.SILVER : TIERS.GOLD;
+  if (['S', 'Z', 'CROSS5', 'HEAVY5', 'WIDE6', 'HOOK5', 'PENTA_T'].includes(shapeId)) {
+    return abilityId === 'none' ? TIERS.BRONZE : TIERS.SILVER;
+  }
   if (rarity === 'gold' || rarity === 'rare') return TIERS.GOLD;
   if (rarity === 'silver' || rarity === 'uncommon') return TIERS.SILVER;
   return TIERS.BRONZE;
@@ -329,7 +335,7 @@ function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
     penalty: !!ability.penalty,
     fuse: ability.fuse || 0,
     rarity,
-    tier: tierFromRarity(rarity)
+    tier: tierFromShapeAbility(shapeId, abilityId, rarity)
   };
 };
 
@@ -371,4 +377,44 @@ export const CARD_LIBRARY = {
   [TYPES.CHAIN]: blockCard(TYPES.CHAIN, '사슬 T', 'T', 'chain', 'rare'),
   [TYPES.GLASS]: blockCard(TYPES.GLASS, '유리 S', 'S', 'glass', 'rare'),
   [TYPES.TIMEBOMB]: blockCard(TYPES.TIMEBOMB, '시한폭탄 O', 'O', 'timeBomb', 'rare')
+};
+
+export const CARD_DESCRIPTIONS = {
+  [TYPES.I]: '긴 4칸 직선 블록. 한 번에 넓은 줄을 메우기 좋습니다.',
+  [TYPES.J]: '꺾인 4칸 블록. 구석과 계단 지형을 메우기 좋습니다.',
+  [TYPES.L]: '반대 방향으로 꺾인 4칸 블록. 측면 정리에 유리합니다.',
+  [TYPES.O]: '2x2 사각 블록. 안정적이지만 구멍 정리는 어렵습니다.',
+  [TYPES.S]: '엇갈린 4칸 블록. 낮은 지형에서는 좋지만 배치가 까다롭습니다.',
+  [TYPES.T]: '중앙 돌출 4칸 블록. T스핀과 구멍 메우기에 강합니다.',
+  [TYPES.Z]: 'S와 반대 방향의 엇갈린 4칸 블록. 배치 난도가 높습니다.',
+  [TYPES.POWER_I]: 'I 모양 고출력 블록. 클리어된 셀당 0.3 공격력.',
+  [TYPES.POWER_T]: 'T 모양 고출력 블록. T스핀 클리어와 공격 전환에 강합니다.',
+  [TYPES.POWER_S]: 'S 모양 고출력 블록. 까다롭지만 클리어 시 공격력이 높습니다.',
+  [TYPES.CROSS]: '5칸 십자형 특수 블록. 배치 난도가 높지만 효율이 좋습니다.',
+  [TYPES.BOMB]: 'O 모양 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.',
+  [TYPES.BOMB_I]: 'I 모양 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.',
+  [TYPES.MANA_T]: 'T 모양 마나 블록. 클리어된 셀이 추가 MP를 제공합니다.',
+  [TYPES.MANA_L]: 'L 모양 마나 블록. 클리어 시 MP 수급에 좋습니다.',
+  [TYPES.PURGE_O]: 'O 모양 클렌즈. 클리어 시 쓰레기 행을 제거합니다.',
+  [TYPES.CLEANSE_J]: 'J 모양 클렌즈. 클리어 시 쓰레기 행을 제거합니다.',
+  [TYPES.HEAVY_JUNK]: '5칸 방해 블록. 덱을 무겁게 만들고 배치가 까다롭습니다.',
+  [TYPES.POWER_CROSS]: '십자형 고출력 블록. 특이한 모양이지만 공격력이 높습니다.',
+  [TYPES.WIDE_JUNK]: '6칸 방해 블록. 넓고 까다로운 모양으로 덱을 막습니다.',
+  [TYPES.INSTANT_STRIKE]: '배치 즉시 1.2 공격력을 발사하는 훅 모양 블록.',
+  [TYPES.INSTANT_GUARD]: '배치 즉시 들어오는 쓰레기 게이지를 최대 3줄 차단합니다.',
+  [TYPES.INSTANT_MANA]: '배치 즉시 MP를 18 회복하는 십자형 블록.',
+  [TYPES.INSTANT_PURGE]: '배치 즉시 쓰레기 행 1줄을 제거하는 헤비 블록.',
+  [TYPES.POWER_Z]: 'Z 모양 고출력 블록. 어려운 모양 대신 클리어 공격력이 높습니다.',
+  [TYPES.MANA_Z]: 'Z 모양 마나 블록. 까다로운 배치로 MP를 추가 수급합니다.',
+  [TYPES.BOMB_Z]: 'Z 모양 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.',
+  [TYPES.CLEANSE_Z]: 'Z 모양 클렌즈. 줄 클리어 시 쓰레기 행을 제거합니다.',
+  [TYPES.POWER_PENTA]: '5칸 펜토 고출력 블록. 모양은 어렵지만 공격 효율이 좋습니다.',
+  [TYPES.COOLANT]: 'I 모양 냉각 블록. 클리어된 냉각 셀마다 적 행동을 0.5초 늦춥니다.',
+  [TYPES.COMBO_CHARGE]: 'T 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.BOUNTY]: 'L 모양 현상금 블록. 클리어된 현상금 셀 수에 따라 골드를 얻습니다.',
+  [TYPES.UNSTABLE]: 'J 모양 불안정 블록. 배치 시 양쪽 필드에 쓰레기 1줄을 예약합니다.',
+  [TYPES.LEAD]: 'O 모양 납 블록. 셀당 0.5 공격력이며 홀드할 수 없고 착지 즉시 고정됩니다.',
+  [TYPES.CHAIN]: 'T 모양 사슬 블록. 연결된 사슬이 줄 클리어에 닿으면 연결 행도 함께 제거됩니다.',
+  [TYPES.GLASS]: 'S 모양 유리 블록. 셀당 0.5 공격력이지만 하드드롭 후 깨져 빈칸이 됩니다.',
+  [TYPES.TIMEBOMB]: 'O 모양 시한폭탄. 매 턴 카운트다운하고, 줄로 제거되면 5x5로 폭발합니다.'
 };
