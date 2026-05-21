@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko14';
-import { Deck } from './deck.js?v=20260521-ko14';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko18';
+import { Deck } from './deck.js?v=20260521-ko18';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -237,9 +237,7 @@ export class Board {
   hardDrop() {
     if (!this.current || this.defeated) return null;
     while (this.ok(this.current, 0, 1)) this.current.y++;
-    const result = this.lock();
-    this.shatterGlass();
-    return result;
+    return this.lock(true);
   }
 
   emergencyShard() {
@@ -271,7 +269,7 @@ export class Board {
     return true;
   }
 
-  lock() {
+  lock(hardDropped = false) {
     const placed = [];
     const wasTSpin = this.isTSpin();
     const cells = this.current.cells;
@@ -282,6 +280,24 @@ export class Board {
     for (const pos of cells) {
       this.grid[pos.y][pos.x] = cell(this.current.card);
       placed.push({ ...pos, card: this.current.card });
+    }
+    if (hardDropped) {
+      const isGlassPiece = this.current.card.traits.includes('glass');
+      const shatter = new Set();
+      for (const pos of cells) {
+        // 1) 하드드롭한 그 블록이 유리면 깨진다
+        if (isGlassPiece) shatter.add(`${pos.y},${pos.x}`);
+        // 2) 하드드롭한 블록 바로 아래(=이 블록이 그 위에 떨어진) 유리가 깨진다
+        const belowY = pos.y + 1;
+        if (belowY < this.rows && this.grid[belowY][pos.x]?.traits.includes('glass')) {
+          shatter.add(`${belowY},${pos.x}`);
+        }
+      }
+      for (const key of shatter) {
+        const [gy, gx] = key.split(',').map(Number);
+        this.grid[gy][gx] = null;
+        this.bombFx.push({ x: gx, y: gy, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'glass', radius: 0 });
+      }
     }
     const placedCard = this.current.card;
     const result = this.clearLines();
@@ -518,17 +534,6 @@ export class Board {
         if (target.fuse <= 0) {
           this.grid[r][c] = null;
           this.bombFx.push({ x: c, y: r, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'fuse', radius: 0 });
-        }
-      }
-    }
-  }
-
-  shatterGlass() {
-    for (let r = 0; r < this.rows; r++) {
-      for (let c = 0; c < this.cols; c++) {
-        if (this.grid[r][c]?.traits.includes('glass')) {
-          this.grid[r][c] = null;
-          this.bombFx.push({ x: c, y: r, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'glass', radius: 0 });
         }
       }
     }
