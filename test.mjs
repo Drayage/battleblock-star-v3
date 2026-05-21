@@ -824,4 +824,25 @@ while (glassSoftBoard.move(0, 1)) {}
 glassSoftBoard.lock();
 assert.equal(glassSoftBoard.grid.flat().some(c => c?.traits?.includes('glass')), true, 'soft-dropped (locked) glass is preserved');
 
+// 유리 조건 2: 다른 블록이 유리 바로 위로 하드드롭되면 그 유리가 깨진다
+const glassOnTopBoard = new Board({ rows: 20, deck: new Deck() });
+glassOnTopBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+glassOnTopBoard.grid[19][3] = { type: TYPES.GLASS, attack: 0.5, traits: ['glass'] };
+glassOnTopBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 3, 5);
+glassOnTopBoard.hardDrop();
+assert.equal(glassOnTopBoard.grid[19][3], null, 'glass shatters when a block is hard-dropped directly on top');
+
+// 유리 조건 2 음성: 옆 칸(바로 위 아님)에 하드드롭하면 유지된다
+const glassBesideBoard = new Board({ rows: 20, deck: new Deck() });
+glassBesideBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+glassBesideBoard.grid[19][0] = { type: TYPES.GLASS, attack: 0.5, traits: ['glass'] };
+glassBesideBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, 5);
+glassBesideBoard.hardDrop();
+assert.equal(glassBesideBoard.grid[19][0]?.traits.includes('glass'), true, 'glass beside (not under) the drop stays intact');
+
+// 오버드라이브 헥사: 6칸 골드 1회용
+assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].cellCount, 6, 'overdrive is a 6-cell block');
+assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].tier, TIERS.GOLD, 'overdrive is gold tier');
+assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].exhaust, true, 'overdrive is once-per-battle');
+
 console.log('All Battle Block Star v3.0 checks passed.');

@@ -277,6 +277,16 @@ export const SHAPE_LIBRARY = {
       [[0,1,0],[0,1,0],[1,1,1]],
       [[1,0,0],[1,1,1],[1,0,0]]
     ]
+  },
+  OVERDRIVE6: {
+    name: '오버드라이브형',
+    cells: 6,
+    shape: [
+      [[1,1,0],[0,1,1],[0,1,1]],
+      [[0,0,1],[1,1,1],[1,1,0]],
+      [[1,1,0],[1,1,0],[0,1,1]],
+      [[0,1,1],[1,1,1],[1,0,0]]
+    ]
   }
 };
 
@@ -332,7 +342,7 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.CHAIN]: 'T',
   [TYPES.GLASS]: 'S',
   [TYPES.TIMEBOMB]: 'O',
-  [TYPES.OVERDRIVE_PENTA]: 'PENTA_T',
+  [TYPES.OVERDRIVE_PENTA]: 'OVERDRIVE6',
   [TYPES.MEGA_CLEANSE]: 'CROSS5',
   [TYPES.PANIC_WALL]: 'WIDE6',
   [TYPES.FLASH_I]: 'I',
@@ -358,7 +368,7 @@ export const ABILITY_LIBRARY = {
   unstable: { id: 'unstable', name: '불안정', cellAttack: 0.1, traits: ['unstable'], onPlace: { selfGarbage: 1, enemyGarbage: 1 }, penalty: true, desc: '배치 시 내 필드와 적 필드에 각각 쓰레기 1줄이 추가됩니다.' },
   leadPower: { id: 'leadPower', name: '중량', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' },
   chain: { id: 'chain', name: '사슬', cellAttack: 0.1, traits: ['chain'], desc: '연결된 사슬 중 한 줄이라도 클리어되면 연결된 모든 줄이 함께 제거됩니다(추가 줄은 절반 효과).' },
-  glass: { id: 'glass', name: '유리', cellAttack: 0.5, traits: ['glass'], penalty: true, desc: '셀당 0.5 공격력. 이 블록을 하드드롭하면 깨져 빈칸이 됩니다. 소프트드롭으로 내리면 유지됩니다.' },
+  glass: { id: 'glass', name: '유리', cellAttack: 0.5, traits: ['glass'], penalty: true, desc: '셀당 0.5 공격력. 이 블록을 하드드롭하거나 다른 블록이 이 블록 바로 위로 하드드롭되면 깨져 빈칸이 됩니다. 소프트드롭으로 내리면 유지됩니다.' },
   timeBomb: { id: 'timeBomb', name: '시한폭탄', cellAttack: 0.1, traits: ['timeBomb'], fuse: 5, penalty: true, desc: '배치 후 매 턴 카운트다운. 0이 되면 그 칸만 사라지고, 줄로 제거하면 5×5 대폭발.' },
   overdrive: { id: 'overdrive', name: '오버드라이브', cellAttack: 0.1, traits: [], onPlace: { attack: 4 }, desc: '배치 즉시 4.0 공격력을 발사합니다.' },
   megaCleanse: { id: 'megaCleanse', name: '메가 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 6 }, desc: '배치 즉시 쓰레기 행 6줄을 제거합니다.' },
@@ -468,7 +478,7 @@ export const CARD_LIBRARY = {
   [TYPES.CHAIN]: blockCard(TYPES.CHAIN, '사슬 T', 'T', 'chain', 'rare'),
   [TYPES.GLASS]: blockCard(TYPES.GLASS, '유리 S', 'S', 'glass', 'rare'),
   [TYPES.TIMEBOMB]: blockCard(TYPES.TIMEBOMB, '시한폭탄 O', 'O', 'timeBomb', 'rare'),
-  [TYPES.OVERDRIVE_PENTA]: blockCard(TYPES.OVERDRIVE_PENTA, '오버드라이브 펜토', 'PENTA_T', 'overdrive', 'rare', { exhaust: true }),
+  [TYPES.OVERDRIVE_PENTA]: blockCard(TYPES.OVERDRIVE_PENTA, '오버드라이브 헥사', 'OVERDRIVE6', 'overdrive', 'rare', { exhaust: true }),
   [TYPES.MEGA_CLEANSE]: blockCard(TYPES.MEGA_CLEANSE, '메가 클렌즈', 'CROSS5', 'megaCleanse', 'rare', { exhaust: true }),
   [TYPES.PANIC_WALL]: blockCard(TYPES.PANIC_WALL, '패닉 월', 'WIDE6', 'panicWall', 'uncommon', { exhaust: true }),
   [TYPES.FLASH_I]: blockCard(TYPES.FLASH_I, '섬광 I', 'I', 'flashStrike', 'uncommon', { exhaust: true }),
@@ -525,9 +535,9 @@ export const CARD_DESCRIPTIONS = {
   [TYPES.UNSTABLE]: 'J 모양 불안정 블록. 배치 시 양쪽 필드에 쓰레기 1줄을 예약합니다.',
   [TYPES.LEAD]: 'O 모양 납 블록. 셀당 0.5 공격력이며 홀드할 수 없고 착지 즉시 고정됩니다.',
   [TYPES.CHAIN]: 'T 모양 사슬 블록. 연결된 사슬이 줄 클리어에 닿으면 연결 행도 함께 제거됩니다.',
-  [TYPES.GLASS]: 'S 모양 유리 블록. 셀당 0.5 공격력. 이 블록을 하드드롭하면 깨져 빈칸이 되니, 소프트드롭으로 내려야 유지됩니다.',
+  [TYPES.GLASS]: 'S 모양 유리 블록. 셀당 0.5 공격력. 이 블록을 하드드롭하거나 다른 블록이 바로 위로 하드드롭되면 깨져 빈칸이 됩니다. 소프트드롭으로 내려야 유지됩니다.',
   [TYPES.TIMEBOMB]: 'O 모양 시한폭탄. 매 턴 카운트다운하고, 줄로 제거되면 5x5로 폭발합니다.',
-  [TYPES.OVERDRIVE_PENTA]: '[1회용] 배치 즉시 4.0 공격력을 발사합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.OVERDRIVE_PENTA]: '[1회용·골드] 배치 즉시 4.0 공격력을 발사하는 6칸 변칙 블록. 모양이 까다로워 자리 잡기 어렵고, 전투당 한 번만 등장합니다.',
   [TYPES.MEGA_CLEANSE]: '[1회용] 배치 즉시 쓰레기 행 6줄을 제거합니다. 전투당 한 번만 등장합니다.',
   [TYPES.PANIC_WALL]: '[1회용] 배치 즉시 들어오는 쓰레기 게이지를 최대 8줄 차단합니다. 전투당 한 번만 등장합니다.',
   [TYPES.FLASH_I]: '[소멸] 배치 즉시 2.0 공격력을 발사합니다. 전투당 한 번만 등장합니다.',
