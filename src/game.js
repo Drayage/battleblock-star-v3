@@ -28,6 +28,36 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
+
+// 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
+// 플레이어에게 직접 효과가 가는 능력일수록 비용을 더 높인다.
+const ENEMY_ABILITIES = {
+  spike: {
+    cost: 55,
+    cooldown: 18000,
+    cast(g) {
+      g.player.receiveGarbage(1);
+      g.message = `${g.enemyCard.name} 능력: 쓰레기 급증 +1`;
+    }
+  },
+  slowPlayer: {
+    cost: 75,
+    cooldown: 22000,
+    cast(g) {
+      g.playerSlowTimer = 3000;
+      g.message = `${g.enemyCard.name} 능력: 중력 둔화 (3초)`;
+    }
+  },
+  power: {
+    cost: 80,
+    cooldown: 24000,
+    cast(g) {
+      g.player.receiveGarbage(2);
+      g.message = `${g.enemyCard.name} 능력: 파워 폭발 +2`;
+    }
+  }
+};
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -523,6 +553,10 @@ class Game {
     this.battleEndDelay = 0;
     this.battleEndResult = null;
     this.playerFreezeTimer = 0;
+    this.playerFogTimer = 0;
+    this.playerHyperTimer = 0;
+    this.playerInvertTimer = 0;
+    this.bossOverloadCharge = 0;
     this.enemyDebuffs = {};
     this.playerDebuffs = {};
     this.paused = false;
@@ -573,6 +607,10 @@ class Game {
     if (!this.inBattle()) return;
     if (action === 'pause') return this.togglePause();
     if (this.paused) return;
+    if (this.playerInvertTimer > 0) {
+      if (action === 'left') action = 'right';
+      else if (action === 'right') action = 'left';
+    }
     if (action === 'left') this.groundAdjust(() => this.player.move(-1, 0));
     if (action === 'right') this.groundAdjust(() => this.player.move(1, 0));
     if (action === 'soft') {
@@ -608,6 +646,7 @@ class Game {
   }
 
   currentFallInterval() {
+    if (this.playerHyperTimer > 0) return GAME_TIMING.PLAYER_FALL_INTERVAL * 0.12;
     return GAME_TIMING.PLAYER_FALL_INTERVAL;
   }
 
@@ -723,7 +762,7 @@ class Game {
 
   winBattle() {
     this.run.gold += this.enemyCard.rewardGold;
-    const relicId = this.enemyCard.type === 'elite' ? grantEliteRelic(this.run) : null;
+    const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
@@ -1013,7 +1052,8 @@ class Game {
         enemyCard: this.enemyCard,
         message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated',
         skillCooldowns: this.skillCooldowns,
-        effects: this.currentEffectBadges()
+        effects: this.currentEffectBadges(),
+        playerFog: this.playerFogTimer
       });
       if (this.battleEndDelay <= 0) {
         if (this.battleEndResult === 'win') this.winBattle();
@@ -1035,7 +1075,8 @@ class Game {
         enemyCard: this.enemyCard,
         message: `Paused | YOU ${pps.toFixed(2)}pps ${apm.toFixed(1)}apm | ENEMY ${ePps.toFixed(2)}pps ${eApm.toFixed(1)}apm`,
         skillCooldowns: this.skillCooldowns,
-        effects: this.currentEffectBadges()
+        effects: this.currentEffectBadges(),
+        playerFog: this.playerFogTimer
       });
       return;
     }
@@ -1059,6 +1100,9 @@ class Game {
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
     this.playerFreezeTimer = Math.max(0, (this.playerFreezeTimer || 0) - dt);
+    this.playerFogTimer = Math.max(0, (this.playerFogTimer || 0) - dt);
+    this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
+    this.playerInvertTimer = Math.max(0, (this.playerInvertTimer || 0) - dt);
     this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
       this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
@@ -1082,7 +1126,8 @@ class Game {
       enemyCard: this.enemyCard,
       message: this.message,
       skillCooldowns: this.skillCooldowns,
-      effects: this.currentEffectBadges()
+      effects: this.currentEffectBadges(),
+        playerFog: this.playerFogTimer
     });
     this.message = '';
   }
@@ -1117,9 +1162,19 @@ class Game {
     if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
     if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
     if (this.playerFreezeTimer > 0) player.push(`FREEZE ${fmt(this.playerFreezeTimer)}`);
+    if (this.playerFogTimer > 0) player.push(`FOG ${fmt(this.playerFogTimer)}`);
+    if (this.playerHyperTimer > 0) player.push(`HYPER ${fmt(this.playerHyperTimer)}`);
+    if (this.playerInvertTimer > 0) player.push(`INVERT ${fmt(this.playerInvertTimer)}`);
+    if (this.player?.rotateLocked) player.push('ROT-LOCK');
     if (this.aiFocusInEpisode) enemy.push(`FOCUS x${this.aiFocusActivations}`);
     if (this.player?.holdLocked) player.push('HOLD LOCK');
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
+    if (this.enemy?.rotateLocked) enemy.push('ROT-LOCK');
+    if (this.enemyCard?.ability === 'overload') {
+      const chargeTime = Math.max(9000, 14000 - this.battleElapsedSec * 70);
+      const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
+      enemy.push(`OVERLOAD ${pct}%`);
+    }
     for (const [k, ms] of Object.entries(this.playerDebuffs || {})) player.push(`${k.toUpperCase()} ${fmt(ms)}`);
     for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
     return { player, enemy };
@@ -1308,21 +1363,54 @@ class Game {
   }
 
   updateEnemyAbility(dt) {
-    if (!this.enemyCard.ability) return;
+    const ability = this.enemyCard.ability;
+    if (!ability) return;
+    if (ability === 'overload') return this.updateBossOverload(dt);
+    // 적 능력은 마나 게이지에 묶인다: 적이 마나를 모으고 쿨다운이 끝나야 발동.
+    const cfg = ENEMY_ABILITIES[ability];
+    if (!cfg) return;
     this.enemyAbilityTimer += dt;
-    if (this.enemyAbilityTimer < GAME_TIMING.ENEMY_ABILITY_INTERVAL) return;
+    if (this.enemyAbilityTimer < cfg.cooldown) return;
+    if ((this.enemy?.mp || 0) < cfg.cost) return;
     this.enemyAbilityTimer = 0;
-    if (this.enemyCard.ability === 'spike') {
-      this.player.receiveGarbage(1);
-      this.message = `${this.enemyCard.name} 쓰레기 급증`;
-    }
-    if (this.enemyCard.ability === 'slowPlayer') {
-      this.playerSlowTimer = 3000;
-      this.message = `${this.enemyCard.name} 중력 둔화`;
-    }
-    if (this.enemyCard.ability === 'power') {
-      this.player.receiveGarbage(2);
-      this.message = `${this.enemyCard.name} 파워 폭발`;
+    this.enemy.mp = Math.max(0, this.enemy.mp - cfg.cost);
+    cfg.cast(this);
+  }
+
+  updateBossOverload(dt) {
+    this.bossOverloadCharge += dt;
+    const chargeTime = Math.max(9000, 14000 - this.battleElapsedSec * 70);
+    if (this.bossOverloadCharge < chargeTime) return;
+    if ((this.enemy?.mp || 0) < 40) return;
+    this.bossOverloadCharge = 0;
+    this.enemy.mp = Math.max(0, this.enemy.mp - 40);
+    this.castBossDebuff();
+  }
+
+  castBossDebuff() {
+    const name = this.enemyCard.name;
+    const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
+    const kind = kinds[Math.floor(Math.random() * kinds.length)];
+    if (kind === 'fog') {
+      this.playerFogTimer = 4000;
+      this.message = `${name} OVERLOAD: 안개 (4초)`;
+    } else if (kind === 'invert') {
+      this.playerInvertTimer = 3500;
+      this.message = `${name} OVERLOAD: 좌우 반전 (3.5초)`;
+    } else if (kind === 'rotate') {
+      this.player.rotateLocked = true;
+      const target = this.player;
+      this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
+      this.message = `${name} OVERLOAD: 회전 봉인 (3초)`;
+    } else if (kind === 'hyper') {
+      this.playerHyperTimer = 2500;
+      this.message = `${name} OVERLOAD: 하이퍼 낙하 (2.5초)`;
+    } else if (kind === 'slow') {
+      this.playerSlowTimer = 3500;
+      this.message = `${name} OVERLOAD: 중력 둔화 (3.5초)`;
+    } else {
+      this.player.addDurableGarbage(2, 2);
+      this.message = `${name} OVERLOAD: 지속 가비지 2줄`;
     }
   }
 }

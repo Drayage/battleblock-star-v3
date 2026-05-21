@@ -370,6 +370,27 @@ export class Board {
     for (let r = 0; r < this.rows; r++) if (this.grid[r].every(Boolean)) fullRows.add(r);
     if (!fullRows.size) return empty;
 
+    // 지속 가비지: 완성된 줄에 지속 가비지 칸이 있으면 즉시 제거하지 않고 숫자를 1 줄인다.
+    // 숫자가 남아있으면 플레이어가 채운 칸을 비워 다시 구멍을 만들고, 0이 되면 정상 제거한다.
+    for (const r of [...fullRows]) {
+      const row = this.grid[r];
+      if (!row.some(c => c?.traits.includes('durable'))) continue;
+      let alive = false;
+      for (const c of row) {
+        if (c?.traits.includes('durable')) {
+          c.hp = (c.hp || 1) - 1;
+          if (c.hp > 0) alive = true;
+        }
+      }
+      if (alive) {
+        for (let x = 0; x < this.cols; x++) {
+          if (!row[x]?.traits.includes('durable')) row[x] = null;
+        }
+        fullRows.delete(r);
+      }
+    }
+    if (!fullRows.size) return empty;
+
     // 사슬 캐스케이드: 클리어되는 줄에 닿은 사슬 그룹이 점유한 다른 줄도 함께 제거한다.
     const bonusRows = new Set();
     for (const comp of this.chainComponents()) {
@@ -569,6 +590,22 @@ export class Board {
   receiveGarbage(amount) {
     const n = Math.max(0, Math.ceil(amount));
     if (n > 0) this.garbageEntries.push({ amount: n, timer: GAME_TIMING.GARBAGE_ARM_DELAY });
+  }
+
+  addDurableGarbage(lines, hp = 2) {
+    const hole = Math.floor(Math.random() * this.cols);
+    for (let i = 0; i < lines; i++) {
+      if (this.grid[0].some(Boolean)) {
+        this.defeated = true;
+        return;
+      }
+      this.grid.shift();
+      this.bombFx.forEach(fx => { fx.y -= 1; });
+      this.bombFx = this.bombFx.filter(fx => fx.y >= 0);
+      this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole
+        ? null
+        : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage', 'durable'], hp }));
+    }
   }
 
   wouldOverflowGarbage(lines) {

@@ -128,6 +128,21 @@ const ELITES = [
   { name: '엘리트: 플롱크 볼트', tier: TIERS.GOLD, style: 'PLONK 엘리트: 압박을 버티다가 강력하게 반격합니다.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
 ];
 
+const BOSS = {
+  name: '최종 보스: 오버로드 코어',
+  tier: TIERS.GOLD,
+  style: 'OVERLOAD: 게이지가 차면 안개·반전·회전봉인·하이퍼·둔화·지속 가비지를 무작위로 시전합니다.',
+  profile: 'stride',
+  rows: 7,
+  speed: 235,
+  garbage: 3,
+  risk: 2.4,
+  rewardBonus: 30,
+  deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.BOMB_I],
+  ability: 'overload',
+  aiSkill: { mistakeRate: 0.001, noise: 0, hesitateRate: 0.08 }
+};
+
 export function tierLabel(tier) {
   return TIER_LABELS[tier] || TIER_LABELS[TIERS.BRONZE];
 }
@@ -190,7 +205,20 @@ function isPlayerRewardCard(card) {
   return card.tier && card.rarity !== 'base' && card.rarity !== 'curse' && card.id !== TYPES.CROSS;
 }
 
+export function makeBoss(round) {
+  const card = makeEnemy(round, true, BOSS);
+  card.type = 'boss';
+  card.ability = 'overload';
+  card.name = BOSS.name;
+  card.style = BOSS.style;
+  card.startingRows = Math.round(card.startingRows * 1.4);
+  card.startingGarbage = card.startingGarbage + 2;
+  card.rewardGold = Math.round(card.rewardGold * 1.4);
+  return card;
+}
+
 export function makeEnemyChoices(round) {
+  if (round === MAX_ROUND) return [makeBoss(round)];
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
   const normalPool = shuffle(round <= 2 ? unlocked.filter(enemy => ['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name)) : round <= 5 ? unlocked.filter(enemy => !['마나 도둑', '클렌즈 워든'].includes(enemy.name)) : unlocked);
