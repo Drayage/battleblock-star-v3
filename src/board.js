@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko18';
-import { Deck } from './deck.js?v=20260521-ko18';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko19';
+import { Deck } from './deck.js?v=20260521-ko19';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -278,7 +278,9 @@ export class Board {
       return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, tetris: false, tSpin: false, topOut: true };
     }
     for (const pos of cells) {
-      this.grid[pos.y][pos.x] = cell(this.current.card);
+      const made = cell(this.current.card);
+      if (made.traits.includes('chain')) made.pieceId = this.pieceSerial;
+      this.grid[pos.y][pos.x] = made;
       placed.push({ ...pos, card: this.current.card });
     }
     if (hardDropped) {
@@ -425,9 +427,13 @@ export class Board {
     }
     if (!fullRows.size) return empty;
 
-    // 사슬 캐스케이드: 클리어되는 줄에 닿은 사슬 그룹이 점유한 다른 줄도 함께 제거한다.
+    // 사슬 캐스케이드: 서로 다른 사슬 미노 2개 이상이 연결된 그룹만 발동한다.
+    // (사슬 블록 하나만으로는 일반 블록과 동일하게 작동.)
     const bonusRows = new Set();
     for (const comp of this.chainComponents()) {
+      const pieceIds = new Set(comp.map(({ x, y }) => this.grid[y][x]?.pieceId));
+      pieceIds.delete(undefined);
+      if (pieceIds.size < 2) continue;
       if (comp.some(({ y }) => fullRows.has(y))) {
         for (const { y } of comp) if (!fullRows.has(y)) bonusRows.add(y);
       }

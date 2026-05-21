@@ -555,16 +555,27 @@ assert.equal(phase2Ups.some(u => u.from === TYPES.S && u.to === TYPES.GLASS), tr
 assert.equal(phase2Ups.some(u => u.from === TYPES.O && u.to === TYPES.TIMEBOMB), true);
 
 // 사슬 캐스케이드 — 한 줄 클리어 시 연결된 다른 줄도 절반 효과로 제거
+// 사슬 캐스케이드는 서로 다른 사슬 미노 2개 이상이 연결됐을 때만 발동
 const chainBoard = new Board({ rows: 20 });
 chainBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-chainBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
-chainBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
+chainBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 1 };
+chainBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 2 };
 for (let c = 1; c < 10; c++) chainBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
 const chainClear = chainBoard.clearLines();
 assert.equal(chainClear.fullCleared, 1);
 assert.equal(chainClear.cleared, 2);
 assert.equal(chainClear.attack, 1.05);
 assert.equal(chainBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), false);
+
+// 사슬 미노 하나(같은 pieceId)만으로는 캐스케이드가 발동하지 않는다(일반 블록처럼 동작)
+const chainSoloBoard = new Board({ rows: 20 });
+chainSoloBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+chainSoloBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 7 };
+chainSoloBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 7 };
+for (let c = 1; c < 10; c++) chainSoloBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+const chainSolo = chainSoloBoard.clearLines();
+assert.equal(chainSolo.cleared, 1);
+assert.equal(chainSoloBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), true);
 
 // 사슬이 가득 찬 줄에 닿지 않으면 캐스케이드 없음
 const chainNoTriggerBoard = new Board({ rows: 20 });
