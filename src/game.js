@@ -18,6 +18,7 @@ import {
   makeStarterChoices,
   makeRewards,
   makeShopItems,
+  removableDeckCards,
   rerollShopStock,
   restockShopItem,
   shopItemKey,
@@ -261,7 +262,7 @@ class Game {
   }
 
   eventName(choice) {
-    if (choice.kind === 'removeCard') return `${choice.price}G · ${CARD_LIBRARY[choice.id].name} 제거`;
+    if (choice.kind === 'removeCard') return `${choice.price}G · 카드 선택 제거`;
     if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}`;
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
@@ -276,7 +277,12 @@ class Game {
   }
 
   attachEventPreview(node, choice) {
-    if (choice.kind === 'removeCard') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.id], 8));
+    if (choice.kind === 'removeCard') {
+      const chip = document.createElement('div');
+      chip.className = 'item-chip';
+      chip.textContent = 'CUT';
+      node.appendChild(chip);
+    }
     if (choice.kind === 'upgradeCard') {
       node.appendChild(this.blockPreview(CARD_LIBRARY[choice.from], 8));
       node.appendChild(this.blockPreview(CARD_LIBRARY[choice.to], 8));
@@ -309,11 +315,7 @@ class Game {
   }
 
   applyEventChoice(choice, done = () => {}) {
-    if (choice.kind === 'removeCard') {
-      this.run.gold -= choice.price;
-      this.run.deck.removeCard(choice.id);
-      this.run.deck.refill();
-    }
+    if (choice.kind === 'removeCard') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
       this.run.deck.replaceCard(choice.from, choice.to);
       this.run.deck.refill();
@@ -499,6 +501,7 @@ class Game {
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
     if (item.kind === 'relic') return RELICS[item.id].desc;
+    if (item.kind === 'removeCard') return '덱에서 원하는 카드 1장을 선택해 제거합니다.';
     return `생존 공간 ${item.amount}줄 추가.`;
   }
 
@@ -514,6 +517,12 @@ class Game {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
       chip.textContent = 'R';
+      node.appendChild(chip);
+    }
+    if (item.kind === 'removeCard') {
+      const chip = document.createElement('div');
+      chip.className = 'item-chip';
+      chip.textContent = 'CUT';
       node.appendChild(chip);
     }
   }
@@ -543,13 +552,13 @@ class Game {
   }
 
   buyShopItem(item) {
-    const finish = accepted => {
+    const finish = (accepted, priceOverride = null) => {
       if (!accepted) return;
       const shopKey = String(this.run.round);
       if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [], locked: [] };
       const stock = this.run.shopStock[shopKey];
       const key = shopItemKey(item);
-      this.run.gold -= this.effectivePrice(item, stock.dealKey === key);
+      this.run.gold -= priceOverride ?? this.effectivePrice(item, stock.dealKey === key);
       stock.locked = (stock.locked || []).filter(lockedKey => lockedKey !== key);
       if (this.run.relics.includes('warehouse_key')) {
         const idx = stock.items.findIndex(it => shopItemKey(it) === key);
@@ -565,8 +574,35 @@ class Game {
     };
     if (item.kind === 'skill') return this.acquireSkill(item.id, () => finish(true), () => finish(false));
     if (item.kind === 'consumable') return this.acquireConsumable(item.id, () => finish(true), () => finish(false));
+    if (item.kind === 'removeCard') {
+      const shopKey = String(this.run.round);
+      const stock = this.run.shopStock?.[shopKey] || {};
+      const price = this.effectivePrice(item, stock.dealKey === shopItemKey(item));
+      return this.chooseRemoveCard(price, () => finish(true, 0), () => finish(false));
+    }
     applyReward(this.run, item);
     finish(true);
+  }
+
+  chooseRemoveCard(price, done = () => {}, skipped = () => {}) {
+    const cards = removableDeckCards(this.run);
+    if (!cards.length || this.run.gold < price) return skipped(false);
+    this.showSlotPicker({
+      title: '카드 제거',
+      desc: `${price}G를 지불하고 덱에서 카드 1장을 제거합니다.`,
+      slots: cards,
+      labels: id => CARD_LIBRARY[id]?.name || id,
+      slotLabel: '카드',
+      onPick: index => {
+        const id = cards[index];
+        if (!id || this.run.gold < price) return skipped(false);
+        this.run.gold -= price;
+        this.run.deck.removeCard(id);
+        this.run.deck.refill();
+        done(true);
+      },
+      onSkip: () => skipped(false)
+    });
   }
 
   acquireSkill(id, done = () => {}, skipped = done) {
@@ -605,7 +641,7 @@ class Game {
     });
   }
 
-  showSlotPicker({ title, desc, slots, labels, onPick, onSkip }) {
+  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = '슬롯' }) {
     let overlay = document.getElementById('slotPicker');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -617,10 +653,10 @@ class Game {
     overlay.querySelector('p').textContent = desc;
     const options = overlay.querySelector('.slot-options');
     options.innerHTML = '';
-    slots.slice(0, 3).forEach((slotId, index) => {
+    slots.forEach((slotId, index) => {
       const btn = document.createElement('button');
       btn.className = 'choice';
-      btn.innerHTML = `<strong>슬롯 ${index + 1}</strong><span>${labels(slotId)}</span>`;
+      btn.innerHTML = `<strong>${slotLabel} ${index + 1}</strong><span>${labels(slotId)}</span>`;
       btn.addEventListener('click', () => {
         overlay.classList.remove('active');
         onPick(index);
@@ -815,7 +851,7 @@ class Game {
     if (attacker === this.player) {
       if (result.slow) this.enemySlowTimer += result.slow;
       if (result.gold) {
-        const bountyRate = this.run.relics.includes('bounty_market') ? 0.7 : 0.35;
+        const bountyRate = this.run.relics.includes('bounty_market') ? 1.0 : 0.5;
         this.bountyBank = (this.bountyBank || 0) + result.gold * bountyRate;
         const earned = Math.floor(this.bountyBank);
         if (earned > 0) {

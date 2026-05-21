@@ -352,10 +352,12 @@ export function makeShopItems(run) {
   const skill = pickByTier(SKILLS, tier, { exclude: run.ownedSkills });
   const consumable = pickByTier(CONSUMABLES, tier);
   const relic = pickByTier(RELICS, tier, { exclude: run.relics });
+  const removable = removableDeckCards(run);
   const hpTier = tier;
   const items = [
     ...cardItems.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: `Buy ${CARD_LIBRARY[id].name}`, price: shopPrice('card', CARD_LIBRARY[id].tier) })),
     { kind: 'hp', amount: 5, tier: hpTier, title: 'Max HP +5 rows', price: shopPrice('hp', hpTier) },
+    ...(removable.length ? [{ kind: 'removeCard', tier: TIERS.BRONZE, title: '덱 수술', price: 28 }] : []),
     ...(skill ? [{ kind: 'skill', id: skill.id, tier: skill.tier, title: `Skill: ${SKILLS[skill.id].name}`, price: shopPrice('skill', skill.tier) }] : []),
     ...(relic ? [{ kind: 'relic', id: relic.id, tier: relic.tier, title: `Relic: ${RELICS[relic.id].name}`, price: shopPrice('relic', relic.tier) }] : []),
     { kind: 'consumable', id: consumable.id, tier: consumable.tier, title: `Consumable: ${CONSUMABLES[consumable.id].name}`, price: shopPrice('consumable', consumable.tier) }
@@ -387,6 +389,9 @@ export function restockShopItem(run, item) {
   if (item.kind === 'consumable') {
     const c = pickByTier(CONSUMABLES, tier);
     return c ? { kind: 'consumable', id: c.id, tier: c.tier, title: `Consumable: ${CONSUMABLES[c.id].name}`, price: shopPrice('consumable', c.tier) } : null;
+  }
+  if (item.kind === 'removeCard') {
+    return removableDeckCards(run).length ? { kind: 'removeCard', tier: TIERS.BRONZE, title: '덱 수술', price: 28 } : null;
   }
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY).filter(isPlayerRewardCard).map(card => [card.id, card]));
   const card = pickByTier(rewardCards, tier);
@@ -434,14 +439,12 @@ export function makeEventChoices(run, eventKey) {
   const sideChoices = [];
   const removable = removableDeckCards(run);
   if (removable.length) {
-    const id = removable[0];
     choices.push({
       kind: 'removeCard',
-      id,
-      tier: CARD_LIBRARY[id].tier || TIERS.BRONZE,
+      tier: TIERS.BRONZE,
       price: eventKey === 'start' ? 8 : 15,
       title: '덱 수술',
-      desc: `덱에서 ${CARD_LIBRARY[id].name} 1장을 제거합니다.`
+      desc: '덱에서 원하는 카드 1장을 선택해 제거합니다.'
     });
   }
   const upgrade = upgradeDeckCards(run)[0];
