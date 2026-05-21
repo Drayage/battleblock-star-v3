@@ -251,10 +251,10 @@ export class Renderer {
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
       const mark = fuse > 0 ? String(fuse)
-        : type === TYPES.BOMB || type === TYPES.BOMB_I || type === TYPES.BOMB_Z ? 'B'
-        : type === TYPES.POWER_I || type === TYPES.POWER_T || type === TYPES.POWER_S || type === TYPES.POWER_CROSS || type === TYPES.POWER_Z || type === TYPES.POWER_PENTA ? 'P'
+        : type === TYPES.BOMB || type === TYPES.BOMB_I || type === TYPES.BOMB_Z || type === TYPES.BOMB_BOX ? 'B'
+        : type === TYPES.POWER_I || type === TYPES.POWER_T || type === TYPES.POWER_S || type === TYPES.POWER_CROSS || type === TYPES.POWER_Z || type === TYPES.POWER_PENTA || type === TYPES.POWER_STAIR ? 'P'
         : type === TYPES.CROSS ? '+'
-        : type === TYPES.MANA_T || type === TYPES.MANA_L || type === TYPES.INSTANT_MANA || type === TYPES.MANA_Z ? 'M'
+        : type === TYPES.MANA_T || type === TYPES.MANA_L || type === TYPES.INSTANT_MANA || type === TYPES.MANA_Z || type === TYPES.MANA_FORK ? 'M'
         : type === TYPES.PURGE_O || type === TYPES.CLEANSE_J || type === TYPES.INSTANT_PURGE || type === TYPES.CLEANSE_Z ? 'C'
         : type === TYPES.INSTANT_STRIKE ? 'A'
         : type === TYPES.INSTANT_GUARD ? 'G'

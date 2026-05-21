@@ -70,7 +70,10 @@ export const TYPES = {
   MEGA_CLEANSE: 'MEGA_CLEANSE',
   PANIC_WALL: 'PANIC_WALL',
   FLASH_I: 'FLASH_I',
-  AID_O: 'AID_O'
+  AID_O: 'AID_O',
+  POWER_STAIR: 'POWER_STAIR',
+  MANA_FORK: 'MANA_FORK',
+  BOMB_BOX: 'BOMB_BOX'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -129,6 +132,9 @@ export const COLORS = {
   [TYPES.PANIC_WALL]: '#7fb6ff',
   [TYPES.FLASH_I]: '#ffe66b',
   [TYPES.AID_O]: '#b9ffe0',
+  [TYPES.POWER_STAIR]: '#ff8ab8',
+  [TYPES.MANA_FORK]: '#7dffd8',
+  [TYPES.BOMB_BOX]: '#ff9350',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -249,6 +255,36 @@ export const SHAPE_LIBRARY = {
       [[0,1,0],[0,1,0],[1,1,1]],
       [[1,0,0],[1,1,1],[1,0,0]]
     ]
+  },
+  STAIR5: {
+    name: '계단형',
+    cells: 5,
+    shape: [
+      [[1,1,0],[0,1,0],[0,1,1]],
+      [[0,0,1],[1,1,1],[1,0,0]],
+      [[1,1,0],[0,1,0],[0,1,1]],
+      [[0,0,1],[1,1,1],[1,0,0]]
+    ]
+  },
+  FORK5: {
+    name: '갈래형',
+    cells: 5,
+    shape: [
+      [[0,1,0],[1,1,1],[1,0,0]],
+      [[1,1,0],[0,1,1],[0,1,0]],
+      [[0,0,1],[1,1,1],[0,1,0]],
+      [[0,1,0],[1,1,0],[0,1,1]]
+    ]
+  },
+  BOX5: {
+    name: '박스형',
+    cells: 5,
+    shape: [
+      [[1,1],[1,1],[1,0]],
+      [[1,1,1],[0,1,1]],
+      [[0,1],[1,1],[1,1]],
+      [[1,1,0],[1,1,1]]
+    ]
   }
 };
 
@@ -294,7 +330,10 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.MEGA_CLEANSE]: 'CROSS5',
   [TYPES.PANIC_WALL]: 'WIDE6',
   [TYPES.FLASH_I]: 'I',
-  [TYPES.AID_O]: 'O'
+  [TYPES.AID_O]: 'O',
+  [TYPES.POWER_STAIR]: 'STAIR5',
+  [TYPES.MANA_FORK]: 'FORK5',
+  [TYPES.BOMB_BOX]: 'BOX5'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
@@ -404,7 +443,10 @@ export const CARD_LIBRARY = {
   [TYPES.MEGA_CLEANSE]: blockCard(TYPES.MEGA_CLEANSE, '메가 클렌즈', 'CROSS5', 'megaCleanse', 'rare', { exhaust: true }),
   [TYPES.PANIC_WALL]: blockCard(TYPES.PANIC_WALL, '패닉 월', 'WIDE6', 'panicWall', 'uncommon', { exhaust: true }),
   [TYPES.FLASH_I]: blockCard(TYPES.FLASH_I, '섬광 I', 'I', 'flashStrike', 'uncommon', { exhaust: true }),
-  [TYPES.AID_O]: blockCard(TYPES.AID_O, '응급 클렌즈', 'O', 'aidCleanse', 'uncommon', { exhaust: true })
+  [TYPES.AID_O]: blockCard(TYPES.AID_O, '응급 클렌즈', 'O', 'aidCleanse', 'uncommon', { exhaust: true }),
+  [TYPES.POWER_STAIR]: blockCard(TYPES.POWER_STAIR, '파워 계단', 'STAIR5', 'highPower', 'rare'),
+  [TYPES.MANA_FORK]: blockCard(TYPES.MANA_FORK, '마나 갈래', 'FORK5', 'manaBonus', 'uncommon'),
+  [TYPES.BOMB_BOX]: blockCard(TYPES.BOMB_BOX, '봄브 박스', 'BOX5', 'bomb', 'uncommon')
 };
 
 export const CARD_DESCRIPTIONS = {
@@ -449,5 +491,8 @@ export const CARD_DESCRIPTIONS = {
   [TYPES.MEGA_CLEANSE]: '[1회용] 배치 즉시 쓰레기 행 6줄을 제거합니다. 전투당 한 번만 등장합니다.',
   [TYPES.PANIC_WALL]: '[1회용] 배치 즉시 들어오는 쓰레기 게이지를 최대 8줄 차단합니다. 전투당 한 번만 등장합니다.',
   [TYPES.FLASH_I]: '[소멸] 배치 즉시 2.0 공격력을 발사합니다. 전투당 한 번만 등장합니다.',
-  [TYPES.AID_O]: '[소멸] 배치 즉시 쓰레기 행 2줄을 제거합니다. 전투당 한 번만 등장합니다.'
+  [TYPES.AID_O]: '[소멸] 배치 즉시 쓰레기 행 2줄을 제거합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.POWER_STAIR]: '5칸 계단형 고출력 블록. 높낮이를 만들지만 클리어 공격력이 높습니다.',
+  [TYPES.MANA_FORK]: '5칸 갈래형 마나 블록. 삐져나온 칸을 맞추면 MP 수급에 좋습니다.',
+  [TYPES.BOMB_BOX]: '5칸 박스형 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.'
 };
