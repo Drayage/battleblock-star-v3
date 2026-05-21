@@ -326,6 +326,28 @@ export function shopItemKey(item) {
   return `${item.kind}:${item.id || item.amount || 'slot'}:${item.tier || 'base'}`;
 }
 
+export function restockShopItem(run, item) {
+  const tier = roundTier(run.round);
+  if (item.kind === 'hp') {
+    return { kind: 'hp', amount: 5, tier, title: 'Max HP +5 rows', price: shopPrice('hp', tier) };
+  }
+  if (item.kind === 'skill') {
+    const s = pickByTier(SKILLS, tier, { exclude: run.ownedSkills });
+    return s ? { kind: 'skill', id: s.id, tier: s.tier, title: `Skill: ${SKILLS[s.id].name}`, price: shopPrice('skill', s.tier) } : null;
+  }
+  if (item.kind === 'relic') {
+    const r = pickByTier(RELICS, tier, { exclude: run.relics });
+    return r ? { kind: 'relic', id: r.id, tier: r.tier, title: `Relic: ${RELICS[r.id].name}`, price: shopPrice('relic', r.tier) } : null;
+  }
+  if (item.kind === 'consumable') {
+    const c = pickByTier(CONSUMABLES, tier);
+    return c ? { kind: 'consumable', id: c.id, tier: c.tier, title: `Consumable: ${CONSUMABLES[c.id].name}`, price: shopPrice('consumable', c.tier) } : null;
+  }
+  const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY).filter(isPlayerRewardCard).map(card => [card.id, card]));
+  const card = pickByTier(rewardCards, tier);
+  return card ? { kind: 'card', id: card.id, tier: card.tier, title: `Buy ${CARD_LIBRARY[card.id].name}`, price: shopPrice('card', card.tier) } : null;
+}
+
 export function shouldShowEvent(run) {
   if (!run.starterPicked) return 'starter';
   if (run.round === 1 && !run.seenEvents.has('start')) return 'start';
@@ -395,6 +417,17 @@ export function makeEventChoices(run, eventKey) {
     title: '보급 캐시',
     desc: `${supply.name}: ${supply.desc} 아이템 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
   });
+  const digRelic = pickByTier(RELICS, roundTier(run.round), { exclude: run.relics });
+  if (digRelic && eventKey !== 'start') {
+    sideChoices.push({
+      kind: 'relicDig',
+      id: digRelic.id,
+      amount: 3,
+      tier: digRelic.tier,
+      title: '유물 발굴',
+      desc: `최대 HP 3줄을 소모하여 ${RELICS[digRelic.id].name}을(를) 획득합니다.`
+    });
+  }
   if (eventKey !== 'start') {
     sideChoices.push({
       kind: 'cleanup',

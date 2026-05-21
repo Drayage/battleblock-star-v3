@@ -18,6 +18,7 @@ import {
   makeStarterChoices,
   makeRewards,
   makeShopItems,
+  restockShopItem,
   shopItemKey,
   shouldShowEvent
 } from './progression.js?v=20260521-ko11';
@@ -240,6 +241,7 @@ class Game {
     if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
     if (choice.kind === 'gold') return `${choice.amount}G 획득`;
     if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
+    if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${RELICS[choice.id].name}`;
     return '이벤트';
   }
 
@@ -270,6 +272,7 @@ class Game {
     if (choice.kind === 'skill') return !this.run.ownedSkills.includes(choice.id);
     if (choice.kind === 'starterSkill') return true;
     if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
+    if (choice.kind === 'relicDig') return this.run.hpRows - choice.amount >= 8 && !this.run.relics.includes(choice.id);
     return true;
   }
 
@@ -295,6 +298,10 @@ class Game {
     if (choice.kind === 'consumable') return this.acquireConsumable(choice.id, done);
     if (choice.kind === 'gold') this.run.gold += choice.amount;
     if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
+    if (choice.kind === 'relicDig') {
+      this.run.hpRows = Math.max(8, this.run.hpRows - choice.amount);
+      if (!this.run.relics.includes(choice.id)) this.run.relics.push(choice.id);
+    }
     done();
   }
 
@@ -308,17 +315,52 @@ class Game {
     const sold = new Set(this.run.shopStock?.[shopKey]?.sold || []);
     for (const item of makeShopItems(this.run)) {
       const soldOut = sold.has(shopItemKey(item));
+      const price = this.effectivePrice(item);
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${item.price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
-      btn.disabled = soldOut || this.run.gold < item.price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
+      btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
-        if (btn.disabled || this.run.gold < item.price) return;
+        if (btn.disabled || this.run.gold < price) return;
         this.buyShopItem(item);
       });
       wrap.appendChild(btn);
     }
+    const rerollCost = this.shopRerollCost();
+    const rerollBtn = document.createElement('button');
+    rerollBtn.className = 'choice shop';
+    rerollBtn.innerHTML = `<strong>리롤</strong><span>${rerollCost} Gold</span><small>상점 물건을 새로 뽑습니다. 리롤할 때마다 비용이 10G 증가합니다.</small>`;
+    rerollBtn.disabled = this.run.gold < rerollCost;
+    rerollBtn.addEventListener('click', () => {
+      if (this.run.gold < rerollCost) return;
+      this.rerollShop();
+    });
+    wrap.appendChild(rerollBtn);
+  }
+
+  effectivePrice(item) {
+    const base = item.price || 0;
+    return this.run.relics.includes('merchant_token') ? Math.ceil(base * 0.8) : base;
+  }
+
+  shopRerollCost() {
+    const key = String(this.run.round);
+    const n = this.run.shopStock?.[key]?.rerolls || 0;
+    return 20 + n * 10;
+  }
+
+  rerollShop() {
+    const cost = this.shopRerollCost();
+    if (this.run.gold < cost) return;
+    this.run.gold -= cost;
+    const key = String(this.run.round);
+    const rerolls = (this.run.shopStock?.[key]?.rerolls || 0) + 1;
+    if (this.run.shopStock) delete this.run.shopStock[key];
+    makeShopItems(this.run);
+    if (this.run.shopStock?.[key]) this.run.shopStock[key].rerolls = rerolls;
+    this.showShop();
+    this.autoSave();
   }
 
   renderDeckViewer() {
@@ -441,12 +483,19 @@ class Game {
   buyShopItem(item) {
     const finish = accepted => {
       if (!accepted) return;
-      this.run.gold -= item.price;
+      this.run.gold -= this.effectivePrice(item);
       const shopKey = String(this.run.round);
       if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [] };
-      const sold = this.run.shopStock[shopKey].sold;
+      const stock = this.run.shopStock[shopKey];
       const key = shopItemKey(item);
-      if (!sold.includes(key)) sold.push(key);
+      if (this.run.relics.includes('merchant_token')) {
+        const idx = stock.items.findIndex(it => shopItemKey(it) === key);
+        const replacement = restockShopItem(this.run, item);
+        if (idx >= 0 && replacement) stock.items[idx] = replacement;
+        else if (!stock.sold.includes(key)) stock.sold.push(key);
+      } else if (!stock.sold.includes(key)) {
+        stock.sold.push(key);
+      }
       this.normalizePersistentGrid();
       this.showShop();
       this.autoSave();
