@@ -83,6 +83,8 @@ export class Board {
     this.attackPool = 0;
     this.nextAttackDouble = false;
     this.attackChargeStacks = 0;
+    this.rotateLocked = false;
+    this.iPieceForce = 0;
     this.fillQueue();
     this.spawn();
   }
@@ -113,6 +115,8 @@ export class Board {
     board.attackPool = state.attackPool || 0;
     board.nextAttackDouble = !!state.nextAttackDouble;
     board.attackChargeStacks = state.attackChargeStacks || 0;
+    board.rotateLocked = !!state.rotateLocked;
+    board.iPieceForce = state.iPieceForce || 0;
     board.fillQueue();
     return board;
   }
@@ -152,8 +156,12 @@ export class Board {
   }
 
   spawn() {
-    const card = this.nextQueue.shift();
+    let card = this.nextQueue.shift();
     this.fillQueue();
+    if (this.iPieceForce > 0) {
+      card = CARD_LIBRARY[TYPES.I];
+      this.iPieceForce--;
+    }
     this.pieceSerial++;
     this.current = new Mino(card, 3, SPAWN_Y);
     this.holdUsed = false;
@@ -179,7 +187,7 @@ export class Board {
   }
 
   rotate(dir = 1) {
-    if (!this.current || this.defeated) return false;
+    if (!this.current || this.defeated || this.rotateLocked) return false;
     const nextRot = (this.current.rot + (dir > 0 ? 1 : 3)) % 4;
     for (const [kx, ky] of KICKS) {
       if (this.ok(this.current, kx, ky, nextRot)) {
@@ -236,6 +244,21 @@ export class Board {
     };
     while (this.move(0, 1)) {}
     return this.lock();
+  }
+
+  bombShard() {
+    if (!this.current || this.defeated) return false;
+    this.current = new Mino({
+      ...CARD_LIBRARY[TYPES.O],
+      id: 'BOMB_SHARD',
+      name: '폭탄 파편',
+      cellAttack: 0.1,
+      traits: ['bomb'],
+      shape: [[[1]], [[1]], [[1]], [[1]]]
+    }, 4, SPAWN_Y);
+    this.holdUsed = true;
+    if (!this.ok(this.current)) this.defeated = true;
+    return true;
   }
 
   lock() {
@@ -502,6 +525,20 @@ export class Board {
     }
   }
 
+  detonateAll() {
+    const targets = [];
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const cell = this.grid[r][c];
+        if (cell?.traits.includes('bomb')) targets.push({ x: c, y: r, radius: 1 });
+        else if (cell?.traits.includes('timeBomb')) targets.push({ x: c, y: r, radius: 2 });
+      }
+    }
+    for (const t of targets) this.explodeBombAt(t.x, t.y, t.radius);
+    for (const t of targets) this.dropCellsAboveExplosion(t.x, t.y, t.radius);
+    return targets.length;
+  }
+
   clearLabel(result) {
     const parts = [];
     if (result.tSpin) parts.push('T-SPIN');
@@ -609,6 +646,51 @@ export class Board {
     return removed;
   }
 
+  scramble() {
+    for (let r = 0; r < this.rows; r++) {
+      const row = this.grid[r];
+      if (!row.some(Boolean)) continue;
+      const shift = Math.random() < 0.5 ? -1 : 1;
+      const next = Array.from({ length: this.cols }, () => null);
+      for (let c = 0; c < this.cols; c++) {
+        if (!row[c]) continue;
+        const nc = c + shift;
+        if (nc >= 0 && nc < this.cols) next[nc] = row[c];
+        else next[c] = row[c];
+      }
+      this.grid[r] = next;
+    }
+  }
+
+  punchHoles(count = 5) {
+    const filled = [];
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.grid[r][c]) filled.push([r, c]);
+      }
+    }
+    for (let i = filled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filled[i], filled[j]] = [filled[j], filled[i]];
+    }
+    let punched = 0;
+    for (const [r, c] of filled) {
+      if (punched >= count) break;
+      this.grid[r][c] = null;
+      punched++;
+    }
+    return punched;
+  }
+
+  clearAllGarbage() {
+    const kept = this.grid.filter(row => !row.some(c => c?.type === TYPES.GARBAGE));
+    const removed = this.rows - kept.length;
+    while (kept.length < this.rows) kept.unshift(emptyRow());
+    this.grid = kept;
+    this.garbageEntries = [];
+    return removed;
+  }
+
   collapseColumns() {
     for (let c = 0; c < this.cols; c++) {
       const stack = [];
@@ -646,7 +728,9 @@ export class Board {
       flash: this.flash,
       attackPool: this.attackPool,
       nextAttackDouble: this.nextAttackDouble,
-      attackChargeStacks: this.attackChargeStacks
+      attackChargeStacks: this.attackChargeStacks,
+      rotateLocked: this.rotateLocked,
+      iPieceForce: this.iPieceForce
     };
   }
 }

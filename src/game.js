@@ -496,10 +496,14 @@ class Game {
   startBattle(enemyCard) {
     this.clearBattleTimeouts();
     this.enemyCard = enemyCard;
+    if (this.run.relics.includes('steel_heart')) {
+      this.run.hpRows = Math.min(28, this.run.hpRows + 1);
+    }
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
-    if (this.run.relics.includes('hold_cache') && !this.player.held) this.player.mp = Math.min(100, this.player.mp + 15);
+    if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
+    this.battleFirstClearUsed = false;
     this.ai = new AI(enemyCard.aiProfile, enemyCard.aiSkill);
     this.fallTimer = 0;
     this.lockTimer = 0;
@@ -518,6 +522,9 @@ class Game {
     this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
+    this.playerFreezeTimer = 0;
+    this.enemyDebuffs = {};
+    this.playerDebuffs = {};
     this.paused = false;
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
@@ -639,7 +646,12 @@ class Game {
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (attacker === this.player) this.battlePlayerPieces++;
     else if (attacker === this.enemy) this.battleEnemyPieces++;
-    const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    let mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    if (attacker === this.player && result.cleared > 0 && !this.battleFirstClearUsed && this.run.relics.includes('first_strike')) {
+      mult *= 3;
+      this.battleFirstClearUsed = true;
+      this.message = '첫수 보너스!';
+    }
     if (attacker === this.player) {
       if (result.slow) this.enemySlowTimer += result.slow;
       if (result.gold) {
@@ -656,6 +668,9 @@ class Game {
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
     }
+    if (attacker === this.player && result.cleared > 0 && !this.player.held && this.run.relics.includes('hold_cache')) {
+      this.player.mp = Math.min(100, this.player.mp + result.mana * 0.5);
+    }
     if (result.attack > 0) {
       const attack = (result.attack + this.battleHeatAttackBonus()) * mult;
       if (attacker === this.player) this.battlePlayerAttacks += attack;
@@ -668,9 +683,19 @@ class Game {
         if (toSend > 0) defender.receiveGarbage(toSend);
       }
     }
-    if (this.player.defeated) return this.queueBattleEnd('loss');
+    if (this.player.defeated && !this.playerSurvivesLethal()) return this.queueBattleEnd('loss');
     if (this.enemy.defeated) return this.queueBattleEnd('win');
     this.autoSave();
+  }
+
+  playerSurvivesLethal() {
+    if (!this.run.relics.includes('phoenix_feather')) return false;
+    this.player.clearAllGarbage();
+    this.player.defeated = false;
+    if (!this.player.current) this.player.spawn();
+    this.run.relics = this.run.relics.filter(r => r !== 'phoenix_feather');
+    this.message = '불사조 깃털 발동! 한 번 버팁니다';
+    return true;
   }
 
   queueBattleEnd(result) {
@@ -1033,6 +1058,8 @@ class Game {
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
+    this.playerFreezeTimer = Math.max(0, (this.playerFreezeTimer || 0) - dt);
+    this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
       this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
     });
@@ -1065,15 +1092,36 @@ class Game {
     return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
   }
 
+  applyPlayerDebuff(key, ms) {
+    this.playerDebuffs[key] = Math.max(this.playerDebuffs[key] || 0, ms);
+  }
+
+  applyEnemyDebuff(key, ms) {
+    this.enemyDebuffs[key] = Math.max(this.enemyDebuffs[key] || 0, ms);
+  }
+
+  tickDebuffs(dt) {
+    for (const store of [this.playerDebuffs, this.enemyDebuffs]) {
+      if (!store) continue;
+      for (const k of Object.keys(store)) {
+        store[k] = Math.max(0, store[k] - dt);
+        if (store[k] <= 0) delete store[k];
+      }
+    }
+  }
+
   currentEffectBadges() {
     const fmt = ms => `${Math.ceil(ms / 1000)}s`;
     const player = [];
     const enemy = [];
     if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
     if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
+    if (this.playerFreezeTimer > 0) player.push(`FREEZE ${fmt(this.playerFreezeTimer)}`);
     if (this.aiFocusInEpisode) enemy.push(`FOCUS x${this.aiFocusActivations}`);
     if (this.player?.holdLocked) player.push('HOLD LOCK');
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
+    for (const [k, ms] of Object.entries(this.playerDebuffs || {})) player.push(`${k.toUpperCase()} ${fmt(ms)}`);
+    for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
     return { player, enemy };
   }
 
@@ -1212,6 +1260,7 @@ class Game {
 
   updatePlayerGravity(dt) {
     if (!this.player?.current || this.player.defeated) return;
+    if (this.playerFreezeTimer > 0) return;
     if (this.isPlayerGrounded()) {
       this.groundTouched = true;
       this.fallTimer = 0;

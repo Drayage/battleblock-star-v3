@@ -26,7 +26,37 @@ export const RELICS = {
     id: 'hold_cache',
     name: '홀드 캐시',
     tier: TIERS.BRONZE,
-    desc: '홀드 슬롯이 비어있으면 전투 시작 시 MP +15.'
+    desc: '전투 중 홀드 슬롯이 비어있으면 마나 회복량이 50% 증가합니다.'
+  },
+  steel_heart: {
+    id: 'steel_heart',
+    name: '강철 심장',
+    tier: TIERS.SILVER,
+    desc: '전투를 시작할 때마다 최대 HP(필드 높이)가 1 증가합니다.'
+  },
+  natural_heal: {
+    id: 'natural_heal',
+    name: '자연 치유',
+    tier: TIERS.SILVER,
+    desc: '전투를 시작할 때마다 내 쓰레기 2줄을 정화합니다.'
+  },
+  first_strike: {
+    id: 'first_strike',
+    name: '첫수 보너스',
+    tier: TIERS.SILVER,
+    desc: '매 전투의 첫 라인 클리어 공격력이 3배가 됩니다.'
+  },
+  merchant_token: {
+    id: 'merchant_token',
+    name: '상인의 증표',
+    tier: TIERS.GOLD,
+    desc: '상점 가격이 20% 저렴해지고, 구매한 자리가 새 물건으로 채워집니다.'
+  },
+  phoenix_feather: {
+    id: 'phoenix_feather',
+    name: '불사조 깃털',
+    tier: TIERS.GOLD,
+    desc: '쓰러질 위기에 처하면 모든 쓰레기 줄을 제거하고 한 번 버팁니다. (전투 무관 1회용)'
   }
 };
 
