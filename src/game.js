@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko15';
-import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko15';
-import { Deck } from './deck.js?v=20260521-ko15';
-import { AI } from './ai.js?v=20260521-ko15';
-import { Renderer } from './renderer.js?v=20260521-ko15';
-import { InputController } from './input.js?v=20260521-ko15';
-import { SKILLS } from './skills.js?v=20260521-ko15';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko15';
+import { Board } from './board.js?v=20260521-ko16';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko16';
+import { Deck } from './deck.js?v=20260521-ko16';
+import { AI } from './ai.js?v=20260521-ko16';
+import { Renderer } from './renderer.js?v=20260521-ko16';
+import { InputController } from './input.js?v=20260521-ko16';
+import { SKILLS } from './skills.js?v=20260521-ko16';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko16';
 import {
   RunState,
   RELICS,
@@ -23,7 +23,7 @@ import {
   restockShopItem,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260521-ko15';
+} from './progression.js?v=20260521-ko16';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -348,10 +348,39 @@ class Game {
     }
     if (choice.kind === 'gamble') {
       this.run.gold -= choice.bet;
-      if (Math.random() < 0.55) this.run.gold += 60;
+      const won = Math.random() < 0.55;
+      if (won) this.run.gold += 60;
+      return this.playGambleEffect(won, choice.bet, done);
     }
     if (choice.kind === 'contract') this.run.deck.addCard(choice.id);
     done();
+  }
+
+  playGambleEffect(won, bet, done = () => {}) {
+    const host = document.getElementById('app') || document.body;
+    const overlay = document.createElement('div');
+    overlay.className = 'gamble-overlay';
+    const card = document.createElement('div');
+    card.className = 'gamble-card';
+    card.textContent = '?';
+    const label = document.createElement('div');
+    label.className = 'gamble-result';
+    label.textContent = '운명을 뒤집는 중…';
+    overlay.append(card, label);
+    host.appendChild(overlay);
+
+    let finished = false;
+    const reveal = () => {
+      if (finished) return;
+      finished = true;
+      card.classList.add('reveal', won ? 'win' : 'lose');
+      card.textContent = won ? '+60G' : `-${bet}G`;
+      label.textContent = won ? '대박! 베팅 성공' : '꽝… 베팅 실패';
+      label.classList.add(won ? 'win' : 'lose');
+      setTimeout(() => { overlay.remove(); done(); }, 1150);
+    };
+    card.addEventListener('animationend', reveal, { once: true });
+    setTimeout(reveal, 1300);
   }
 
   showShop() {
@@ -1622,6 +1651,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko15').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko16').catch(() => {});
   });
 }
