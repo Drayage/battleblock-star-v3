@@ -769,4 +769,42 @@ const shaveBoard = new Board({ rows: 12, deck: new Deck() });
 shaveBoard.grid[11] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
 assert.equal(shaveBoard.shaveBottom(1), 1, 'shaveBottom removes occupied row');
 
+// 몬스터 다양성: 신규 AI 프로파일이 보드를 정상 진행하고 블록을 배치
+for (const profile of ['aggro', 'turtle', 'spiker', 'cheese']) {
+  const profBoard = new Board({ rows: 20, deck: new Deck() });
+  const profAi = new AI(profile);
+  let placed = false;
+  for (let i = 0; i < 60 && !placed; i++) {
+    const res = profAi.step(profBoard);
+    if (res) placed = true;
+  }
+  assert.equal(placed, true, `AI profile ${profile} places a piece`);
+  assert.equal(profBoard.defeated, false, `AI profile ${profile} survives early placement`);
+}
+
+// 신규 적 등장: 충분히 진행하면 신규 적/엘리트가 풀에 나타나고 능력 키가 유효
+const validAbilities = new Set(['spike', 'slowPlayer', 'power', 'rotateLockPlayer', 'hyperBurst', 'polluteDeck', 'overload', undefined, null]);
+const newNames = new Set();
+for (let round = 5; round <= 16; round++) {
+  for (let trial = 0; trial < 40; trial++) {
+    for (const enemy of makeEnemyChoices(round)) {
+      assert.ok(validAbilities.has(enemy.ability), `enemy ${enemy.name} has valid ability key (${enemy.ability})`);
+      assert.ok(enemy.aiProfile, `enemy ${enemy.name} has an AI profile`);
+      newNames.add(enemy.name);
+    }
+  }
+}
+for (const expected of ['광전사', '거북 수문장', '유리 무희', '엘리트: 광란 코어', '엘리트: 오염원']) {
+  assert.ok(newNames.has(expected), `new enemy ${expected} appears in pools`);
+}
+
+// 초반(round 1~2) 풀은 신규 적으로 오염되지 않음
+for (let round = 1; round <= 2; round++) {
+  for (let trial = 0; trial < 40; trial++) {
+    for (const enemy of makeEnemyChoices(round)) {
+      assert.ok(['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name), `round ${round} only starter enemies, got ${enemy.name}`);
+    }
+  }
+}
+
 console.log('All Battle Block Star v3.0 checks passed.');

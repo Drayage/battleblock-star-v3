@@ -1,5 +1,5 @@
-import { Mino } from './board.js?v=20260521-ko13';
-import { COLS } from './constants.js?v=20260521-ko13';
+import { Mino } from './board.js?v=20260521-ko14';
+import { COLS } from './constants.js?v=20260521-ko14';
 
 function analyzeGrid(grid) {
   const rows = grid.length;
@@ -50,7 +50,11 @@ function scoreGrid(grid, cleared, profile) {
     plonk: { line: 14, hole: -6.8, height: -0.45, bump: -0.95, well: 0.45, garbage: 0.02 },
     infds: { line: 7, hole: -10, height: -0.95, bump: -1.5, well: 0.1, garbage: -0.65 },
     stacker: { line: 9, hole: -9, height: -0.85, bump: -1.45, well: 0.25, garbage: -0.3 },
-    elite: { line: 12, hole: -8, height: -0.62, bump: -1.05, well: 0.35, garbage: -0.1 }
+    elite: { line: 12, hole: -8, height: -0.62, bump: -1.05, well: 0.35, garbage: -0.1 },
+    aggro: { line: 16, hole: -5.0, height: -0.42, bump: -0.7, well: 0.1, garbage: 0.06 },
+    turtle: { line: 8, hole: -11, height: -1.0, bump: -1.6, well: 0.06, garbage: -0.72 },
+    spiker: { line: 14, hole: -9, height: -0.72, bump: -1.15, well: 1.05, garbage: -0.12 },
+    cheese: { line: 11, hole: -5.5, height: -0.5, bump: -0.85, well: 0.28, garbage: 0.08 }
   }[profile] || {
     line: 9, hole: -8, height: -0.75, bump: -1.25, well: 0.1, garbage: -0.2
   };

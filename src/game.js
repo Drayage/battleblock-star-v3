@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko13';
-import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko13';
-import { Deck } from './deck.js?v=20260521-ko13';
-import { AI } from './ai.js?v=20260521-ko13';
-import { Renderer } from './renderer.js?v=20260521-ko13';
-import { InputController } from './input.js?v=20260521-ko13';
-import { SKILLS } from './skills.js?v=20260521-ko13';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko13';
+import { Board } from './board.js?v=20260521-ko14';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko14';
+import { Deck } from './deck.js?v=20260521-ko14';
+import { AI } from './ai.js?v=20260521-ko14';
+import { Renderer } from './renderer.js?v=20260521-ko14';
+import { InputController } from './input.js?v=20260521-ko14';
+import { SKILLS } from './skills.js?v=20260521-ko14';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko14';
 import {
   RunState,
   RELICS,
@@ -23,7 +23,7 @@ import {
   restockShopItem,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260521-ko13';
+} from './progression.js?v=20260521-ko14';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1622,6 +1622,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko13').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko14').catch(() => {});
   });
 }

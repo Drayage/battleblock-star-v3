@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko13';
-import { Deck, shuffle } from './deck.js?v=20260521-ko13';
-import { SKILLS } from './skills.js?v=20260521-ko13';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko13';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko14';
+import { Deck, shuffle } from './deck.js?v=20260521-ko14';
+import { SKILLS } from './skills.js?v=20260521-ko14';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko14';
 
 export const RELICS = {
   combo_amp: {
@@ -159,7 +159,12 @@ const ENEMIES = [
   { name: 'INF DS 쉘', tier: TIERS.SILVER, style: 'INF DS 패턴: 방어적 다운스태킹과 필드 정리.', profile: 'infds', rows: 3, speed: 450, garbage: 1, risk: 1.3, rewardBonus: 4, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.INSTANT_GUARD], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.003, noise: 0, hesitateRate: 0.15 } },
   { name: '봄브 어뎁트', tier: TIERS.SILVER, style: '중반부터 폭탄 블록을 추가합니다.', profile: 'balanced', rows: 0, speed: 445, garbage: 1, risk: 1.2, rewardBonus: 3, deckExtras: [TYPES.BOMB, TYPES.BOMB_I], ability: 'spike', aiSkill: { mistakeRate: 0.003, noise: 0, hesitateRate: 0.16 } },
   { name: '마나 도둑', tier: TIERS.SILVER, style: '주기적으로 플레이어를 느리게 하는 중반 캐스터.', profile: 'balanced', rows: 1, speed: 430, garbage: 1, risk: 1.3, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer', aiSkill: { mistakeRate: 0.003, noise: 0, hesitateRate: 0.12 } },
-  { name: '클렌즈 워든', tier: TIERS.GOLD, style: '클렌즈 블록을 사용하며 쓰레기 압박에 저항합니다.', profile: 'stacker', rows: 2, speed: 390, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.001, noise: 0, hesitateRate: 0.09 } }
+  { name: '클렌즈 워든', tier: TIERS.GOLD, style: '클렌즈 블록을 사용하며 쓰레기 압박에 저항합니다.', profile: 'stacker', rows: 2, speed: 390, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.001, noise: 0, hesitateRate: 0.09 } },
+  { name: '광전사', tier: TIERS.SILVER, style: 'AGGRO 패턴: 지저분해도 빠르게 쌓아 끝없이 공격합니다.', profile: 'aggro', rows: -8, speed: 300, garbage: 0, risk: 1.7, rewardBonus: 8, minRound: 5, deckExtras: [TYPES.POWER_I, TYPES.POWER_Z, TYPES.UNSTABLE], ability: 'power', aiSkill: { mistakeRate: 0.006, noise: 0, hesitateRate: 0.14 } },
+  { name: '사슬술사', tier: TIERS.SILVER, style: '사슬 캐스케이드와 콤보 차지로 누적 압박합니다.', profile: 'stride', rows: 0, speed: 410, garbage: 1, risk: 1.35, rewardBonus: 5, minRound: 6, deckExtras: [TYPES.CHAIN, TYPES.COMBO_CHARGE], ability: 'spike', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.13 } },
+  { name: '폭파공', tier: TIERS.SILVER, style: '시한폭탄과 폭탄을 깔고 덱을 오염시킵니다.', profile: 'plonk', rows: -2, speed: 380, garbage: 1, risk: 1.5, rewardBonus: 6, minRound: 7, deckExtras: [TYPES.TIMEBOMB, TYPES.BOMB], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.12 } },
+  { name: '거북 수문장', tier: TIERS.GOLD, style: 'TURTLE 패턴: 구멍을 극도로 피하며 장기전으로 끕니다.', profile: 'turtle', rows: 4, speed: 430, garbage: 2, risk: 1.4, rewardBonus: 5, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.COOLANT], ability: 'slowPlayer', aiSkill: { mistakeRate: 0.0025, noise: 0, hesitateRate: 0.1 } },
+  { name: '유리 무희', tier: TIERS.GOLD, style: 'SPIKER 패턴: 우물을 파 쿼드 대량 폭발을 노립니다.', profile: 'spiker', rows: -3, speed: 320, garbage: 1, risk: 1.75, rewardBonus: 9, minRound: 9, deckExtras: [TYPES.GLASS, TYPES.POWER_S], ability: 'hyperBurst', aiSkill: { mistakeRate: 0.002, noise: 0, hesitateRate: 0.1 } }
 ];
 
 const ELITES = [
@@ -167,7 +172,10 @@ const ELITES = [
   { name: '엘리트: 파워 코어', tier: TIERS.GOLD, style: '다수의 파워 블록으로 큰 폭발 피해를 줍니다.', profile: 'fast', rows: 4, speed: 260, garbage: 2, risk: 2.05, rewardBonus: 13, deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.POWER_S], ability: 'power' },
   { name: '엘리트: 크로스 엔진', tier: TIERS.GOLD, style: '특이한 모양, 높은 분산, 엘리트 보상.', profile: 'elite', rows: 6, speed: 300, garbage: 2, risk: 1.95, rewardBonus: 11, deckExtras: [TYPES.CROSS], ability: 'spike' },
   { name: '엘리트: 오프너 랩', tier: TIERS.GOLD, style: 'OPENER 엘리트: 매우 낮은 HP, 극도로 빠른 초반 폭발.', profile: 'opener', rows: -5, speed: 235, garbage: 1, risk: 2.25, rewardBonus: 16, minRound: 6, deckExtras: [TYPES.POWER_T, TYPES.POWER_I], ability: 'power' },
-  { name: '엘리트: 플롱크 볼트', tier: TIERS.GOLD, style: 'PLONK 엘리트: 압박을 버티다가 강력하게 반격합니다.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' }
+  { name: '엘리트: 플롱크 볼트', tier: TIERS.GOLD, style: 'PLONK 엘리트: 압박을 버티다가 강력하게 반격합니다.', profile: 'plonk', rows: 1, speed: 285, garbage: 4, risk: 2.1, rewardBonus: 14, minRound: 9, deckExtras: [TYPES.POWER_CROSS, TYPES.BOMB_I, TYPES.INSTANT_STRIKE], ability: 'spike' },
+  { name: '엘리트: 광란 코어', tier: TIERS.GOLD, style: 'AGGRO 엘리트: 멈추지 않는 극단 공격으로 몰아칩니다.', profile: 'aggro', rows: 3, speed: 250, garbage: 3, risk: 2.2, rewardBonus: 14, minRound: 7, deckExtras: [TYPES.POWER_I, TYPES.POWER_Z, TYPES.POWER_CROSS], ability: 'power' },
+  { name: '엘리트: 중량 분쇄기', tier: TIERS.GOLD, style: '무거운 납 덱과 회전 봉인으로 짓누릅니다.', profile: 'stacker', rows: 5, speed: 300, garbage: 3, risk: 2.0, rewardBonus: 13, minRound: 9, deckExtras: [TYPES.LEAD, TYPES.POWER_CROSS], ability: 'rotateLockPlayer' },
+  { name: '엘리트: 오염원', tier: TIERS.GOLD, style: 'CHEESE 엘리트: 변칙 압박과 지속 덱 오염을 겁니다.', profile: 'cheese', rows: 2, speed: 300, garbage: 3, risk: 2.05, rewardBonus: 14, minRound: 10, deckExtras: [TYPES.UNSTABLE, TYPES.BOMB_I], ability: 'polluteDeck' }
 ];
 
 const BOSS = {
