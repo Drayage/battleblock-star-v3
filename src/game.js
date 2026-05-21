@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko11';
-import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260521-ko11';
-import { Deck } from './deck.js?v=20260521-ko11';
-import { AI } from './ai.js?v=20260521-ko11';
-import { Renderer } from './renderer.js?v=20260521-ko11';
-import { InputController } from './input.js?v=20260521-ko11';
-import { SKILLS } from './skills.js?v=20260521-ko11';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko11';
+import { Board } from './board.js?v=20260521-ko12';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260521-ko12';
+import { Deck } from './deck.js?v=20260521-ko12';
+import { AI } from './ai.js?v=20260521-ko12';
+import { Renderer } from './renderer.js?v=20260521-ko12';
+import { InputController } from './input.js?v=20260521-ko12';
+import { SKILLS } from './skills.js?v=20260521-ko12';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko12';
 import {
   RunState,
   RELICS,
@@ -21,7 +21,7 @@ import {
   restockShopItem,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260521-ko11';
+} from './progression.js?v=20260521-ko12';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -578,6 +578,7 @@ class Game {
     if (this.run.relics.includes('steel_heart')) {
       this.run.hpRows = Math.min(28, this.run.hpRows + 1);
     }
+    this.run.deck.beginBattle();
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
@@ -1468,6 +1469,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko11').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko12').catch(() => {});
   });
 }
