@@ -474,7 +474,7 @@ export function makeEventChoices(run, eventKey) {
       to: upgrade.to,
       tier: CARD_LIBRARY[upgrade.to].tier || TIERS.BRONZE,
       title: '블록 주입',
-      desc: `${CARD_LIBRARY[upgrade.from].name} → ${CARD_LIBRARY[upgrade.to].name}: ${CARD_DESCRIPTIONS[upgrade.to] || '이 블록으로 업그레이드합니다.'}`
+      desc: `${CARD_LIBRARY[upgrade.from].name} → ${CARD_LIBRARY[upgrade.to].name} · 특수효과: ${CARD_DESCRIPTIONS[upgrade.to] || '이 블록으로 업그레이드합니다.'}`
     });
   }
   const skill = pickByTier(SKILLS, roundTier(run.round), { exclude: run.ownedSkills });
