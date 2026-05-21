@@ -6,7 +6,7 @@ export const CONSUMABLES = {
     short: 'B',
     desc: 'MP를 35 즉시 획득합니다.',
     use({ player }) {
-      player.mp = Math.min(100, player.mp + 35);
+      player.mp = Math.min(player.mpCap || 100, player.mp + 35);
       return 'MP 배터리 사용';
     }
   },
@@ -60,6 +60,17 @@ export const CONSUMABLES = {
     use({ player }) {
       player.purgeGarbageRows(4);
       return '만능 클렌즈 사용';
+    }
+  },
+  reroll_token: {
+    id: 'reroll_token',
+    name: '리롤 토큰',
+    tier: 'silver',
+    short: 'R',
+    desc: '다음에 나올 블록 큐를 새로 뽑습니다.',
+    use({ player }) {
+      player.rerollQueue();
+      return '리롤 토큰 사용';
     }
   },
   gold_pouch: {

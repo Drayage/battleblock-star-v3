@@ -61,6 +61,56 @@ export const SKILLS = {
       return player.bombShard();
     }
   },
+  line_shave: {
+    id: 'line_shave',
+    name: '라인 셰이브',
+    tier: 'silver',
+    cost: 40,
+    cooldown: 9000,
+    desc: '내 필드 바닥의 점유 행 2줄을 삭제합니다.',
+    activate({ player }) {
+      return player.shaveBottom(2) > 0;
+    }
+  },
+  panic_guard: {
+    id: 'panic_guard',
+    name: '패닉 가드',
+    tier: 'bronze',
+    cost: 30,
+    cooldown: 9000,
+    desc: '예정된 모든 쓰레기 공격을 즉시 차단합니다.',
+    activate({ player }) {
+      player.garbageQueue = 0;
+      return true;
+    }
+  },
+  overcharge: {
+    id: 'overcharge',
+    name: '과충전',
+    tier: 'gold',
+    cost: 60,
+    cooldown: 13000,
+    desc: '다음 3회 라인 클리어의 공격력이 50% 증가합니다.',
+    activate({ player }) {
+      if (player.defeated) return false;
+      player.overchargeShots = 3;
+      return true;
+    }
+  },
+  hyper_force: {
+    id: 'hyper_force',
+    name: '하이퍼 강제',
+    tier: 'gold',
+    cost: 55,
+    cooldown: 12000,
+    desc: '4초 동안 적의 블록을 즉시 강제 낙하시켜 배치를 망칩니다.',
+    activate({ game, enemy }) {
+      if (!enemy || enemy.defeated) return false;
+      game.enemyForceDropTimer = 4000;
+      game.applyEnemyDebuff?.('hyper', 4000);
+      return true;
+    }
+  },
   purge: {
     id: 'purge',
     name: '퍼지',

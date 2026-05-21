@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko12';
-import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260521-ko12';
-import { Deck } from './deck.js?v=20260521-ko12';
-import { AI } from './ai.js?v=20260521-ko12';
-import { Renderer } from './renderer.js?v=20260521-ko12';
-import { InputController } from './input.js?v=20260521-ko12';
-import { SKILLS } from './skills.js?v=20260521-ko12';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko12';
+import { Board } from './board.js?v=20260521-ko13';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko13';
+import { Deck } from './deck.js?v=20260521-ko13';
+import { AI } from './ai.js?v=20260521-ko13';
+import { Renderer } from './renderer.js?v=20260521-ko13';
+import { InputController } from './input.js?v=20260521-ko13';
+import { SKILLS } from './skills.js?v=20260521-ko13';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko13';
 import {
   RunState,
   RELICS,
@@ -21,7 +21,7 @@ import {
   restockShopItem,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260521-ko12';
+} from './progression.js?v=20260521-ko13';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -55,6 +55,32 @@ const ENEMY_ABILITIES = {
     cast(g) {
       g.player.receiveGarbage(2);
       g.message = `${g.enemyCard.name} 능력: 파워 폭발 +2`;
+    }
+  },
+  rotateLockPlayer: {
+    cost: 60,
+    cooldown: 22000,
+    cast(g) {
+      g.player.rotateLocked = true;
+      const target = g.player;
+      g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
+      g.message = `${g.enemyCard.name} 능력: 회전 봉인 (2초)`;
+    }
+  },
+  hyperBurst: {
+    cost: 65,
+    cooldown: 24000,
+    cast(g) {
+      g.playerHyperTimer = 2500;
+      g.message = `${g.enemyCard.name} 능력: 하이퍼 낙하 (2.5초)`;
+    }
+  },
+  polluteDeck: {
+    cost: 60,
+    cooldown: 26000,
+    cast(g) {
+      g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
+      g.message = `${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`;
     }
   }
 };
@@ -242,6 +268,8 @@ class Game {
     if (choice.kind === 'gold') return `${choice.amount}G 획득`;
     if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
     if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${RELICS[choice.id].name}`;
+    if (choice.kind === 'gamble') return `${choice.bet}G 베팅`;
+    if (choice.kind === 'contract') return CARD_LIBRARY[choice.id].name;
     return '이벤트';
   }
 
@@ -252,6 +280,7 @@ class Game {
       node.appendChild(this.blockPreview(CARD_LIBRARY[choice.to], 8));
     }
     if (choice.kind === 'hpForCurse') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.card], 8));
+    if (choice.kind === 'contract') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.id], 8));
     if (choice.kind === 'consumable') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
@@ -273,6 +302,7 @@ class Game {
     if (choice.kind === 'starterSkill') return true;
     if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
     if (choice.kind === 'relicDig') return this.run.hpRows - choice.amount >= 8 && !this.run.relics.includes(choice.id);
+    if (choice.kind === 'gamble') return this.run.gold >= choice.bet;
     return true;
   }
 
@@ -302,6 +332,11 @@ class Game {
       this.run.hpRows = Math.max(8, this.run.hpRows - choice.amount);
       if (!this.run.relics.includes(choice.id)) this.run.relics.push(choice.id);
     }
+    if (choice.kind === 'gamble') {
+      this.run.gold -= choice.bet;
+      if (Math.random() < 0.55) this.run.gold += 60;
+    }
+    if (choice.kind === 'contract') this.run.deck.addCard(choice.id);
     done();
   }
 
@@ -583,6 +618,9 @@ class Game {
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
     if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
+    if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
+    if (this.run.relics.includes('combo_keeper')) this.player.comboGuard = true;
+    if (this.run.relics.includes('chain_reactor')) this.player.chainReactor = true;
     this.battleFirstClearUsed = false;
     this.ai = new AI(enemyCard.aiProfile, enemyCard.aiSkill);
     this.fallTimer = 0;
@@ -606,6 +644,7 @@ class Game {
     this.playerFogTimer = 0;
     this.playerHyperTimer = 0;
     this.playerInvertTimer = 0;
+    this.enemyForceDropTimer = 0;
     this.bossOverloadCharge = 0;
     this.enemyDebuffs = {};
     this.playerDebuffs = {};
@@ -741,10 +780,15 @@ class Game {
       this.battleFirstClearUsed = true;
       this.message = '첫수 보너스!';
     }
+    if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('first_aid')) {
+      const gRows = this.player.grid.filter(row => row.some(c => c?.traits?.includes('garbage'))).length;
+      if (gRows >= 6) mult *= 1.3;
+    }
     if (attacker === this.player) {
       if (result.slow) this.enemySlowTimer += result.slow;
       if (result.gold) {
-        this.bountyBank = (this.bountyBank || 0) + result.gold * 0.3;
+        const bountyRate = this.run.relics.includes('bounty_market') ? 0.6 : 0.3;
+        this.bountyBank = (this.bountyBank || 0) + result.gold * bountyRate;
         const earned = Math.floor(this.bountyBank);
         if (earned > 0) {
           this.run.gold += earned;
@@ -755,10 +799,10 @@ class Game {
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
-      this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35);
     }
     if (attacker === this.player && result.cleared > 0 && !this.player.held && this.run.relics.includes('hold_cache')) {
-      this.player.mp = Math.min(100, this.player.mp + result.mana * 0.5);
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
     }
     if (result.attack > 0) {
       const attack = (result.attack + this.battleHeatAttackBonus()) * mult;
@@ -811,7 +855,8 @@ class Game {
   }
 
   winBattle() {
-    this.run.gold += this.enemyCard.rewardGold;
+    const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
+    this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
@@ -1153,6 +1198,7 @@ class Game {
     this.playerFogTimer = Math.max(0, (this.playerFogTimer || 0) - dt);
     this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
     this.playerInvertTimer = Math.max(0, (this.playerInvertTimer || 0) - dt);
+    this.enemyForceDropTimer = Math.max(0, (this.enemyForceDropTimer || 0) - dt);
     this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
       this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
@@ -1231,6 +1277,10 @@ class Game {
   }
 
   resolveEnemyStep() {
+    if (this.enemyForceDropTimer > 0 && this.enemy?.current && !this.enemy.defeated) {
+      this.ai.queue = [];
+      return this.enemy.hardDrop();
+    }
     const result = this.ai.step(this.enemy);
     if (result) {
       this.enemyActionStall = 0;
@@ -1469,6 +1519,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko12').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko13').catch(() => {});
   });
 }

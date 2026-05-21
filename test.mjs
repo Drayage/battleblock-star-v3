@@ -667,4 +667,50 @@ restockRun.round = 11;
 const restocked = restockShopItem(restockRun, { kind: 'consumable', tier: TIERS.SILVER });
 assert.equal(restocked.kind, 'consumable', 'restockShopItem keeps kind');
 
+// 누락 보강 항목: 유물/스킬/소모품 신규 정의 존재
+for (const id of ['greed', 'first_aid', 'combo_keeper', 'mana_surge', 'chain_reactor', 'bounty_market']) {
+  assert.ok(RELICS[id], `relic ${id} defined`);
+}
+for (const id of ['line_shave', 'panic_guard', 'overcharge', 'hyper_force']) {
+  assert.ok(SKILLS[id], `skill ${id} defined`);
+}
+assert.ok(CONSUMABLES.reroll_token, 'reroll_token consumable defined');
+
+// 연쇄 반응로: 인접 폭탄이 연쇄로 터진다
+const reactorBoard = new Board({ rows: 12, deck: new Deck() });
+reactorBoard.chainReactor = true;
+reactorBoard.grid[10][4] = { type: TYPES.BOMB, attack: 0.1, traits: ['bomb'] };
+reactorBoard.grid[10][5] = { type: TYPES.BOMB, attack: 0.1, traits: ['bomb'] };
+reactorBoard.explodeBombAt(4, 10, 1);
+assert.equal(reactorBoard.grid[10][5], null, 'chain reactor detonates adjacent bomb');
+
+// 콤보 보존: 충전된 보호막이 1회 미스를 막는다
+const cgBoard = new Board({ rows: 12, deck: new Deck() });
+cgBoard.combo = 3;
+cgBoard.comboGuard = true;
+cgBoard.comboGuardCharged = true;
+cgBoard.grid = Array.from({ length: 12 }, () => Array.from({ length: 10 }, () => null));
+cgBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 0, 0);
+const cgRes = cgBoard.lock();
+assert.equal(cgBoard.combo, 3, 'combo preserved by guard on miss');
+assert.equal(cgBoard.comboGuardCharged, false, 'combo guard consumed');
+
+// 마나 과급: mpCap 상향 반영
+const capBoard = new Board({ rows: 12, deck: new Deck() });
+capBoard.mpCap = 120;
+capBoard.mp = 119;
+capBoard.applyOnPlace({ onPlace: { mana: 10 } });
+assert.equal(capBoard.mp, 120, 'mana respects raised mpCap');
+
+// 덱 오염: pollute가 방해 블록을 주입
+const polDeck = new Deck();
+const before = polDeck.draw.length;
+polDeck.pollute(TYPES.HEAVY_JUNK, 2);
+assert.equal(polDeck.draw.length, before + 2, 'pollute injects junk cards');
+
+// shaveBottom / rerollQueue 동작
+const shaveBoard = new Board({ rows: 12, deck: new Deck() });
+shaveBoard.grid[11] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
+assert.equal(shaveBoard.shaveBottom(1), 1, 'shaveBottom removes occupied row');
+
 console.log('All Battle Block Star v3.0 checks passed.');

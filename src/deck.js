@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko12';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko13';
 
 export function shuffle(items) {
   const out = [...items];
@@ -89,6 +89,14 @@ export class Deck {
 
   beginBattle() {
     this.battleExhausted = new Set();
+  }
+
+  pollute(cardId, n = 1) {
+    if (!CARD_LIBRARY[cardId]) return;
+    for (let i = 0; i < n; i++) {
+      const at = Math.min(this.draw.length, 1 + Math.floor(Math.random() * 4));
+      this.draw.splice(at, 0, cardId);
+    }
   }
 
   next() {
