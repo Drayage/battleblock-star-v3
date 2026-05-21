@@ -253,7 +253,7 @@ class Game {
         this.applyEventChoice(choice, () => {
           this.run.seenEvents.add(eventKey);
           this.normalizePersistentGrid();
-          this.showMap();
+          this.routeNextScreen();
           this.autoSave();
         });
       });

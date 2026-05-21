@@ -448,13 +448,15 @@ export function makeEventChoices(run, eventKey) {
       title: '덱 수술',
       desc: `덱에서 ${CARD_LIBRARY[id].name} 1장을 제거합니다.`
     });
-    sideChoices.push({
-      kind: 'removeChoice',
-      tier: TIERS.GOLD,
-      price: eventKey === 'start' ? 18 : 30,
-      title: '정밀 덱 수술',
-      desc: '덱에서 원하는 카드 1장을 선택해 제거합니다.'
-    });
+    if (eventKey !== 'start') {
+      sideChoices.push({
+        kind: 'removeChoice',
+        tier: TIERS.GOLD,
+        price: 30,
+        title: '정밀 덱 수술',
+        desc: '덱에서 원하는 카드 1장을 선택해 제거합니다.'
+      });
+    }
   }
   const upgrade = upgradeDeckCards(run)[0];
   if (upgrade) {

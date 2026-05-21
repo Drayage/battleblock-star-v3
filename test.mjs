@@ -342,6 +342,7 @@ const eventRun = new RunState();
 assert.equal(shouldShowEvent(eventRun), 'starter');
 eventRun.starterPicked = true;
 eventRun.deck.addCard(TYPES.HEAVY_JUNK);
+assert.equal(shouldShowEvent(eventRun), 'start');
 assert.equal(removableDeckCards(eventRun).includes(TYPES.HEAVY_JUNK), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.I && upgrade.to === TYPES.POWER_I), true);
 assert.equal(upgradeDeckCards(eventRun).every(upgrade => CARD_LIBRARY[upgrade.from].shapeId === CARD_LIBRARY[upgrade.to].shapeId), true);
@@ -349,7 +350,7 @@ assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
 const removeChoice = makeEventChoices(eventRun, 'start').find(choice => choice.kind === 'removeCard');
 assert.equal(!!removeChoice && removeChoice.tier === TIERS.BRONZE && !!removeChoice.id, true);
-assert.equal(Array.from({ length: 20 }, () => makeEventChoices(eventRun, 'start')).some(choices => choices.some(choice => choice.kind === 'removeChoice' && choice.tier === TIERS.GOLD)), true);
+assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'removeChoice'), false);
 assert.equal(makeEventChoices(eventRun, 'start').every(choice => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(choice.tier)), true);
 assert.equal(Array.from({ length: 20 }, () => makeEventChoices(eventRun, 'start')).some(choices => choices.some(choice => choice.kind === 'skill')), true);
 
