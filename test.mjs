@@ -5,7 +5,7 @@ import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, grantEliteRelic, isShopRound, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, grantEliteRelic, isShopRound, makeBoss, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, restockShopItem, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -612,5 +612,59 @@ for (let i = 0; i < 60; i++) {
   assert.equal(shop.filter(item => CARD_LIBRARY[item.id].penalty).length <= 1, true);
   assert.equal(shop.filter(item => CARD_LIBRARY[item.id].onPlace).length <= 1, true);
 }
+
+// 1회용/소멸 카드: 전투당 최대 1회 등장
+for (const t of [TYPES.OVERDRIVE_PENTA, TYPES.MEGA_CLEANSE, TYPES.PANIC_WALL, TYPES.FLASH_I, TYPES.AID_O]) {
+  assert.equal(CARD_LIBRARY[t].exhaust, true, `${t} should be exhaust`);
+  assert.equal(CARD_LIBRARY[t].traits.includes('exhaust'), true, `${t} traits include exhaust`);
+}
+assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].onPlace.attack, 4);
+assert.equal(CARD_LIBRARY[TYPES.MEGA_CLEANSE].onPlace.purgeGarbageRows, 6);
+const exhaustDeck = new Deck([TYPES.FLASH_I, TYPES.FLASH_I, TYPES.FLASH_I]);
+exhaustDeck.beginBattle();
+let flashSeen = 0;
+for (let i = 0; i < 120; i++) if (exhaustDeck.next()?.id === TYPES.FLASH_I) flashSeen++;
+assert.equal(flashSeen <= 1, true, 'exhaust card appears at most once per battle');
+
+// 회전 봉인 / 강제 I / 폭탄 변환
+const lockBoard = new Board({ rows: 20 });
+lockBoard.rotateLocked = true;
+assert.equal(lockBoard.rotate(1), false, 'rotate blocked when rotateLocked');
+const iBoard = new Board({ rows: 20 });
+iBoard.iPieceForce = 2;
+iBoard.spawn();
+assert.equal(iBoard.current.card.id, TYPES.I, 'forced I piece on spawn');
+const shardBoard = new Board({ rows: 20 });
+assert.equal(shardBoard.bombShard(), true);
+assert.equal(shardBoard.current.card.traits.includes('bomb'), true, 'bombShard yields bomb piece');
+
+// 지속 가비지: 첫 클리어에는 숫자만 줄고 제거되지 않음
+const durBoard = new Board({ rows: 12, deck: new Deck() });
+durBoard.addDurableGarbage(1, 2);
+const durRow = durBoard.grid.findIndex(r => r.some(c => c?.traits.includes('durable')));
+assert.equal(durRow >= 0, true, 'durable garbage row added');
+const durHole = durBoard.grid[durRow].findIndex(c => !c);
+durBoard.grid[durRow][durHole] = { type: TYPES.I, attack: 0.1, traits: [] };
+const durRes = durBoard.clearLines();
+assert.equal(durRes.cleared, 0, 'durable row not cleared on first hit');
+assert.equal(durBoard.grid.some(r => r.some(c => c?.traits.includes('durable') && c.hp === 1)), true, 'durable hp decremented');
+
+// detonateAll: 폭탄 칸을 모두 터뜨림
+const detBoard = new Board({ rows: 12, deck: new Deck() });
+detBoard.grid[10][4] = { type: TYPES.BOMB, attack: 0.1, traits: ['bomb'] };
+detBoard.grid[10][5] = { type: TYPES.I, attack: 0.1, traits: [] };
+assert.equal(detBoard.detonateAll() >= 1, true, 'detonateAll explodes bomb cells');
+
+// 최종 보스: 20라운드는 단일 보스(overload)
+const bossChoices = makeEnemyChoices(20);
+assert.equal(bossChoices.length, 1, 'round 20 offers single boss');
+assert.equal(bossChoices[0].type, 'boss');
+assert.equal(bossChoices[0].ability, 'overload');
+
+// 상점 재입고 헬퍼는 같은 종류의 아이템을 반환
+const restockRun = new RunState();
+restockRun.round = 11;
+const restocked = restockShopItem(restockRun, { kind: 'consumable', tier: TIERS.SILVER });
+assert.equal(restocked.kind, 'consumable', 'restockShopItem keeps kind');
 
 console.log('All Battle Block Star v3.0 checks passed.');
