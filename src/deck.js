@@ -24,6 +24,7 @@ export class Deck {
     deck.removedBase = [...(state.removedBase || [])];
     deck.draw = [...(state.draw || [])];
     deck.discard = [...(state.discard || [])];
+    deck.battleExhausted = new Set(state.battleExhausted || []);
     if (!deck.draw.length && !deck.discard.length) deck.refill();
     return deck;
   }
@@ -128,7 +129,8 @@ export class Deck {
       extraCards: [...this.extraCards],
       removedBase: [...this.removedBase],
       draw: [...this.draw],
-      discard: [...this.discard]
+      discard: [...this.discard],
+      battleExhausted: [...(this.battleExhausted || [])]
     };
   }
 }

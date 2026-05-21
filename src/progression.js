@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko13';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko13';
 import { Deck, shuffle } from './deck.js?v=20260521-ko13';
 import { SKILLS } from './skills.js?v=20260521-ko13';
 import { CONSUMABLES } from './consumables.js?v=20260521-ko13';
@@ -50,7 +50,13 @@ export const RELICS = {
     id: 'merchant_token',
     name: '상인의 증표',
     tier: TIERS.GOLD,
-    desc: '상점 가격이 20% 저렴해지고, 구매한 자리가 새 물건으로 채워집니다.'
+    desc: '상점 물품 가격이 25% 저렴해집니다.'
+  },
+  warehouse_key: {
+    id: 'warehouse_key',
+    name: '창고지기의 열쇠',
+    tier: TIERS.GOLD,
+    desc: '상점에서 물건을 구매하면 같은 종류의 새 물건으로 무한 재입고됩니다.'
   },
   phoenix_feather: {
     id: 'phoenix_feather',
@@ -354,7 +360,10 @@ export function makeShopItems(run) {
     ...(relic ? [{ kind: 'relic', id: relic.id, tier: relic.tier, title: `Relic: ${RELICS[relic.id].name}`, price: shopPrice('relic', relic.tier) }] : []),
     { kind: 'consumable', id: consumable.id, tier: consumable.tier, title: `Consumable: ${CONSUMABLES[consumable.id].name}`, price: shopPrice('consumable', consumable.tier) }
   ];
-  if (run.shopStock) run.shopStock[key] = { items, sold: [] };
+  if (run.shopStock) {
+    const deal = items[Math.floor(Math.random() * items.length)];
+    run.shopStock[key] = { items, sold: [], locked: [], dealKey: shopItemKey(deal) };
+  }
   return items;
 }
 
@@ -384,7 +393,26 @@ export function restockShopItem(run, item) {
   return card ? { kind: 'card', id: card.id, tier: card.tier, title: `Buy ${CARD_LIBRARY[card.id].name}`, price: shopPrice('card', card.tier) } : null;
 }
 
+export function rerollShopStock(run) {
+  const key = String(run.round);
+  const previous = run.shopStock?.[key] || {};
+  const rerolls = (previous.rerolls || 0) + 1;
+  const locked = new Set(previous.locked || []);
+  const previousItems = previous.items || makeShopItems(run);
+  const nextItems = previousItems
+    .map(item => locked.has(shopItemKey(item)) ? item : restockShopItem(run, item))
+    .filter(Boolean);
+  run.shopStock[key] = {
+    items: nextItems,
+    sold: [],
+    locked: [...locked].filter(lockKey => nextItems.some(item => shopItemKey(item) === lockKey)),
+    rerolls
+  };
+  return run.shopStock[key];
+}
+
 export function shouldShowEvent(run) {
+  if (run.round > MAX_ROUND) return null;
   if (!run.starterPicked) return 'starter';
   if (run.round === 1 && !run.seenEvents.has('start')) return 'start';
   const completed = run.round - 1;
@@ -478,7 +506,7 @@ export function makeEventChoices(run, eventKey) {
       id: contractCard,
       tier: CARD_LIBRARY[contractCard].tier,
       title: '계약',
-      desc: `강력한 1회용 블록 ${CARD_LIBRARY[contractCard].name}을(를) 덱에 영구 추가합니다.`
+      desc: `${CARD_LIBRARY[contractCard].name}: ${CARD_DESCRIPTIONS[contractCard]} 덱에 영구 추가됩니다.`
     });
   }
   if (eventKey !== 'start') {

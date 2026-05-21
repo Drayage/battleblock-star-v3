@@ -18,6 +18,7 @@ import {
   makeStarterChoices,
   makeRewards,
   makeShopItems,
+  rerollShopStock,
   restockShopItem,
   shopItemKey,
   shouldShowEvent
@@ -62,6 +63,7 @@ const ENEMY_ABILITIES = {
     cooldown: 22000,
     cast(g) {
       g.player.rotateLocked = true;
+      g.applyPlayerDebuff?.('rotate', 2000);
       const target = g.player;
       g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
       g.message = `${g.enemyCard.name} 능력: 회전 봉인 (2초)`;
@@ -347,20 +349,35 @@ class Game {
     const wrap = document.getElementById('shopItems');
     wrap.innerHTML = '';
     const shopKey = String(this.run.round);
-    const sold = new Set(this.run.shopStock?.[shopKey]?.sold || []);
-    for (const item of makeShopItems(this.run)) {
-      const soldOut = sold.has(shopItemKey(item));
-      const price = this.effectivePrice(item);
+    const items = makeShopItems(this.run);
+    const stock = this.run.shopStock?.[shopKey] || {};
+    const sold = new Set(stock.sold || []);
+    const locked = new Set(stock.locked || []);
+    const dealKey = stock.dealKey || null;
+    for (const item of items) {
+      const key = shopItemKey(item);
+      const soldOut = sold.has(key);
+      const isDeal = key === dealKey && !soldOut;
+      const price = this.effectivePrice(item, isDeal);
+      const slot = document.createElement('div');
+      slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
         if (btn.disabled || this.run.gold < price) return;
         this.buyShopItem(item);
       });
-      wrap.appendChild(btn);
+      const lockBtn = document.createElement('button');
+      lockBtn.className = 'shop-lock';
+      lockBtn.textContent = locked.has(key) ? '잠금됨' : '잠금';
+      lockBtn.disabled = soldOut;
+      lockBtn.addEventListener('click', () => this.toggleShopLock(item));
+      slot.appendChild(btn);
+      slot.appendChild(lockBtn);
+      wrap.appendChild(slot);
     }
     const rerollCost = this.shopRerollCost();
     const rerollBtn = document.createElement('button');
@@ -374,9 +391,23 @@ class Game {
     wrap.appendChild(rerollBtn);
   }
 
-  effectivePrice(item) {
+  effectivePrice(item, isDeal = false) {
     const base = item.price || 0;
-    return this.run.relics.includes('merchant_token') ? Math.ceil(base * 0.8) : base;
+    const merchantPrice = this.run.relics.includes('merchant_token') ? base * 0.75 : base;
+    return Math.ceil(isDeal ? merchantPrice * 0.6 : merchantPrice);
+  }
+
+  toggleShopLock(item) {
+    const shopKey = String(this.run.round);
+    const stock = this.run.shopStock?.[shopKey];
+    if (!stock) return;
+    const key = shopItemKey(item);
+    const locked = new Set(stock.locked || []);
+    if (locked.has(key)) locked.delete(key);
+    else locked.add(key);
+    stock.locked = [...locked];
+    this.showShop();
+    this.autoSave();
   }
 
   shopRerollCost() {
@@ -389,11 +420,7 @@ class Game {
     const cost = this.shopRerollCost();
     if (this.run.gold < cost) return;
     this.run.gold -= cost;
-    const key = String(this.run.round);
-    const rerolls = (this.run.shopStock?.[key]?.rerolls || 0) + 1;
-    if (this.run.shopStock) delete this.run.shopStock[key];
-    makeShopItems(this.run);
-    if (this.run.shopStock?.[key]) this.run.shopStock[key].rerolls = rerolls;
+    rerollShopStock(this.run);
     this.showShop();
     this.autoSave();
   }
@@ -518,12 +545,13 @@ class Game {
   buyShopItem(item) {
     const finish = accepted => {
       if (!accepted) return;
-      this.run.gold -= this.effectivePrice(item);
       const shopKey = String(this.run.round);
-      if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [] };
+      if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [], locked: [] };
       const stock = this.run.shopStock[shopKey];
       const key = shopItemKey(item);
-      if (this.run.relics.includes('merchant_token')) {
+      this.run.gold -= this.effectivePrice(item, stock.dealKey === key);
+      stock.locked = (stock.locked || []).filter(lockedKey => lockedKey !== key);
+      if (this.run.relics.includes('warehouse_key')) {
         const idx = stock.items.findIndex(it => shopItemKey(it) === key);
         const replacement = restockShopItem(this.run, item);
         if (idx >= 0 && replacement) stock.items[idx] = replacement;
@@ -787,7 +815,7 @@ class Game {
     if (attacker === this.player) {
       if (result.slow) this.enemySlowTimer += result.slow;
       if (result.gold) {
-        const bountyRate = this.run.relics.includes('bounty_market') ? 0.6 : 0.3;
+        const bountyRate = this.run.relics.includes('bounty_market') ? 0.7 : 0.35;
         this.bountyBank = (this.bountyBank || 0) + result.gold * bountyRate;
         const earned = Math.floor(this.bountyBank);
         if (earned > 0) {
@@ -1035,6 +1063,14 @@ class Game {
         battleEndDelay: this.battleEndDelay,
         battleEndResult: this.battleEndResult,
         skillCooldowns: { ...this.skillCooldowns },
+        playerFreezeTimer: this.playerFreezeTimer || 0,
+        playerFogTimer: this.playerFogTimer || 0,
+        playerHyperTimer: this.playerHyperTimer || 0,
+        playerInvertTimer: this.playerInvertTimer || 0,
+        enemyForceDropTimer: this.enemyForceDropTimer || 0,
+        bossOverloadCharge: this.bossOverloadCharge || 0,
+        playerDebuffs: { ...(this.playerDebuffs || {}) },
+        enemyDebuffs: { ...(this.enemyDebuffs || {}) },
         paused: this.paused,
         message: this.message
       } : null
@@ -1078,6 +1114,15 @@ class Game {
         this.battleEndDelay = state.battle.battleEndDelay || 0;
         this.battleEndResult = state.battle.battleEndResult || null;
         this.skillCooldowns = { ...(state.battle.skillCooldowns || {}) };
+        this.playerFreezeTimer = state.battle.playerFreezeTimer || 0;
+        this.playerFogTimer = state.battle.playerFogTimer || 0;
+        this.playerHyperTimer = state.battle.playerHyperTimer || 0;
+        this.playerInvertTimer = state.battle.playerInvertTimer || 0;
+        this.enemyForceDropTimer = state.battle.enemyForceDropTimer || 0;
+        this.bossOverloadCharge = state.battle.bossOverloadCharge || 0;
+        this.playerDebuffs = { ...(state.battle.playerDebuffs || {}) };
+        this.enemyDebuffs = { ...(state.battle.enemyDebuffs || {}) };
+        this.syncTimedLocks();
         this.paused = state.battle.paused ?? true;
         this.message = state.battle.message || '불러옴';
         document.getElementById('battleTitle').textContent = `${this.run.round}라운드`;
@@ -1248,6 +1293,17 @@ class Game {
         store[k] = Math.max(0, store[k] - dt);
         if (store[k] <= 0) delete store[k];
       }
+    }
+    this.syncTimedLocks();
+  }
+
+  syncTimedLocks() {
+    if (this.player) {
+      this.player.rotateLocked = (this.playerDebuffs?.rotate || 0) > 0;
+    }
+    if (this.enemy) {
+      this.enemy.rotateLocked = (this.enemyDebuffs?.rotate || 0) > 0 || (this.enemyDebuffs?.blackout || 0) > 0;
+      this.enemy.holdLocked = (this.enemyDebuffs?.hold || 0) > 0 || (this.enemyDebuffs?.blackout || 0) > 0;
     }
   }
 
@@ -1499,6 +1555,7 @@ class Game {
       this.message = `${name} OVERLOAD: 좌우 반전 (3.5초)`;
     } else if (kind === 'rotate') {
       this.player.rotateLocked = true;
+      this.applyPlayerDebuff('rotate', 3000);
       const target = this.player;
       this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
       this.message = `${name} OVERLOAD: 회전 봉인 (3초)`;

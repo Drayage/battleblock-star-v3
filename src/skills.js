@@ -3,7 +3,7 @@ export const SKILLS = {
     id: 'minor_purge',
     name: '마이너 퍼지',
     tier: 'bronze',
-    cost: 16,
+    cost: 28,
     cooldown: 9000,
     desc: '가장 낮은 쓰레기 행 1줄을 제거합니다.',
     activate({ player }) {
@@ -211,6 +211,7 @@ export const SKILLS = {
     desc: '20초 동안 적의 홀드 슬롯을 잠급니다.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;
+      game.applyEnemyDebuff?.('hold', 20000);
       game.scheduleBattleTimeout(() => {
         if (game.enemy === enemy) enemy.holdLocked = false;
       }, 20000);

@@ -5,7 +5,7 @@ import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, grantEliteRelic, isShopRound, makeBoss, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, restockShopItem, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, grantEliteRelic, isShopRound, makeBoss, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, rerollShopStock, restockShopItem, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -317,8 +317,15 @@ if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilver
 assert.equal(shopItems.some(item => item.kind === 'card' && item.id === TYPES.CROSS), false);
 const secondShopItems = makeShopItems(shopRun);
 assert.deepEqual(secondShopItems, shopItems);
+assert.equal(shopRun.shopStock[String(shopRun.round)].locked.length, 0);
+assert.equal(shopItems.some(item => shopItemKey(item) === shopRun.shopStock[String(shopRun.round)].dealKey), true);
 shopRun.shopStock[String(shopRun.round)].sold.push(shopItemKey(shopItems[0]));
 assert.equal(shopRun.shopStock[String(shopRun.round)].sold.includes(shopItemKey(shopItems[0])), true);
+shopRun.shopStock[String(shopRun.round)].locked.push(shopItemKey(shopItems[1]));
+const rerolledStock = rerollShopStock(shopRun);
+assert.equal(rerolledStock.locked.includes(shopItemKey(shopItems[1])), true);
+assert.equal(rerolledStock.items.some(item => shopItemKey(item) === shopItemKey(shopItems[1])), true);
+assert.equal('dealKey' in rerolledStock, false);
 
 const relicRun = new RunState();
 applyReward(relicRun, { kind: 'relic', id: 'combo_amp' });
@@ -350,6 +357,10 @@ assert.equal(shouldShowEvent(eventRun), null);
 eventRun.round = 3;
 assert.equal(shouldShowEvent(eventRun), 'after-2');
 assert.equal(makeEventChoices(eventRun, 'after-2').length, 3);
+eventRun.round = 21;
+assert.equal(shouldShowEvent(eventRun), null);
+const contractChoices = Array.from({ length: 40 }, () => makeEventChoices(eventRun, 'after-2')).flat().filter(choice => choice.kind === 'contract');
+if (contractChoices.length) assert.equal(contractChoices.every(choice => choice.desc.includes(CARD_LIBRARY[choice.id].name) && choice.desc.includes('배치 즉시')), true);
 
 const trimmedDeck = new Deck();
 assert.equal(trimmedDeck.removeCard(TYPES.I), true);
@@ -625,6 +636,10 @@ exhaustDeck.beginBattle();
 let flashSeen = 0;
 for (let i = 0; i < 120; i++) if (exhaustDeck.next()?.id === TYPES.FLASH_I) flashSeen++;
 assert.equal(flashSeen <= 1, true, 'exhaust card appears at most once per battle');
+const restoredExhaustDeck = Deck.fromState(exhaustDeck.toState());
+let restoredFlashSeen = 0;
+for (let i = 0; i < 120; i++) if (restoredExhaustDeck.next()?.id === TYPES.FLASH_I) restoredFlashSeen++;
+assert.equal(restoredFlashSeen, 0, 'exhaust state survives save/load within a battle');
 
 // 회전 봉인 / 강제 I / 폭탄 변환
 const lockBoard = new Board({ rows: 20 });
@@ -666,9 +681,11 @@ const restockRun = new RunState();
 restockRun.round = 11;
 const restocked = restockShopItem(restockRun, { kind: 'consumable', tier: TIERS.SILVER });
 assert.equal(restocked.kind, 'consumable', 'restockShopItem keeps kind');
+assert.equal(RELICS.merchant_token.desc.includes('25%'), true, 'merchant token is discount-only');
+assert.equal(RELICS.warehouse_key.desc.includes('재입고'), true, 'warehouse key owns restock effect');
 
 // 누락 보강 항목: 유물/스킬/소모품 신규 정의 존재
-for (const id of ['greed', 'first_aid', 'combo_keeper', 'mana_surge', 'chain_reactor', 'bounty_market']) {
+for (const id of ['greed', 'first_aid', 'combo_keeper', 'mana_surge', 'chain_reactor', 'bounty_market', 'warehouse_key']) {
   assert.ok(RELICS[id], `relic ${id} defined`);
 }
 for (const id of ['line_shave', 'panic_guard', 'overcharge', 'hyper_force']) {
