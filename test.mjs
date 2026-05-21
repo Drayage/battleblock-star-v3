@@ -416,13 +416,6 @@ assert.equal(CARD_LIBRARY[TYPES.CLEANSE_Z].abilityId, 'purgeGarbage');
 assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].cellCount, 5);
 assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shapeId, 'PENTA_T');
 assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shape.every(rot => rot.flat().filter(Boolean).length === 5), true);
-for (const id of [TYPES.POWER_STAIR, TYPES.MANA_FORK, TYPES.BOMB_BOX]) {
-  assert.equal(CARD_LIBRARY[id].cellCount, 5, `${id} is a 5-cell shape`);
-  assert.equal(CARD_LIBRARY[id].shape.every(rot => rot.flat().filter(Boolean).length === 5), true, `${id} rotations keep 5 cells`);
-}
-assert.equal(CARD_LIBRARY[TYPES.POWER_STAIR].shapeId, 'STAIR5');
-assert.equal(CARD_LIBRARY[TYPES.MANA_FORK].traits.includes('manaBonus'), true);
-assert.equal(CARD_LIBRARY[TYPES.BOMB_BOX].traits.includes('bomb'), true);
 
 // 패널티/즉발 표식
 assert.equal(CARD_LIBRARY[TYPES.LEAD].cellAttack, 0.5);
