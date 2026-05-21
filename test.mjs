@@ -315,7 +315,7 @@ const shopGoldCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY
 const shopSilverCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.SILVER);
 if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilverCard.price, true);
 assert.equal(shopItems.some(item => item.kind === 'card' && item.id === TYPES.CROSS), false);
-assert.equal(shopItems.some(item => item.kind === 'removeCard' && item.title === '덱 수술'), true);
+assert.equal(shopItems.some(item => item.kind === 'removeChoice' && item.title === '정밀 덱 수술' && item.tier === TIERS.GOLD), true);
 const secondShopItems = makeShopItems(shopRun);
 assert.deepEqual(secondShopItems, shopItems);
 assert.equal(shopRun.shopStock[String(shopRun.round)].locked.length, 0);
@@ -348,7 +348,8 @@ assert.equal(upgradeDeckCards(eventRun).every(upgrade => CARD_LIBRARY[upgrade.fr
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O && upgrade.to === TYPES.PURGE_O), true);
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
 const removeChoice = makeEventChoices(eventRun, 'start').find(choice => choice.kind === 'removeCard');
-assert.equal(!!removeChoice && !('id' in removeChoice), true);
+assert.equal(!!removeChoice && removeChoice.tier === TIERS.BRONZE && !!removeChoice.id, true);
+assert.equal(Array.from({ length: 20 }, () => makeEventChoices(eventRun, 'start')).some(choices => choices.some(choice => choice.kind === 'removeChoice' && choice.tier === TIERS.GOLD)), true);
 assert.equal(makeEventChoices(eventRun, 'start').every(choice => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(choice.tier)), true);
 assert.equal(Array.from({ length: 20 }, () => makeEventChoices(eventRun, 'start')).some(choices => choices.some(choice => choice.kind === 'skill')), true);
 

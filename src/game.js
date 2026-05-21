@@ -262,7 +262,8 @@ class Game {
   }
 
   eventName(choice) {
-    if (choice.kind === 'removeCard') return `${choice.price}G · 카드 선택 제거`;
+    if (choice.kind === 'removeCard') return `${choice.price}G · ${CARD_LIBRARY[choice.id].name} 제거`;
+    if (choice.kind === 'removeChoice') return `${choice.price}G · 카드 선택 제거`;
     if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}`;
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
@@ -278,6 +279,9 @@ class Game {
 
   attachEventPreview(node, choice) {
     if (choice.kind === 'removeCard') {
+      node.appendChild(this.blockPreview(CARD_LIBRARY[choice.id], 8));
+    }
+    if (choice.kind === 'removeChoice') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
       chip.textContent = 'CUT';
@@ -305,6 +309,7 @@ class Game {
 
   canUseEvent(choice) {
     if (choice.kind === 'removeCard') return this.run.gold >= choice.price;
+    if (choice.kind === 'removeChoice') return this.run.gold >= choice.price;
     if (choice.kind === 'upgradeCard') return true;
     if (choice.kind === 'skill') return !this.run.ownedSkills.includes(choice.id);
     if (choice.kind === 'starterSkill') return true;
@@ -315,7 +320,12 @@ class Game {
   }
 
   applyEventChoice(choice, done = () => {}) {
-    if (choice.kind === 'removeCard') return this.chooseRemoveCard(choice.price, done);
+    if (choice.kind === 'removeCard') {
+      this.run.gold -= choice.price;
+      this.run.deck.removeCard(choice.id);
+      this.run.deck.refill();
+    }
+    if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
       this.run.deck.replaceCard(choice.from, choice.to);
       this.run.deck.refill();
@@ -501,7 +511,7 @@ class Game {
     if (item.kind === 'skill') return SKILLS[item.id].desc;
     if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
     if (item.kind === 'relic') return RELICS[item.id].desc;
-    if (item.kind === 'removeCard') return '덱에서 원하는 카드 1장을 선택해 제거합니다.';
+    if (item.kind === 'removeChoice') return '덱에서 원하는 카드 1장을 선택해 제거합니다.';
     return `생존 공간 ${item.amount}줄 추가.`;
   }
 
@@ -519,7 +529,7 @@ class Game {
       chip.textContent = 'R';
       node.appendChild(chip);
     }
-    if (item.kind === 'removeCard') {
+    if (item.kind === 'removeChoice') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
       chip.textContent = 'CUT';
@@ -574,7 +584,7 @@ class Game {
     };
     if (item.kind === 'skill') return this.acquireSkill(item.id, () => finish(true), () => finish(false));
     if (item.kind === 'consumable') return this.acquireConsumable(item.id, () => finish(true), () => finish(false));
-    if (item.kind === 'removeCard') {
+    if (item.kind === 'removeChoice') {
       const shopKey = String(this.run.round);
       const stock = this.run.shopStock?.[shopKey] || {};
       const price = this.effectivePrice(item, stock.dealKey === shopItemKey(item));
