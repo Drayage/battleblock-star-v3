@@ -368,21 +368,9 @@ export const ABILITY_LIBRARY = {
 };
 
 function tierFromShapeAbility(shapeId, abilityId, rarity) {
-  const strongAbilities = new Set([
-    'highPower',
-    'bomb',
-    'purgeGarbage',
-    'comboCharge',
-    'chain',
-    'leadPower',
-    'timeBomb',
-    'overdrive',
-    'megaCleanse',
-    'panicWall'
-  ]);
   if (rarity === 'curse') return TIERS.BRONZE;
   if (shapeId === 'I') return TIERS.GOLD;
-  if (['J', 'L', 'T'].includes(shapeId)) return strongAbilities.has(abilityId) ? TIERS.GOLD : TIERS.SILVER;
+  if (['J', 'L', 'T'].includes(shapeId)) return abilityId === 'none' ? TIERS.SILVER : TIERS.GOLD;
   if (['S', 'Z', 'CROSS5', 'HEAVY5', 'WIDE6', 'HOOK5', 'PENTA_T'].includes(shapeId)) {
     return abilityId === 'none' ? TIERS.BRONZE : TIERS.SILVER;
   }
