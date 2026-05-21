@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko22';
-import { Deck } from './deck.js?v=20260521-ko22';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko23';
+import { Deck } from './deck.js?v=20260521-ko23';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -381,6 +381,10 @@ export class Board {
       }
     }
     this.tickTimeBombs(new Set(placed.map(pos => `${pos.x},${pos.y}`)));
+    // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 한 박자 미룬다.
+    if (result.cleared > 0) {
+      for (const entry of this.garbageEntries) if (entry.timer <= 0) entry.timer = GAME_TIMING.GARBAGE_ARM_DELAY;
+    }
     this.applyReadyGarbage();
     this.lastAttack = result.attack;
     if (this.defeated) return result;

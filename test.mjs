@@ -263,8 +263,17 @@ queuedGarbageBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, 18);
 queuedGarbageBoard.garbageQueue = 3;
 const queuedClear = queuedGarbageBoard.lock();
 assert.equal(queuedClear.cleared, 1);
-assert.equal(queuedGarbageBoard.garbageQueue, 0);
-assert.equal(queuedGarbageBoard.defeated, true);
+// 줄을 지운 턴에는 도착 대기(빨간) 가비지가 즉시 적용되지 않고 한 박자 미뤄진다.
+assert.ok(queuedGarbageBoard.garbageQueue > 0, 'clearing delays ready garbage instead of dropping it');
+assert.equal(queuedGarbageBoard.defeated, false);
+assert.ok(queuedGarbageBoard.garbageEntries.every(e => e.timer > 0), 'ready garbage is re-armed after a clear');
+// 줄을 지우지 않으면 대기 가비지는 그대로 적용된다.
+const noClearBoard = Board.fromState(queuedGarbageBoard.toState());
+noClearBoard.garbageEntries = [{ amount: 2, timer: 0 }];
+noClearBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 0, 0);
+const noClear = noClearBoard.lock();
+assert.equal(noClear.cleared, 0, 'no line cleared');
+assert.equal(noClearBoard.garbageQueue, 0, 'ready garbage applies when no line is cleared');
 
 const run = new RunState();
 const persistBoard = new Board({ rows: 20, deck: run.deck });

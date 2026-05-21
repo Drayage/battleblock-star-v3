@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko22';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko22';
-import { Deck } from './deck.js?v=20260521-ko22';
-import { AI } from './ai.js?v=20260521-ko22';
-import { Renderer } from './renderer.js?v=20260521-ko22';
-import { InputController } from './input.js?v=20260521-ko22';
-import { SKILLS } from './skills.js?v=20260521-ko22';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko22';
+import { Board } from './board.js?v=20260521-ko23';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko23';
+import { Deck } from './deck.js?v=20260521-ko23';
+import { AI } from './ai.js?v=20260521-ko23';
+import { Renderer } from './renderer.js?v=20260521-ko23';
+import { InputController } from './input.js?v=20260521-ko23';
+import { SKILLS } from './skills.js?v=20260521-ko23';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko23';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko22';
+} from './progression.js?v=20260521-ko23';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -43,7 +43,7 @@ const ENEMY_ABILITIES = {
     cooldown: 18000,
     cast(g) {
       g.player.receiveGarbage(1);
-      g.message = `${g.enemyCard.name} 능력: 쓰레기 급증 +1`;
+      g.flashAlert(`${g.enemyCard.name} 능력: 쓰레기 급증 +1`);
     }
   },
   slowPlayer: {
@@ -51,7 +51,7 @@ const ENEMY_ABILITIES = {
     cooldown: 22000,
     cast(g) {
       g.playerSlowTimer = 3000;
-      g.message = `${g.enemyCard.name} 능력: 중력 둔화 (3초)`;
+      g.flashAlert(`${g.enemyCard.name} 능력: 중력 둔화 (3초)`);
     }
   },
   power: {
@@ -59,7 +59,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.player.receiveGarbage(2);
-      g.message = `${g.enemyCard.name} 능력: 파워 폭발 +2`;
+      g.flashAlert(`${g.enemyCard.name} 능력: 파워 폭발 +2`);
     }
   },
   rotateLockPlayer: {
@@ -70,7 +70,7 @@ const ENEMY_ABILITIES = {
       g.applyPlayerDebuff?.('rotate', 2000);
       const target = g.player;
       g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
-      g.message = `${g.enemyCard.name} 능력: 회전 봉인 (2초)`;
+      g.flashAlert(`${g.enemyCard.name} 능력: 회전 봉인 (2초)`);
     }
   },
   hyperBurst: {
@@ -78,7 +78,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.playerHyperTimer = 2500;
-      g.message = `${g.enemyCard.name} 능력: 하이퍼 낙하 (2.5초)`;
+      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (2.5초)`);
     }
   },
   polluteDeck: {
@@ -86,7 +86,7 @@ const ENEMY_ABILITIES = {
     cooldown: 26000,
     cast(g) {
       g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
-      g.message = `${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`;
+      g.flashAlert(`${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`);
     }
   }
 };
@@ -148,6 +148,8 @@ class Game {
     });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
+    document.getElementById('shopDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
+    document.getElementById('eventDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
     });
@@ -248,7 +250,7 @@ class Game {
     for (const choice of choices) {
       const btn = document.createElement('button');
       btn.className = `choice event ${this.tierClass(choice.tier)}`;
-      btn.innerHTML = `<strong>${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
       try {
         this.attachEventPreview(btn, choice);
       } catch {
@@ -290,9 +292,23 @@ class Game {
     return '이벤트';
   }
 
+  kindLabel(kind) {
+    const map = {
+      card: '블록', grantCard: '블록', contract: '블록', upgradeCard: '블록',
+      skill: '스킬', starterSkill: '스킬',
+      consumable: '소모품',
+      relic: '유물', relicDig: '유물', setRelic: '유물',
+      hp: 'HP', hpForCurse: 'HP',
+      removeCard: '제거', removeChoice: '제거', gamble: '도박', cleanup: '정리', gold: '골드'
+    };
+    return map[kind] ? `<em class="kind-tag">[${map[kind]}]</em> ` : '';
+  }
+
   setTag(cardId) {
     const ab = abilityOf(cardId);
     if (!ab) return '';
+    // 7형태 세트 구성원(I~Z)만 진행도를 표기한다. 펜토/크로스 등 변종은 제외.
+    if (!Object.values(SET_DEFINITIONS[ab] || {}).includes(cardId)) return '';
     const p = setProgress(this.run, ab);
     return p ? ` (${p.have}/${p.total})` : '';
   }
@@ -462,7 +478,7 @@ class Game {
       slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
@@ -525,27 +541,59 @@ class Game {
   }
 
   renderDeckViewer() {
-    const wrap = document.getElementById('deckList');
-    const counts = new Map();
-    for (const id of this.run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
-    for (const id of this.run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
-    for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
-    wrap.innerHTML = '';
-    [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
-      const card = CARD_LIBRARY[id];
-      const item = document.createElement('div');
-      item.className = `deck-card ${this.tierClass(card.tier)}`;
-      item.appendChild(this.blockPreview(card, 7));
-      item.insertAdjacentHTML('beforeend', `<span>${card.name}</span><strong>x${count}</strong>`);
-      wrap.appendChild(item);
+    this.renderDeckSections({
+      deck: document.getElementById('deckList'),
+      skill: document.getElementById('skillList'),
+      consumable: document.getElementById('consumableList'),
+      relic: document.getElementById('relicList')
     });
-    this.renderLoadoutViewer();
   }
 
-  renderLoadoutViewer() {
-    const skillWrap = document.getElementById('skillList');
-    const consumableWrap = document.getElementById('consumableList');
-    const relicWrap = document.getElementById('relicList');
+  openDeckOverlay() {
+    let ov = document.getElementById('deckModal');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'deckModal';
+      ov.innerHTML = '<div class="deck-modal-inner">'
+        + '<button class="ghost wide" data-close="1">닫기</button>'
+        + '<div class="deck-section"><h3>덱</h3><div id="mDeckList" class="deck-list"></div></div>'
+        + '<div class="deck-section"><h3>스킬</h3><div id="mSkillList" class="loadout-list"></div></div>'
+        + '<div class="deck-section"><h3>소모품</h3><div id="mConsumableList" class="loadout-list"></div></div>'
+        + '<div class="deck-section"><h3>유물</h3><div id="mRelicList" class="loadout-list"></div></div>'
+        + '</div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e => { if (e.target === ov || e.target.dataset.close) ov.classList.remove('active'); });
+    }
+    this.renderDeckSections({
+      deck: ov.querySelector('#mDeckList'),
+      skill: ov.querySelector('#mSkillList'),
+      consumable: ov.querySelector('#mConsumableList'),
+      relic: ov.querySelector('#mRelicList')
+    });
+    ov.classList.add('active');
+  }
+
+  renderDeckSections({ deck, skill, consumable, relic }) {
+    if (deck) {
+      const counts = new Map();
+      for (const id of this.run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
+      for (const id of this.run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
+      for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
+      deck.innerHTML = '';
+      [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
+        const card = CARD_LIBRARY[id];
+        const item = document.createElement('div');
+        item.className = `deck-card ${this.tierClass(card.tier)}`;
+        item.appendChild(this.blockPreview(card, 7));
+        item.insertAdjacentHTML('beforeend', `<span>${card.name}${this.setTag(id)}</span><strong>x${count}</strong>`);
+        deck.appendChild(item);
+      });
+    }
+    this.renderLoadoutViewer(skill, consumable, relic);
+  }
+
+  renderLoadoutViewer(skillWrap = document.getElementById('skillList'), consumableWrap = document.getElementById('consumableList'), relicWrap = document.getElementById('relicList')) {
+    if (!skillWrap || !consumableWrap || !relicWrap) return;
     skillWrap.innerHTML = '';
     consumableWrap.innerHTML = '';
     relicWrap.innerHTML = '';
@@ -689,6 +737,7 @@ class Game {
       desc: `${price}G를 지불하고 덱에서 카드 1장을 제거합니다.`,
       slots: cards,
       labels: id => CARD_LIBRARY[id]?.name || id,
+      preview: id => this.blockPreview(CARD_LIBRARY[id], 8),
       slotLabel: '카드',
       onPick: index => {
         const id = cards[index];
@@ -738,7 +787,7 @@ class Game {
     });
   }
 
-  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = '슬롯' }) {
+  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = '슬롯', preview = null }) {
     let overlay = document.getElementById('slotPicker');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -754,6 +803,9 @@ class Game {
       const btn = document.createElement('button');
       btn.className = 'choice';
       btn.innerHTML = `<strong>${slotLabel} ${index + 1}</strong><span>${labels(slotId)}</span>`;
+      if (preview) {
+        try { btn.appendChild(preview(slotId)); } catch { /* preview optional */ }
+      }
       btn.addEventListener('click', () => {
         overlay.classList.remove('active');
         onPick(index);
@@ -788,6 +840,8 @@ class Game {
     if (this.run.relics.includes('set_resonator')) this.player.chainResonator = true;
     if (this.run.relics.includes('set_comboengine')) this.player.comboEngine = true;
     this.enemyAbilitySuppressTimer = 0;
+    this.alertText = '';
+    this.alertTimer = 0;
     this.battleFirstClearUsed = false;
     this.ai = new AI(enemyCard.aiProfile, enemyCard.aiSkill);
     this.fallTimer = 0;
@@ -1000,6 +1054,12 @@ class Game {
     this.autoSave();
   }
 
+  flashAlert(text, ms = 1600) {
+    this.alertText = text;
+    this.alertTimer = ms;
+    this.message = text;
+  }
+
   dispelEnemyAbilities() {
     this.playerFogTimer = 0;
     this.playerInvertTimer = 0;
@@ -1009,10 +1069,9 @@ class Game {
     if (this.player) this.player.rotateLocked = false;
     this.playerDebuffs = {};
     this.enemyAbilityTimer = 0;
-    this.enemyAbilitySuppressTimer = 0;
     this.bossOverloadCharge = 0;
     this.enemyAbilitySuppressTimer = 8000;
-    this.message = '적 특수능력 해제!';
+    this.flashAlert('적 특수능력 해제!');
   }
 
   playerSurvivesLethal() {
@@ -1073,7 +1132,7 @@ class Game {
     rewards.forEach(reward => {
       const btn = document.createElement('button');
       btn.className = `choice reward ${this.tierClass(reward.tier)}`;
-      btn.innerHTML = `<strong>${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         applyReward(this.run, reward);
@@ -1367,7 +1426,8 @@ class Game {
         message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated',
         skillCooldowns: this.skillCooldowns,
         effects: this.currentEffectBadges(),
-        playerFog: this.playerFogTimer
+        playerFog: this.playerFogTimer,
+        alert: this.alertTimer > 0 ? this.alertText : null
       });
       if (this.battleEndDelay <= 0) {
         if (this.battleEndResult === 'win') this.winBattle();
@@ -1390,7 +1450,8 @@ class Game {
         message: `Paused | YOU ${pps.toFixed(2)}pps ${apm.toFixed(1)}apm | ENEMY ${ePps.toFixed(2)}pps ${eApm.toFixed(1)}apm`,
         skillCooldowns: this.skillCooldowns,
         effects: this.currentEffectBadges(),
-        playerFog: this.playerFogTimer
+        playerFog: this.playerFogTimer,
+        alert: this.alertTimer > 0 ? this.alertText : null
       });
       return;
     }
@@ -1418,6 +1479,7 @@ class Game {
     this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
     this.playerInvertTimer = Math.max(0, (this.playerInvertTimer || 0) - dt);
     this.enemyForceDropTimer = Math.max(0, (this.enemyForceDropTimer || 0) - dt);
+    this.alertTimer = Math.max(0, (this.alertTimer || 0) - dt);
     this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
       this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
@@ -1442,7 +1504,8 @@ class Game {
       message: this.message,
       skillCooldowns: this.skillCooldowns,
       effects: this.currentEffectBadges(),
-        playerFog: this.playerFogTimer
+        playerFog: this.playerFogTimer,
+        alert: this.alertTimer > 0 ? this.alertText : null
     });
     this.message = '';
   }
@@ -1504,6 +1567,12 @@ class Game {
     // 'rotate'는 ROT-LOCK 배지로 이미 표시되므로 중복 표기를 막는다.
     for (const [k, ms] of Object.entries(this.playerDebuffs || {})) if (k !== 'rotate') player.push(`${k.toUpperCase()} ${fmt(ms)}`);
     for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) if (k !== 'rotate') enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
+    // 활성 패시브 유물(눈에 잘 안 보이는 효과)을 확인할 수 있게 표시. 디버프 뒤에 붙여 우선순위 양보.
+    const relics = this.run?.relics || [];
+    if (relics.includes('set_goldhand')) player.push(`금화+${Math.round(Math.min(1, this.run.gold / 200) * 100)}%`);
+    if (relics.includes('set_overload')) player.push('과부하');
+    if (relics.includes('set_abszero') && this.enemySlowTimer > 0) player.push('절대영도');
+    if (relics.includes('set_sanctuary')) player.push('성소');
     return { player, enemy };
   }
 
@@ -1728,25 +1797,25 @@ class Game {
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'fog') {
       this.playerFogTimer = 4000;
-      this.message = `${name} OVERLOAD: 안개 (4초)`;
+      this.flashAlert(`${name} OVERLOAD: 안개 (4초)`);
     } else if (kind === 'invert') {
       this.playerInvertTimer = 3500;
-      this.message = `${name} OVERLOAD: 좌우 반전 (3.5초)`;
+      this.flashAlert(`${name} OVERLOAD: 좌우 반전 (3.5초)`);
     } else if (kind === 'rotate') {
       this.player.rotateLocked = true;
       this.applyPlayerDebuff('rotate', 3000);
       const target = this.player;
       this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
-      this.message = `${name} OVERLOAD: 회전 봉인 (3초)`;
+      this.flashAlert(`${name} OVERLOAD: 회전 봉인 (3초)`);
     } else if (kind === 'hyper') {
       this.playerHyperTimer = 2500;
-      this.message = `${name} OVERLOAD: 하이퍼 낙하 (2.5초)`;
+      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (2.5초)`);
     } else if (kind === 'slow') {
       this.playerSlowTimer = 3500;
-      this.message = `${name} OVERLOAD: 중력 둔화 (3.5초)`;
+      this.flashAlert(`${name} OVERLOAD: 중력 둔화 (3.5초)`);
     } else {
       this.player.addDurableGarbage(2, 2);
-      this.message = `${name} OVERLOAD: 지속 가비지 2줄`;
+      this.flashAlert(`${name} OVERLOAD: 지속 가비지 2줄`);
     }
   }
 }
@@ -1755,6 +1824,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko22').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko23').catch(() => {});
   });
 }
