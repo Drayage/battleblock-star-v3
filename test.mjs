@@ -576,13 +576,12 @@ assert.equal(chainNoTrigger.fullCleared, 1);
 assert.equal(chainNoTrigger.cleared, 1);
 assert.equal(chainNoTriggerBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), true);
 
-// 유리 — 하드드롭 시 깨져 빈칸을 남김
+// 유리 — 하드드롭한 그 블록만 깨지고, 옆에 있던 다른 블록의 하드드롭에는 영향 없음
 const glassBoard = new Board({ rows: 20 });
 glassBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-glassBoard.grid[19][0] = { type: TYPES.GLASS, attack: 0.5, traits: ['glass'] };
-glassBoard.current = new Mino(CARD_LIBRARY[TYPES.I], 3, 5);
+glassBoard.current = new Mino(CARD_LIBRARY[TYPES.GLASS], 3, 5);
 glassBoard.hardDrop();
-assert.equal(glassBoard.grid[19][0], null);
+assert.equal(glassBoard.grid.flat().some(c => c?.traits?.includes('glass')), false);
 assert.equal(glassBoard.bombFx.some(fx => fx.kind === 'glass'), true);
 
 // 시한폭탄 — 카운트다운 후 자기 칸만 소멸
@@ -806,5 +805,23 @@ for (let round = 1; round <= 2; round++) {
     }
   }
 }
+
+// 유리 블록: 하드드롭한 그 블록만 깨지고, 옆/기존 유리는 유지
+const glassDropBoard = new Board({ rows: 20, deck: new Deck() });
+glassDropBoard.current = new Mino(CARD_LIBRARY[TYPES.GLASS], 3, SPAWN_Y);
+glassDropBoard.hardDrop();
+assert.equal(glassDropBoard.grid.flat().some(c => c?.traits?.includes('glass')), false, 'hard-dropped glass piece shatters');
+
+const glassKeepBoard = new Board({ rows: 20, deck: new Deck() });
+glassKeepBoard.grid[19][0] = { type: TYPES.GLASS, attack: 0.5, traits: ['glass'] };
+glassKeepBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 4, SPAWN_Y);
+glassKeepBoard.hardDrop();
+assert.equal(glassKeepBoard.grid[19][0]?.traits.includes('glass'), true, 'existing glass survives when a different piece is hard-dropped');
+
+const glassSoftBoard = new Board({ rows: 20, deck: new Deck() });
+glassSoftBoard.current = new Mino(CARD_LIBRARY[TYPES.GLASS], 3, SPAWN_Y);
+while (glassSoftBoard.move(0, 1)) {}
+glassSoftBoard.lock();
+assert.equal(glassSoftBoard.grid.flat().some(c => c?.traits?.includes('glass')), true, 'soft-dropped (locked) glass is preserved');
 
 console.log('All Battle Block Star v3.0 checks passed.');
