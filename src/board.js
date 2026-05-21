@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko21';
-import { Deck } from './deck.js?v=20260521-ko21';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko22';
+import { Deck } from './deck.js?v=20260521-ko22';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -411,6 +411,7 @@ export class Board {
       result.purgedRows = this.purgeGarbageRows(effect.purgeGarbageRows);
       if (result.purgedRows > 0) labels.push(`GARBAGE -${result.purgedRows}`);
       else labels.push('PURGE READY');
+      if (this.sanctuaryActive && result.purgedRows > 0) result.attack = Number((result.attack + result.purgedRows * 0.5).toFixed(2));
     }
     if (effect.selfGarbage) {
       this.receiveGarbage(effect.selfGarbage);
@@ -419,6 +420,10 @@ export class Board {
     if (effect.enemyGarbage) {
       result.enemyGarbage = effect.enemyGarbage;
       labels.push(`ENEMY +${effect.enemyGarbage}`);
+    }
+    if (effect.dispelEnemy) {
+      result.dispelEnemy = true;
+      labels.push('DISPEL');
     }
     result.triggered = labels.length > 0;
     result.text = labels.join(' ');
@@ -513,7 +518,10 @@ export class Board {
       drops.push({ x, y: targetY, radius: timeR });
     }
     if (drops.length) this.queueExplosionDrops(drops);
-    if (purge) this.purgeGarbageRows(1);
+    if (purge) {
+      const purgedRows = this.purgeGarbageRows(1);
+      if (this.sanctuaryActive && purgedRows > 0) attack += purgedRows * 0.5;
+    }
     return {
       cleared: rows.length,
       fullCleared: fullRows.size,
@@ -774,7 +782,6 @@ export class Board {
         removed++;
       }
     }
-    if (this.sanctuaryActive && removed > 0) this.attackPool += removed * 0.5;
     return removed;
   }
 

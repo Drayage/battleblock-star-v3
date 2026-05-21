@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko21';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko21';
-import { Deck } from './deck.js?v=20260521-ko21';
-import { AI } from './ai.js?v=20260521-ko21';
-import { Renderer } from './renderer.js?v=20260521-ko21';
-import { InputController } from './input.js?v=20260521-ko21';
-import { SKILLS } from './skills.js?v=20260521-ko21';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko21';
+import { Board } from './board.js?v=20260521-ko22';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko22';
+import { Deck } from './deck.js?v=20260521-ko22';
+import { AI } from './ai.js?v=20260521-ko22';
+import { Renderer } from './renderer.js?v=20260521-ko22';
+import { InputController } from './input.js?v=20260521-ko22';
+import { SKILLS } from './skills.js?v=20260521-ko22';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko22';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko21';
+} from './progression.js?v=20260521-ko22';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -241,6 +241,9 @@ class Game {
       console.warn('Event choices failed', err);
       choices = [];
     }
+    // 제시된 상위 도박을 '살 수 있었는데' 안 골랐을 때만 체인을 닫는다(골드 부족으로 강제 종료 방지).
+    const offeredGambleAffordable = offeredGamble
+      && choices.some(c => c.kind === 'gamble' && this.canUseEvent(c));
     if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: '여분의 골드', desc: '소량의 골드를 가져갑니다.' }];
     for (const choice of choices) {
       const btn = document.createElement('button');
@@ -254,7 +257,7 @@ class Game {
       btn.disabled = !this.canUseEvent(choice);
       btn.addEventListener('click', () => {
         if (btn.disabled) return;
-        if (offeredGamble && choice.kind !== 'gamble') {
+        if (offeredGambleAffordable && choice.kind !== 'gamble') {
           this.run.gambleClosed = true;
           this.run.gambleNext = null;
         }
@@ -1498,8 +1501,9 @@ class Game {
       const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
       enemy.push(`OVERLOAD ${pct}%`);
     }
-    for (const [k, ms] of Object.entries(this.playerDebuffs || {})) player.push(`${k.toUpperCase()} ${fmt(ms)}`);
-    for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
+    // 'rotate'는 ROT-LOCK 배지로 이미 표시되므로 중복 표기를 막는다.
+    for (const [k, ms] of Object.entries(this.playerDebuffs || {})) if (k !== 'rotate') player.push(`${k.toUpperCase()} ${fmt(ms)}`);
+    for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) if (k !== 'rotate') enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
     return { player, enemy };
   }
 
@@ -1751,6 +1755,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko21').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko22').catch(() => {});
   });
 }

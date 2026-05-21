@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko21';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko22';
 
 export class Renderer {
   constructor(canvas) {
@@ -104,7 +104,7 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.font = `bold ${Math.max(8, Math.floor(cs * 0.38))}px Courier New`;
     let x = ox;
-    for (const item of items.slice(0, 3)) {
+    for (const item of items.slice(0, 5)) {
       const w = Math.max(42, ctx.measureText(item).width + 12);
       ctx.fillStyle = '#182538';
       ctx.fillRect(x, oy, w, 14);

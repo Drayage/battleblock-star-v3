@@ -942,4 +942,25 @@ assert.equal(immDeck.battleExhausted.has(TYPES.FLASH_I), false, 'exhaust immune 
 assert.equal(CARD_LIBRARY[TYPES.DISPEL_T].onPlace?.dispelEnemy, true, 'dispel block carries dispelEnemy');
 assert.equal(CARD_LIBRARY[TYPES.DISPEL_T].exhaust, false, 'dispel block is not exhaust (reward pool)');
 
+// 버그 수정: applyOnPlace가 dispelEnemy를 instant 결과로 전달
+const dispBoard = new Board({ rows: 20, deck: new Deck() });
+const dispRes = dispBoard.applyOnPlace(CARD_LIBRARY[TYPES.DISPEL_T]);
+assert.equal(dispRes.dispelEnemy, true, 'applyOnPlace propagates dispelEnemy to result');
+assert.equal(dispRes.triggered, true, 'dispel produces a triggered instant result');
+
+// 버그 수정: 정화의 성소 — onPlace 정화가 줄당 +0.5 공격을 실제 공격으로 반영
+const sancBoard = new Board({ rows: 20, deck: new Deck() });
+sancBoard.sanctuaryActive = true;
+for (let c = 0; c < sancBoard.cols; c++) {
+  sancBoard.grid[19][c] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+  sancBoard.grid[18][c] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+}
+const sancRes = sancBoard.applyOnPlace(CARD_LIBRARY[TYPES.AID_O]); // onPlace purgeGarbageRows 2
+assert.equal(sancRes.purgedRows, 2, 'aid cleanse purges 2 garbage rows');
+assert.ok(Math.abs(sancRes.attack - 1.0) < 1e-6, 'sanctuary grants +0.5 attack per purged row (2 -> +1.0)');
+const noSancBoard = new Board({ rows: 20, deck: new Deck() });
+for (let c = 0; c < noSancBoard.cols; c++) noSancBoard.grid[19][c] = { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] };
+const noSancRes = noSancBoard.applyOnPlace(CARD_LIBRARY[TYPES.AID_O]);
+assert.equal(noSancRes.attack, 0, 'no sanctuary -> purge grants no bonus attack');
+
 console.log('All Battle Block Star v3.0 checks passed.');

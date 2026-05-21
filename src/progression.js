@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko21';
-import { Deck, shuffle } from './deck.js?v=20260521-ko21';
-import { SKILLS } from './skills.js?v=20260521-ko21';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko21';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko22';
+import { Deck, shuffle } from './deck.js?v=20260521-ko22';
+import { SKILLS } from './skills.js?v=20260521-ko22';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko22';
 
 export const RELICS = {
   combo_amp: {
@@ -350,8 +350,8 @@ export function makeBoss(round) {
   card.ability = 'overload';
   card.name = BOSS.name;
   card.style = BOSS.style;
-  card.startingRows = Math.round(card.startingRows * 1.4);
-  card.startingGarbage = card.startingGarbage + 2;
+  card.startingRows = Math.round(card.startingRows * 1.25);
+  card.startingGarbage = card.startingGarbage + 1;
   card.rewardGold = Math.round(card.rewardGold * 1.4);
   return card;
 }
