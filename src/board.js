@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko18';
-import { Deck } from './deck.js?v=20260521-ko18';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko20';
+import { Deck } from './deck.js?v=20260521-ko20';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -90,6 +90,8 @@ export class Board {
     this.comboGuardCharged = false;
     this.chainReactor = false;
     this.overchargeShots = 0;
+    this.pendingDrops = [];
+    this.pendingDropTimer = 0;
     this.fillQueue();
     this.spawn();
   }
@@ -127,6 +129,8 @@ export class Board {
     board.comboGuardCharged = !!state.comboGuardCharged;
     board.chainReactor = !!state.chainReactor;
     board.overchargeShots = state.overchargeShots || 0;
+    board.pendingDrops = (state.pendingDrops || []).map(d => ({ ...d }));
+    board.pendingDropTimer = state.pendingDropTimer || 0;
     board.fillQueue();
     return board;
   }
@@ -270,6 +274,7 @@ export class Board {
   }
 
   lock(hardDropped = false) {
+    this.flushPendingDrops();
     const placed = [];
     const wasTSpin = this.isTSpin();
     const cells = this.current.cells;
@@ -278,7 +283,9 @@ export class Board {
       return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, tetris: false, tSpin: false, topOut: true };
     }
     for (const pos of cells) {
-      this.grid[pos.y][pos.x] = cell(this.current.card);
+      const made = cell(this.current.card);
+      if (made.traits.includes('chain')) made.pieceId = this.pieceSerial;
+      this.grid[pos.y][pos.x] = made;
       placed.push({ ...pos, card: this.current.card });
     }
     if (hardDropped) {
@@ -425,9 +432,13 @@ export class Board {
     }
     if (!fullRows.size) return empty;
 
-    // 사슬 캐스케이드: 클리어되는 줄에 닿은 사슬 그룹이 점유한 다른 줄도 함께 제거한다.
+    // 사슬 캐스케이드: 서로 다른 사슬 미노 2개 이상이 연결된 그룹만 발동한다.
+    // (사슬 블록 하나만으로는 일반 블록과 동일하게 작동.)
     const bonusRows = new Set();
     for (const comp of this.chainComponents()) {
+      const pieceIds = new Set(comp.map(({ x, y }) => this.grid[y][x]?.pieceId));
+      pieceIds.delete(undefined);
+      if (pieceIds.size < 2) continue;
       if (comp.some(({ y }) => fullRows.has(y))) {
         for (const { y } of comp) if (!fullRows.has(y)) bonusRows.add(y);
       }
@@ -479,7 +490,7 @@ export class Board {
       this.explodeBombAt(x, targetY, 2);
       drops.push({ x, y: targetY, radius: 2 });
     }
-    for (const drop of drops) this.dropCellsAboveExplosion(drop.x, drop.y, drop.radius);
+    if (drops.length) this.queueExplosionDrops(drops);
     if (purge) this.purgeGarbageRows(1);
     return {
       cleared: rows.length,
@@ -576,6 +587,24 @@ export class Board {
     }
   }
 
+  // 폭발로 비운 직후 위 칸을 곧바로 당기지 않고, 잠깐 뒤에 떨어뜨려 자연스럽게 보이게 한다.
+  queueExplosionDrops(drops) {
+    this.flushPendingDrops();
+    this.pendingDrops = drops.map(d => ({ ...d }));
+    this.pendingDropTimer = GAME_TIMING.EXPLOSION_DROP_DELAY;
+  }
+
+  flushPendingDrops() {
+    if (!this.pendingDrops?.length) {
+      this.pendingDropTimer = 0;
+      return;
+    }
+    const drops = this.pendingDrops;
+    this.pendingDrops = [];
+    this.pendingDropTimer = 0;
+    for (const d of drops) this.dropCellsAboveExplosion(d.x, d.y, d.radius);
+  }
+
   detonateAll() {
     const targets = [];
     for (let r = 0; r < this.rows; r++) {
@@ -586,7 +615,7 @@ export class Board {
       }
     }
     for (const t of targets) this.explodeBombAt(t.x, t.y, t.radius);
-    for (const t of targets) this.dropCellsAboveExplosion(t.x, t.y, t.radius);
+    if (targets.length) this.queueExplosionDrops(targets.map(t => ({ x: t.x, y: t.y, radius: t.radius })));
     return targets.length;
   }
 
@@ -650,6 +679,10 @@ export class Board {
   tickEffects(dt) {
     this.bombFx.forEach(fx => { fx.timer = Math.max(0, fx.timer - dt); });
     this.bombFx = this.bombFx.filter(fx => fx.timer > 0);
+    if (this.pendingDropTimer > 0) {
+      this.pendingDropTimer = Math.max(0, this.pendingDropTimer - dt);
+      if (this.pendingDropTimer === 0) this.flushPendingDrops();
+    }
   }
 
   readyGarbage() {
@@ -680,6 +713,7 @@ export class Board {
   }
 
   applyGarbage(lines) {
+    this.flushPendingDrops();
     const hole = Math.floor(Math.random() * this.cols);
     for (let i = 0; i < lines; i++) {
       if (this.grid[0].some(Boolean)) {
@@ -821,7 +855,9 @@ export class Board {
       comboGuard: this.comboGuard,
       comboGuardCharged: this.comboGuardCharged,
       chainReactor: this.chainReactor,
-      overchargeShots: this.overchargeShots
+      overchargeShots: this.overchargeShots,
+      pendingDrops: this.pendingDrops.map(d => ({ ...d })),
+      pendingDropTimer: this.pendingDropTimer
     };
   }
 }

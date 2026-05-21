@@ -475,6 +475,7 @@ bombGravityBoard.grid[10][8] = { type: TYPES.Z, attack: 0.1, traits: [] };
 bombGravityBoard.grid[18][4] = { type: TYPES.L, attack: 0.1, traits: [] };
 bombGravityBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
 const bombGravity = bombGravityBoard.clearLines();
+bombGravityBoard.flushPendingDrops();
 assert.equal(bombGravity.cleared, 1);
 assert.equal(bombGravityBoard.grid[19][3].type, TYPES.S);
 assert.equal(bombGravityBoard.grid[19][4].type, TYPES.I);
@@ -488,6 +489,7 @@ doubleBombGravityBoard.grid[10][4] = { type: TYPES.I, attack: 0.1, traits: [] };
 doubleBombGravityBoard.grid[18] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
 doubleBombGravityBoard.grid[19] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
 const doubleBombGravity = doubleBombGravityBoard.clearLines();
+doubleBombGravityBoard.flushPendingDrops();
 assert.equal(doubleBombGravity.cleared, 2);
 assert.equal(doubleBombGravityBoard.grid[19][3].type, TYPES.S);
 assert.equal(doubleBombGravityBoard.grid[19][4].type, TYPES.I);
@@ -555,16 +557,27 @@ assert.equal(phase2Ups.some(u => u.from === TYPES.S && u.to === TYPES.GLASS), tr
 assert.equal(phase2Ups.some(u => u.from === TYPES.O && u.to === TYPES.TIMEBOMB), true);
 
 // 사슬 캐스케이드 — 한 줄 클리어 시 연결된 다른 줄도 절반 효과로 제거
+// 사슬 캐스케이드는 서로 다른 사슬 미노 2개 이상이 연결됐을 때만 발동
 const chainBoard = new Board({ rows: 20 });
 chainBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-chainBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
-chainBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
+chainBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 1 };
+chainBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 2 };
 for (let c = 1; c < 10; c++) chainBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
 const chainClear = chainBoard.clearLines();
 assert.equal(chainClear.fullCleared, 1);
 assert.equal(chainClear.cleared, 2);
 assert.equal(chainClear.attack, 1.05);
 assert.equal(chainBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), false);
+
+// 사슬 미노 하나(같은 pieceId)만으로는 캐스케이드가 발동하지 않는다(일반 블록처럼 동작)
+const chainSoloBoard = new Board({ rows: 20 });
+chainSoloBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+chainSoloBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 7 };
+chainSoloBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 7 };
+for (let c = 1; c < 10; c++) chainSoloBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+const chainSolo = chainSoloBoard.clearLines();
+assert.equal(chainSolo.cleared, 1);
+assert.equal(chainSoloBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), true);
 
 // 사슬이 가득 찬 줄에 닿지 않으면 캐스케이드 없음
 const chainNoTriggerBoard = new Board({ rows: 20 });
@@ -844,5 +857,27 @@ assert.equal(glassBesideBoard.grid[19][0]?.traits.includes('glass'), true, 'glas
 assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].cellCount, 6, 'overdrive is a 6-cell block');
 assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].tier, TIERS.GOLD, 'overdrive is gold tier');
 assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].exhaust, true, 'overdrive is once-per-battle');
+
+// 폭발 후 위 칸 낙하는 약간 지연된 뒤 적용된다
+const delayDropBoard = new Board({ rows: 20, deck: new Deck() });
+delayDropBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+delayDropBoard.grid[10][4] = { type: TYPES.S, attack: 0.1, traits: [] };
+delayDropBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+delayDropBoard.clearLines();
+assert.ok(delayDropBoard.pendingDropTimer > 0, 'explosion schedules a delayed drop');
+assert.equal(delayDropBoard.grid[19][4], null, 'cell above does not fall immediately');
+delayDropBoard.tickEffects(1000);
+assert.equal(delayDropBoard.pendingDropTimer, 0, 'pending drop resolves after delay');
+assert.equal(delayDropBoard.grid[19][4]?.type, TYPES.S, 'cell above falls once the delay elapses');
+
+// 다음 블록이 잠기면 보류된 낙하가 먼저 정리된다
+const flushOnLockBoard = new Board({ rows: 20, deck: new Deck() });
+flushOnLockBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+flushOnLockBoard.grid[10][4] = { type: TYPES.S, attack: 0.1, traits: [] };
+flushOnLockBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+flushOnLockBoard.clearLines();
+flushOnLockBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 0, SPAWN_Y);
+flushOnLockBoard.lock();
+assert.equal(flushOnLockBoard.pendingDropTimer, 0, 'locking flushes pending drops');
 
 console.log('All Battle Block Star v3.0 checks passed.');
