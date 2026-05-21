@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko11';
-import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING } from './constants.js?v=20260521-ko11';
-import { Deck } from './deck.js?v=20260521-ko11';
-import { AI } from './ai.js?v=20260521-ko11';
-import { Renderer } from './renderer.js?v=20260521-ko11';
-import { InputController } from './input.js?v=20260521-ko11';
-import { SKILLS } from './skills.js?v=20260521-ko11';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko11';
+import { Board } from './board.js?v=20260521-ko13';
+import { CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko13';
+import { Deck } from './deck.js?v=20260521-ko13';
+import { AI } from './ai.js?v=20260521-ko13';
+import { Renderer } from './renderer.js?v=20260521-ko13';
+import { InputController } from './input.js?v=20260521-ko13';
+import { SKILLS } from './skills.js?v=20260521-ko13';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko13';
 import {
   RunState,
   RELICS,
@@ -18,9 +18,10 @@ import {
   makeStarterChoices,
   makeRewards,
   makeShopItems,
+  restockShopItem,
   shopItemKey,
   shouldShowEvent
-} from './progression.js?v=20260521-ko11';
+} from './progression.js?v=20260521-ko13';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -28,6 +29,62 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
+
+// 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
+// 플레이어에게 직접 효과가 가는 능력일수록 비용을 더 높인다.
+const ENEMY_ABILITIES = {
+  spike: {
+    cost: 55,
+    cooldown: 18000,
+    cast(g) {
+      g.player.receiveGarbage(1);
+      g.message = `${g.enemyCard.name} 능력: 쓰레기 급증 +1`;
+    }
+  },
+  slowPlayer: {
+    cost: 75,
+    cooldown: 22000,
+    cast(g) {
+      g.playerSlowTimer = 3000;
+      g.message = `${g.enemyCard.name} 능력: 중력 둔화 (3초)`;
+    }
+  },
+  power: {
+    cost: 80,
+    cooldown: 24000,
+    cast(g) {
+      g.player.receiveGarbage(2);
+      g.message = `${g.enemyCard.name} 능력: 파워 폭발 +2`;
+    }
+  },
+  rotateLockPlayer: {
+    cost: 60,
+    cooldown: 22000,
+    cast(g) {
+      g.player.rotateLocked = true;
+      const target = g.player;
+      g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
+      g.message = `${g.enemyCard.name} 능력: 회전 봉인 (2초)`;
+    }
+  },
+  hyperBurst: {
+    cost: 65,
+    cooldown: 24000,
+    cast(g) {
+      g.playerHyperTimer = 2500;
+      g.message = `${g.enemyCard.name} 능력: 하이퍼 낙하 (2.5초)`;
+    }
+  },
+  polluteDeck: {
+    cost: 60,
+    cooldown: 26000,
+    cast(g) {
+      g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
+      g.message = `${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`;
+    }
+  }
+};
+
 class Game {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -210,6 +267,9 @@ class Game {
     if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
     if (choice.kind === 'gold') return `${choice.amount}G 획득`;
     if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
+    if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${RELICS[choice.id].name}`;
+    if (choice.kind === 'gamble') return `${choice.bet}G 베팅`;
+    if (choice.kind === 'contract') return CARD_LIBRARY[choice.id].name;
     return '이벤트';
   }
 
@@ -220,6 +280,7 @@ class Game {
       node.appendChild(this.blockPreview(CARD_LIBRARY[choice.to], 8));
     }
     if (choice.kind === 'hpForCurse') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.card], 8));
+    if (choice.kind === 'contract') node.appendChild(this.blockPreview(CARD_LIBRARY[choice.id], 8));
     if (choice.kind === 'consumable') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
@@ -240,6 +301,8 @@ class Game {
     if (choice.kind === 'skill') return !this.run.ownedSkills.includes(choice.id);
     if (choice.kind === 'starterSkill') return true;
     if (choice.kind === 'cleanup') return this.hasCarriedGarbage();
+    if (choice.kind === 'relicDig') return this.run.hpRows - choice.amount >= 8 && !this.run.relics.includes(choice.id);
+    if (choice.kind === 'gamble') return this.run.gold >= choice.bet;
     return true;
   }
 
@@ -265,6 +328,15 @@ class Game {
     if (choice.kind === 'consumable') return this.acquireConsumable(choice.id, done);
     if (choice.kind === 'gold') this.run.gold += choice.amount;
     if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
+    if (choice.kind === 'relicDig') {
+      this.run.hpRows = Math.max(8, this.run.hpRows - choice.amount);
+      if (!this.run.relics.includes(choice.id)) this.run.relics.push(choice.id);
+    }
+    if (choice.kind === 'gamble') {
+      this.run.gold -= choice.bet;
+      if (Math.random() < 0.55) this.run.gold += 60;
+    }
+    if (choice.kind === 'contract') this.run.deck.addCard(choice.id);
     done();
   }
 
@@ -278,17 +350,52 @@ class Game {
     const sold = new Set(this.run.shopStock?.[shopKey]?.sold || []);
     for (const item of makeShopItems(this.run)) {
       const soldOut = sold.has(shopItemKey(item));
+      const price = this.effectivePrice(item);
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${item.price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${item.title}</strong><span>${soldOut ? 'Sold Out' : `${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
-      btn.disabled = soldOut || this.run.gold < item.price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
+      btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
-        if (btn.disabled || this.run.gold < item.price) return;
+        if (btn.disabled || this.run.gold < price) return;
         this.buyShopItem(item);
       });
       wrap.appendChild(btn);
     }
+    const rerollCost = this.shopRerollCost();
+    const rerollBtn = document.createElement('button');
+    rerollBtn.className = 'choice shop';
+    rerollBtn.innerHTML = `<strong>리롤</strong><span>${rerollCost} Gold</span><small>상점 물건을 새로 뽑습니다. 리롤할 때마다 비용이 10G 증가합니다.</small>`;
+    rerollBtn.disabled = this.run.gold < rerollCost;
+    rerollBtn.addEventListener('click', () => {
+      if (this.run.gold < rerollCost) return;
+      this.rerollShop();
+    });
+    wrap.appendChild(rerollBtn);
+  }
+
+  effectivePrice(item) {
+    const base = item.price || 0;
+    return this.run.relics.includes('merchant_token') ? Math.ceil(base * 0.8) : base;
+  }
+
+  shopRerollCost() {
+    const key = String(this.run.round);
+    const n = this.run.shopStock?.[key]?.rerolls || 0;
+    return 20 + n * 10;
+  }
+
+  rerollShop() {
+    const cost = this.shopRerollCost();
+    if (this.run.gold < cost) return;
+    this.run.gold -= cost;
+    const key = String(this.run.round);
+    const rerolls = (this.run.shopStock?.[key]?.rerolls || 0) + 1;
+    if (this.run.shopStock) delete this.run.shopStock[key];
+    makeShopItems(this.run);
+    if (this.run.shopStock?.[key]) this.run.shopStock[key].rerolls = rerolls;
+    this.showShop();
+    this.autoSave();
   }
 
   renderDeckViewer() {
@@ -411,12 +518,19 @@ class Game {
   buyShopItem(item) {
     const finish = accepted => {
       if (!accepted) return;
-      this.run.gold -= item.price;
+      this.run.gold -= this.effectivePrice(item);
       const shopKey = String(this.run.round);
       if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [] };
-      const sold = this.run.shopStock[shopKey].sold;
+      const stock = this.run.shopStock[shopKey];
       const key = shopItemKey(item);
-      if (!sold.includes(key)) sold.push(key);
+      if (this.run.relics.includes('merchant_token')) {
+        const idx = stock.items.findIndex(it => shopItemKey(it) === key);
+        const replacement = restockShopItem(this.run, item);
+        if (idx >= 0 && replacement) stock.items[idx] = replacement;
+        else if (!stock.sold.includes(key)) stock.sold.push(key);
+      } else if (!stock.sold.includes(key)) {
+        stock.sold.push(key);
+      }
       this.normalizePersistentGrid();
       this.showShop();
       this.autoSave();
@@ -496,10 +610,18 @@ class Game {
   startBattle(enemyCard) {
     this.clearBattleTimeouts();
     this.enemyCard = enemyCard;
+    if (this.run.relics.includes('steel_heart')) {
+      this.run.hpRows = Math.min(28, this.run.hpRows + 1);
+    }
+    this.run.deck.beginBattle();
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
-    if (this.run.relics.includes('hold_cache') && !this.player.held) this.player.mp = Math.min(100, this.player.mp + 15);
+    if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
+    if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
+    if (this.run.relics.includes('combo_keeper')) this.player.comboGuard = true;
+    if (this.run.relics.includes('chain_reactor')) this.player.chainReactor = true;
+    this.battleFirstClearUsed = false;
     this.ai = new AI(enemyCard.aiProfile, enemyCard.aiSkill);
     this.fallTimer = 0;
     this.lockTimer = 0;
@@ -518,6 +640,14 @@ class Game {
     this.aiFocusInEpisode = false;
     this.battleEndDelay = 0;
     this.battleEndResult = null;
+    this.playerFreezeTimer = 0;
+    this.playerFogTimer = 0;
+    this.playerHyperTimer = 0;
+    this.playerInvertTimer = 0;
+    this.enemyForceDropTimer = 0;
+    this.bossOverloadCharge = 0;
+    this.enemyDebuffs = {};
+    this.playerDebuffs = {};
     this.paused = false;
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
@@ -566,6 +696,10 @@ class Game {
     if (!this.inBattle()) return;
     if (action === 'pause') return this.togglePause();
     if (this.paused) return;
+    if (this.playerInvertTimer > 0) {
+      if (action === 'left') action = 'right';
+      else if (action === 'right') action = 'left';
+    }
     if (action === 'left') this.groundAdjust(() => this.player.move(-1, 0));
     if (action === 'right') this.groundAdjust(() => this.player.move(1, 0));
     if (action === 'soft') {
@@ -601,6 +735,7 @@ class Game {
   }
 
   currentFallInterval() {
+    if (this.playerHyperTimer > 0) return GAME_TIMING.PLAYER_FALL_INTERVAL * 0.12;
     return GAME_TIMING.PLAYER_FALL_INTERVAL;
   }
 
@@ -639,11 +774,21 @@ class Game {
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (attacker === this.player) this.battlePlayerPieces++;
     else if (attacker === this.enemy) this.battleEnemyPieces++;
-    const mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    let mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
+    if (attacker === this.player && result.cleared > 0 && !this.battleFirstClearUsed && this.run.relics.includes('first_strike')) {
+      mult *= 3;
+      this.battleFirstClearUsed = true;
+      this.message = '첫수 보너스!';
+    }
+    if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('first_aid')) {
+      const gRows = this.player.grid.filter(row => row.some(c => c?.traits?.includes('garbage'))).length;
+      if (gRows >= 6) mult *= 1.3;
+    }
     if (attacker === this.player) {
       if (result.slow) this.enemySlowTimer += result.slow;
       if (result.gold) {
-        this.bountyBank = (this.bountyBank || 0) + result.gold * 0.3;
+        const bountyRate = this.run.relics.includes('bounty_market') ? 0.6 : 0.3;
+        this.bountyBank = (this.bountyBank || 0) + result.gold * bountyRate;
         const earned = Math.floor(this.bountyBank);
         if (earned > 0) {
           this.run.gold += earned;
@@ -654,7 +799,10 @@ class Game {
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
-      this.player.mp = Math.min(100, this.player.mp + result.mana * 0.35);
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35);
+    }
+    if (attacker === this.player && result.cleared > 0 && !this.player.held && this.run.relics.includes('hold_cache')) {
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
     }
     if (result.attack > 0) {
       const attack = (result.attack + this.battleHeatAttackBonus()) * mult;
@@ -668,9 +816,19 @@ class Game {
         if (toSend > 0) defender.receiveGarbage(toSend);
       }
     }
-    if (this.player.defeated) return this.queueBattleEnd('loss');
+    if (this.player.defeated && !this.playerSurvivesLethal()) return this.queueBattleEnd('loss');
     if (this.enemy.defeated) return this.queueBattleEnd('win');
     this.autoSave();
+  }
+
+  playerSurvivesLethal() {
+    if (!this.run.relics.includes('phoenix_feather')) return false;
+    this.player.clearAllGarbage();
+    this.player.defeated = false;
+    if (!this.player.current) this.player.spawn();
+    this.run.relics = this.run.relics.filter(r => r !== 'phoenix_feather');
+    this.message = '불사조 깃털 발동! 한 번 버팁니다';
+    return true;
   }
 
   queueBattleEnd(result) {
@@ -697,8 +855,9 @@ class Game {
   }
 
   winBattle() {
-    this.run.gold += this.enemyCard.rewardGold;
-    const relicId = this.enemyCard.type === 'elite' ? grantEliteRelic(this.run) : null;
+    const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
+    this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
+    const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
@@ -988,7 +1147,8 @@ class Game {
         enemyCard: this.enemyCard,
         message: this.battleEndResult === 'win' ? 'Enemy defeated' : 'You were defeated',
         skillCooldowns: this.skillCooldowns,
-        effects: this.currentEffectBadges()
+        effects: this.currentEffectBadges(),
+        playerFog: this.playerFogTimer
       });
       if (this.battleEndDelay <= 0) {
         if (this.battleEndResult === 'win') this.winBattle();
@@ -1010,7 +1170,8 @@ class Game {
         enemyCard: this.enemyCard,
         message: `Paused | YOU ${pps.toFixed(2)}pps ${apm.toFixed(1)}apm | ENEMY ${ePps.toFixed(2)}pps ${eApm.toFixed(1)}apm`,
         skillCooldowns: this.skillCooldowns,
-        effects: this.currentEffectBadges()
+        effects: this.currentEffectBadges(),
+        playerFog: this.playerFogTimer
       });
       return;
     }
@@ -1033,6 +1194,12 @@ class Game {
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
+    this.playerFreezeTimer = Math.max(0, (this.playerFreezeTimer || 0) - dt);
+    this.playerFogTimer = Math.max(0, (this.playerFogTimer || 0) - dt);
+    this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
+    this.playerInvertTimer = Math.max(0, (this.playerInvertTimer || 0) - dt);
+    this.enemyForceDropTimer = Math.max(0, (this.enemyForceDropTimer || 0) - dt);
+    this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
       this.skillCooldowns[id] = Math.max(0, this.skillCooldowns[id] - dt);
     });
@@ -1055,7 +1222,8 @@ class Game {
       enemyCard: this.enemyCard,
       message: this.message,
       skillCooldowns: this.skillCooldowns,
-      effects: this.currentEffectBadges()
+      effects: this.currentEffectBadges(),
+        playerFog: this.playerFogTimer
     });
     this.message = '';
   }
@@ -1065,19 +1233,54 @@ class Game {
     return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
   }
 
+  applyPlayerDebuff(key, ms) {
+    this.playerDebuffs[key] = Math.max(this.playerDebuffs[key] || 0, ms);
+  }
+
+  applyEnemyDebuff(key, ms) {
+    this.enemyDebuffs[key] = Math.max(this.enemyDebuffs[key] || 0, ms);
+  }
+
+  tickDebuffs(dt) {
+    for (const store of [this.playerDebuffs, this.enemyDebuffs]) {
+      if (!store) continue;
+      for (const k of Object.keys(store)) {
+        store[k] = Math.max(0, store[k] - dt);
+        if (store[k] <= 0) delete store[k];
+      }
+    }
+  }
+
   currentEffectBadges() {
     const fmt = ms => `${Math.ceil(ms / 1000)}s`;
     const player = [];
     const enemy = [];
     if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
     if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
+    if (this.playerFreezeTimer > 0) player.push(`FREEZE ${fmt(this.playerFreezeTimer)}`);
+    if (this.playerFogTimer > 0) player.push(`FOG ${fmt(this.playerFogTimer)}`);
+    if (this.playerHyperTimer > 0) player.push(`HYPER ${fmt(this.playerHyperTimer)}`);
+    if (this.playerInvertTimer > 0) player.push(`INVERT ${fmt(this.playerInvertTimer)}`);
+    if (this.player?.rotateLocked) player.push('ROT-LOCK');
     if (this.aiFocusInEpisode) enemy.push(`FOCUS x${this.aiFocusActivations}`);
     if (this.player?.holdLocked) player.push('HOLD LOCK');
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
+    if (this.enemy?.rotateLocked) enemy.push('ROT-LOCK');
+    if (this.enemyCard?.ability === 'overload') {
+      const chargeTime = Math.max(9000, 14000 - this.battleElapsedSec * 70);
+      const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
+      enemy.push(`OVERLOAD ${pct}%`);
+    }
+    for (const [k, ms] of Object.entries(this.playerDebuffs || {})) player.push(`${k.toUpperCase()} ${fmt(ms)}`);
+    for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
     return { player, enemy };
   }
 
   resolveEnemyStep() {
+    if (this.enemyForceDropTimer > 0 && this.enemy?.current && !this.enemy.defeated) {
+      this.ai.queue = [];
+      return this.enemy.hardDrop();
+    }
     const result = this.ai.step(this.enemy);
     if (result) {
       this.enemyActionStall = 0;
@@ -1212,6 +1415,7 @@ class Game {
 
   updatePlayerGravity(dt) {
     if (!this.player?.current || this.player.defeated) return;
+    if (this.playerFreezeTimer > 0) return;
     if (this.isPlayerGrounded()) {
       this.groundTouched = true;
       this.fallTimer = 0;
@@ -1259,21 +1463,54 @@ class Game {
   }
 
   updateEnemyAbility(dt) {
-    if (!this.enemyCard.ability) return;
+    const ability = this.enemyCard.ability;
+    if (!ability) return;
+    if (ability === 'overload') return this.updateBossOverload(dt);
+    // 적 능력은 마나 게이지에 묶인다: 적이 마나를 모으고 쿨다운이 끝나야 발동.
+    const cfg = ENEMY_ABILITIES[ability];
+    if (!cfg) return;
     this.enemyAbilityTimer += dt;
-    if (this.enemyAbilityTimer < GAME_TIMING.ENEMY_ABILITY_INTERVAL) return;
+    if (this.enemyAbilityTimer < cfg.cooldown) return;
+    if ((this.enemy?.mp || 0) < cfg.cost) return;
     this.enemyAbilityTimer = 0;
-    if (this.enemyCard.ability === 'spike') {
-      this.player.receiveGarbage(1);
-      this.message = `${this.enemyCard.name} 쓰레기 급증`;
-    }
-    if (this.enemyCard.ability === 'slowPlayer') {
-      this.playerSlowTimer = 3000;
-      this.message = `${this.enemyCard.name} 중력 둔화`;
-    }
-    if (this.enemyCard.ability === 'power') {
-      this.player.receiveGarbage(2);
-      this.message = `${this.enemyCard.name} 파워 폭발`;
+    this.enemy.mp = Math.max(0, this.enemy.mp - cfg.cost);
+    cfg.cast(this);
+  }
+
+  updateBossOverload(dt) {
+    this.bossOverloadCharge += dt;
+    const chargeTime = Math.max(9000, 14000 - this.battleElapsedSec * 70);
+    if (this.bossOverloadCharge < chargeTime) return;
+    if ((this.enemy?.mp || 0) < 40) return;
+    this.bossOverloadCharge = 0;
+    this.enemy.mp = Math.max(0, this.enemy.mp - 40);
+    this.castBossDebuff();
+  }
+
+  castBossDebuff() {
+    const name = this.enemyCard.name;
+    const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
+    const kind = kinds[Math.floor(Math.random() * kinds.length)];
+    if (kind === 'fog') {
+      this.playerFogTimer = 4000;
+      this.message = `${name} OVERLOAD: 안개 (4초)`;
+    } else if (kind === 'invert') {
+      this.playerInvertTimer = 3500;
+      this.message = `${name} OVERLOAD: 좌우 반전 (3.5초)`;
+    } else if (kind === 'rotate') {
+      this.player.rotateLocked = true;
+      const target = this.player;
+      this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
+      this.message = `${name} OVERLOAD: 회전 봉인 (3초)`;
+    } else if (kind === 'hyper') {
+      this.playerHyperTimer = 2500;
+      this.message = `${name} OVERLOAD: 하이퍼 낙하 (2.5초)`;
+    } else if (kind === 'slow') {
+      this.playerSlowTimer = 3500;
+      this.message = `${name} OVERLOAD: 중력 둔화 (3.5초)`;
+    } else {
+      this.player.addDurableGarbage(2, 2);
+      this.message = `${name} OVERLOAD: 지속 가비지 2줄`;
     }
   }
 }
@@ -1282,6 +1519,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko11').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko13').catch(() => {});
   });
 }

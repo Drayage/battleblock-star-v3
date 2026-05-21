@@ -1,4 +1,4 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko11';
+import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko13';
 
 export class Renderer {
   constructor(canvas) {
@@ -35,7 +35,7 @@ export class Renderer {
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
 
-  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] } }) {
+  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0 }) {
     if (!this.layout) this.resize(player.rows, enemy.rows);
     const L = this.layout;
     const ctx = this.ctx;
@@ -53,7 +53,7 @@ export class Renderer {
     }
     ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
-    this.board(player, L.pX, L.y, L.cell, 'YOU');
+    this.board(player, L.pX, L.y, L.cell, 'YOU', playerFog);
     this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
     this.effectBadges(effects.player, L.pX, L.y + player.rows * L.cell + 6, L.cell);
     if (L.mobile) {
@@ -116,7 +116,7 @@ export class Renderer {
     }
   }
 
-  board(board, ox, oy, cs, label) {
+  board(board, ox, oy, cs, label, fog = 0) {
     const ctx = this.ctx;
     const bw = COLS * cs;
     const bh = board.rows * cs;
@@ -144,7 +144,16 @@ export class Renderer {
     }
     for (let r = 0; r < board.rows; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (board.grid[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, board.grid[r][c].type, board.grid[r][c].fuse || 0);
+        const cell = board.grid[r][c];
+        if (!cell) continue;
+        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0);
+        if (cell.hp > 0) {
+          ctx.fillStyle = '#ffe27a';
+          ctx.font = `bold ${Math.max(9, cs * 0.5)}px Courier New`;
+          ctx.textAlign = 'center';
+          ctx.fillText(String(cell.hp), ox + c * cs + cs / 2, oy + r * cs + cs * 0.7);
+          ctx.textAlign = 'left';
+        }
       }
     }
     if (board.current && !board.defeated) {
@@ -219,6 +228,15 @@ export class Renderer {
       ctx.font = `bold ${Math.max(13, Math.floor(cs * 0.8))}px Courier New`;
       ctx.textAlign = 'center';
       ctx.fillText('DEFEATED', ox + bw / 2, oy + bh / 2);
+      ctx.textAlign = 'left';
+    }
+    if (fog > 0) {
+      ctx.fillStyle = 'rgba(120,130,150,.82)';
+      ctx.fillRect(ox, oy, bw, bh * 0.62);
+      ctx.fillStyle = '#dfe6f5';
+      ctx.font = `bold ${Math.max(11, Math.floor(cs * 0.55))}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillText('FOG', ox + bw / 2, oy + bh * 0.32);
       ctx.textAlign = 'left';
     }
   }

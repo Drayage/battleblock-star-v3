@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko11';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko13';
 
 export function shuffle(items) {
   const out = [...items];
@@ -87,11 +87,35 @@ export class Deck {
     this.discard = [];
   }
 
+  beginBattle() {
+    this.battleExhausted = new Set();
+  }
+
+  pollute(cardId, n = 1) {
+    if (!CARD_LIBRARY[cardId]) return;
+    for (let i = 0; i < n; i++) {
+      const at = Math.min(this.draw.length, 1 + Math.floor(Math.random() * 4));
+      this.draw.splice(at, 0, cardId);
+    }
+  }
+
   next() {
-    if (!this.draw.length) this.refill();
-    const id = this.draw.shift();
-    this.discard.push(id);
-    return CARD_LIBRARY[id];
+    let guard = 0;
+    while (true) {
+      if (!this.draw.length) this.refill();
+      const id = this.draw.shift();
+      const card = CARD_LIBRARY[id];
+      if (card?.exhaust) {
+        if (this.battleExhausted && this.battleExhausted.has(id)) {
+          // 이번 전투에서 이미 등장한 1회용/소멸 블록은 다시 뽑지 않는다.
+          if (++guard > 200) { this.discard.push(id); return card; }
+          continue;
+        }
+        (this.battleExhausted || (this.battleExhausted = new Set())).add(id);
+      }
+      this.discard.push(id);
+      return card;
+    }
   }
 
   preview(n = 3) {

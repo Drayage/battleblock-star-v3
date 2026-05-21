@@ -65,7 +65,12 @@ export const TYPES = {
   LEAD: 'LEAD',
   CHAIN: 'CHAIN',
   GLASS: 'GLASS',
-  TIMEBOMB: 'TIMEBOMB'
+  TIMEBOMB: 'TIMEBOMB',
+  OVERDRIVE_PENTA: 'OVERDRIVE_PENTA',
+  MEGA_CLEANSE: 'MEGA_CLEANSE',
+  PANIC_WALL: 'PANIC_WALL',
+  FLASH_I: 'FLASH_I',
+  AID_O: 'AID_O'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -119,6 +124,11 @@ export const COLORS = {
   [TYPES.CHAIN]: '#7fb0ff',
   [TYPES.GLASS]: '#bfefff',
   [TYPES.TIMEBOMB]: '#ff4d4d',
+  [TYPES.OVERDRIVE_PENTA]: '#ff2d6f',
+  [TYPES.MEGA_CLEANSE]: '#eafcff',
+  [TYPES.PANIC_WALL]: '#7fb6ff',
+  [TYPES.FLASH_I]: '#ffe66b',
+  [TYPES.AID_O]: '#b9ffe0',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -279,7 +289,12 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.LEAD]: 'O',
   [TYPES.CHAIN]: 'T',
   [TYPES.GLASS]: 'S',
-  [TYPES.TIMEBOMB]: 'O'
+  [TYPES.TIMEBOMB]: 'O',
+  [TYPES.OVERDRIVE_PENTA]: 'PENTA_T',
+  [TYPES.MEGA_CLEANSE]: 'CROSS5',
+  [TYPES.PANIC_WALL]: 'WIDE6',
+  [TYPES.FLASH_I]: 'I',
+  [TYPES.AID_O]: 'O'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
@@ -302,7 +317,12 @@ export const ABILITY_LIBRARY = {
   leadPower: { id: 'leadPower', name: '중량', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' },
   chain: { id: 'chain', name: '사슬', cellAttack: 0.1, traits: ['chain'], desc: '연결된 사슬 중 한 줄이라도 클리어되면 연결된 모든 줄이 함께 제거됩니다(추가 줄은 절반 효과).' },
   glass: { id: 'glass', name: '유리', cellAttack: 0.5, traits: ['glass'], penalty: true, desc: '셀당 0.5 공격력. 하드드롭이 일어나면 깨져 빈칸을 남깁니다.' },
-  timeBomb: { id: 'timeBomb', name: '시한폭탄', cellAttack: 0.1, traits: ['timeBomb'], fuse: 5, penalty: true, desc: '배치 후 매 턴 카운트다운. 0이 되면 그 칸만 사라지고, 줄로 제거하면 5×5 대폭발.' }
+  timeBomb: { id: 'timeBomb', name: '시한폭탄', cellAttack: 0.1, traits: ['timeBomb'], fuse: 5, penalty: true, desc: '배치 후 매 턴 카운트다운. 0이 되면 그 칸만 사라지고, 줄로 제거하면 5×5 대폭발.' },
+  overdrive: { id: 'overdrive', name: '오버드라이브', cellAttack: 0.1, traits: [], onPlace: { attack: 4 }, desc: '배치 즉시 4.0 공격력을 발사합니다.' },
+  megaCleanse: { id: 'megaCleanse', name: '메가 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 6 }, desc: '배치 즉시 쓰레기 행 6줄을 제거합니다.' },
+  panicWall: { id: 'panicWall', name: '패닉 월', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 8 }, desc: '배치 즉시 들어오는 공격 게이지를 최대 8 차단합니다.' },
+  flashStrike: { id: 'flashStrike', name: '섬광', cellAttack: 0.1, traits: [], onPlace: { attack: 2 }, desc: '배치 즉시 2.0 공격력을 발사합니다.' },
+  aidCleanse: { id: 'aidCleanse', name: '응급 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 2 }, desc: '배치 즉시 쓰레기 행 2줄을 제거합니다.' }
 };
 
 function tierFromShapeAbility(shapeId, abilityId, rarity) {
@@ -317,9 +337,11 @@ function tierFromShapeAbility(shapeId, abilityId, rarity) {
   return TIERS.BRONZE;
 }
 
-function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
+function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base', opts = {}) {
   const shape = SHAPE_LIBRARY[shapeId];
   const ability = ABILITY_LIBRARY[abilityId];
+  const traits = [...ability.traits];
+  if (opts.exhaust) traits.push('exhaust');
   return {
     id,
     name,
@@ -330,10 +352,11 @@ function blockCard(id, name, shapeId, abilityId = 'none', rarity = 'base') {
     cellCount: shape.cells,
     shape: shape.shape,
     cellAttack: ability.cellAttack,
-    traits: [...ability.traits],
+    traits,
     onPlace: ability.onPlace ? { ...ability.onPlace } : null,
     penalty: !!ability.penalty,
     fuse: ability.fuse || 0,
+    exhaust: !!opts.exhaust,
     rarity,
     tier: tierFromShapeAbility(shapeId, abilityId, rarity)
   };
@@ -376,7 +399,12 @@ export const CARD_LIBRARY = {
   [TYPES.LEAD]: blockCard(TYPES.LEAD, '납 O', 'O', 'leadPower', 'rare'),
   [TYPES.CHAIN]: blockCard(TYPES.CHAIN, '사슬 T', 'T', 'chain', 'rare'),
   [TYPES.GLASS]: blockCard(TYPES.GLASS, '유리 S', 'S', 'glass', 'rare'),
-  [TYPES.TIMEBOMB]: blockCard(TYPES.TIMEBOMB, '시한폭탄 O', 'O', 'timeBomb', 'rare')
+  [TYPES.TIMEBOMB]: blockCard(TYPES.TIMEBOMB, '시한폭탄 O', 'O', 'timeBomb', 'rare'),
+  [TYPES.OVERDRIVE_PENTA]: blockCard(TYPES.OVERDRIVE_PENTA, '오버드라이브 펜토', 'PENTA_T', 'overdrive', 'rare', { exhaust: true }),
+  [TYPES.MEGA_CLEANSE]: blockCard(TYPES.MEGA_CLEANSE, '메가 클렌즈', 'CROSS5', 'megaCleanse', 'rare', { exhaust: true }),
+  [TYPES.PANIC_WALL]: blockCard(TYPES.PANIC_WALL, '패닉 월', 'WIDE6', 'panicWall', 'uncommon', { exhaust: true }),
+  [TYPES.FLASH_I]: blockCard(TYPES.FLASH_I, '섬광 I', 'I', 'flashStrike', 'uncommon', { exhaust: true }),
+  [TYPES.AID_O]: blockCard(TYPES.AID_O, '응급 클렌즈', 'O', 'aidCleanse', 'uncommon', { exhaust: true })
 };
 
 export const CARD_DESCRIPTIONS = {
@@ -416,5 +444,10 @@ export const CARD_DESCRIPTIONS = {
   [TYPES.LEAD]: 'O 모양 납 블록. 셀당 0.5 공격력이며 홀드할 수 없고 착지 즉시 고정됩니다.',
   [TYPES.CHAIN]: 'T 모양 사슬 블록. 연결된 사슬이 줄 클리어에 닿으면 연결 행도 함께 제거됩니다.',
   [TYPES.GLASS]: 'S 모양 유리 블록. 셀당 0.5 공격력이지만 하드드롭 후 깨져 빈칸이 됩니다.',
-  [TYPES.TIMEBOMB]: 'O 모양 시한폭탄. 매 턴 카운트다운하고, 줄로 제거되면 5x5로 폭발합니다.'
+  [TYPES.TIMEBOMB]: 'O 모양 시한폭탄. 매 턴 카운트다운하고, 줄로 제거되면 5x5로 폭발합니다.',
+  [TYPES.OVERDRIVE_PENTA]: '[1회용] 배치 즉시 4.0 공격력을 발사합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.MEGA_CLEANSE]: '[1회용] 배치 즉시 쓰레기 행 6줄을 제거합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.PANIC_WALL]: '[1회용] 배치 즉시 들어오는 쓰레기 게이지를 최대 8줄 차단합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.FLASH_I]: '[소멸] 배치 즉시 2.0 공격력을 발사합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.AID_O]: '[소멸] 배치 즉시 쓰레기 행 2줄을 제거합니다. 전투당 한 번만 등장합니다.'
 };

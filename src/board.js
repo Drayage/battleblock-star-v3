@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko11';
-import { Deck } from './deck.js?v=20260521-ko11';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko13';
+import { Deck } from './deck.js?v=20260521-ko13';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -83,6 +83,13 @@ export class Board {
     this.attackPool = 0;
     this.nextAttackDouble = false;
     this.attackChargeStacks = 0;
+    this.rotateLocked = false;
+    this.iPieceForce = 0;
+    this.mpCap = 100;
+    this.comboGuard = false;
+    this.comboGuardCharged = false;
+    this.chainReactor = false;
+    this.overchargeShots = 0;
     this.fillQueue();
     this.spawn();
   }
@@ -113,6 +120,13 @@ export class Board {
     board.attackPool = state.attackPool || 0;
     board.nextAttackDouble = !!state.nextAttackDouble;
     board.attackChargeStacks = state.attackChargeStacks || 0;
+    board.rotateLocked = !!state.rotateLocked;
+    board.iPieceForce = state.iPieceForce || 0;
+    board.mpCap = state.mpCap || 100;
+    board.comboGuard = !!state.comboGuard;
+    board.comboGuardCharged = !!state.comboGuardCharged;
+    board.chainReactor = !!state.chainReactor;
+    board.overchargeShots = state.overchargeShots || 0;
     board.fillQueue();
     return board;
   }
@@ -152,8 +166,12 @@ export class Board {
   }
 
   spawn() {
-    const card = this.nextQueue.shift();
+    let card = this.nextQueue.shift();
     this.fillQueue();
+    if (this.iPieceForce > 0) {
+      card = CARD_LIBRARY[TYPES.I];
+      this.iPieceForce--;
+    }
     this.pieceSerial++;
     this.current = new Mino(card, 3, SPAWN_Y);
     this.holdUsed = false;
@@ -179,7 +197,7 @@ export class Board {
   }
 
   rotate(dir = 1) {
-    if (!this.current || this.defeated) return false;
+    if (!this.current || this.defeated || this.rotateLocked) return false;
     const nextRot = (this.current.rot + (dir > 0 ? 1 : 3)) % 4;
     for (const [kx, ky] of KICKS) {
       if (this.ok(this.current, kx, ky, nextRot)) {
@@ -238,6 +256,21 @@ export class Board {
     return this.lock();
   }
 
+  bombShard() {
+    if (!this.current || this.defeated) return false;
+    this.current = new Mino({
+      ...CARD_LIBRARY[TYPES.O],
+      id: 'BOMB_SHARD',
+      name: '폭탄 파편',
+      cellAttack: 0.1,
+      traits: ['bomb'],
+      shape: [[[1]], [[1]], [[1]], [[1]]]
+    }, 4, SPAWN_Y);
+    this.holdUsed = true;
+    if (!this.ok(this.current)) this.defeated = true;
+    return true;
+  }
+
   lock() {
     const placed = [];
     const wasTSpin = this.isTSpin();
@@ -261,7 +294,8 @@ export class Board {
       this.combo++;
       const comboMult = this.combo >= 2 ? 1.0 + this.combo * 0.1 : 1.0;
       result.attack = Number((result.attack * comboMult).toFixed(2));
-      this.mp = Math.min(100, this.mp + result.mana);
+      this.mp = Math.min(this.mpCap, this.mp + result.mana);
+      if (this.comboGuard) this.comboGuardCharged = true;
       this.flash = 180;
       this.comboBreakFlash = 0;
       this.clearText = result.clearText;
@@ -269,6 +303,10 @@ export class Board {
       if (this.nextAttackDouble) {
         result.attack = Number((result.attack * 2).toFixed(2));
         this.nextAttackDouble = false;
+      }
+      if (this.overchargeShots > 0) {
+        result.attack = Number((result.attack * 1.5).toFixed(2));
+        this.overchargeShots--;
       }
       if (this.attackChargeStacks > 0) {
         result.attack = Number((result.attack * (1 + 0.2 * this.attackChargeStacks)).toFixed(2));
@@ -281,6 +319,9 @@ export class Board {
       this.attackPool = Number(Math.max(0, this.attackPool - cancel).toFixed(4));
       result.attack = this.attackPool;
       this.attackPool = 0;
+    } else if (this.comboGuard && this.comboGuardCharged && this.combo > 0) {
+      // 콤보 보존: 충전된 보호막이 한 번의 미스로부터 콤보를 지킨다(다음 클리어 시 재충전).
+      this.comboGuardCharged = false;
     } else {
       if (this.combo > 1) result.comboBreak = this.combo;
       this.combo = 0;
@@ -320,7 +361,7 @@ export class Board {
     }
     if (effect.mana) {
       result.mana = effect.mana;
-      this.mp = Math.min(100, this.mp + effect.mana);
+      this.mp = Math.min(this.mpCap, this.mp + effect.mana);
       labels.push(`MP +${effect.mana}`);
     }
     if (effect.purgeGarbageRows) {
@@ -345,6 +386,27 @@ export class Board {
     const empty = { cleared: 0, fullCleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, slow: 0, gold: 0, chargeGained: 0, tetris: false, tSpin: false };
     const fullRows = new Set();
     for (let r = 0; r < this.rows; r++) if (this.grid[r].every(Boolean)) fullRows.add(r);
+    if (!fullRows.size) return empty;
+
+    // 지속 가비지: 완성된 줄에 지속 가비지 칸이 있으면 즉시 제거하지 않고 숫자를 1 줄인다.
+    // 숫자가 남아있으면 플레이어가 채운 칸을 비워 다시 구멍을 만들고, 0이 되면 정상 제거한다.
+    for (const r of [...fullRows]) {
+      const row = this.grid[r];
+      if (!row.some(c => c?.traits.includes('durable'))) continue;
+      let alive = false;
+      for (const c of row) {
+        if (c?.traits.includes('durable')) {
+          c.hp = (c.hp || 1) - 1;
+          if (c.hp > 0) alive = true;
+        }
+      }
+      if (alive) {
+        for (let x = 0; x < this.cols; x++) {
+          if (!row[x]?.traits.includes('durable')) row[x] = null;
+        }
+        fullRows.delete(r);
+      }
+    }
     if (!fullRows.size) return empty;
 
     // 사슬 캐스케이드: 클리어되는 줄에 닿은 사슬 그룹이 점유한 다른 줄도 함께 제거한다.
@@ -474,11 +536,18 @@ export class Board {
 
   explodeBombAt(x, y, radius = 1) {
     this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH, radius });
+    const chained = [];
     for (let r = Math.max(0, y - radius); r <= Math.min(this.rows - 1, y + radius); r++) {
       for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
-        if (r >= 0 && r < this.rows) this.grid[r][c] = null;
+        const cell = this.grid[r][c];
+        if (this.chainReactor && cell && !(r === y && c === x)) {
+          if (cell.traits.includes('bomb')) chained.push({ x: c, y: r, radius: 1 });
+          else if (cell.traits.includes('timeBomb')) chained.push({ x: c, y: r, radius: 2 });
+        }
+        this.grid[r][c] = null;
       }
     }
+    for (const ch of chained) this.explodeBombAt(ch.x, ch.y, ch.radius);
   }
 
   dropCellsAbove(x, y) {
@@ -500,6 +569,20 @@ export class Board {
     for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
       this.dropCellsAbove(c, bottomY);
     }
+  }
+
+  detonateAll() {
+    const targets = [];
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        const cell = this.grid[r][c];
+        if (cell?.traits.includes('bomb')) targets.push({ x: c, y: r, radius: 1 });
+        else if (cell?.traits.includes('timeBomb')) targets.push({ x: c, y: r, radius: 2 });
+      }
+    }
+    for (const t of targets) this.explodeBombAt(t.x, t.y, t.radius);
+    for (const t of targets) this.dropCellsAboveExplosion(t.x, t.y, t.radius);
+    return targets.length;
   }
 
   clearLabel(result) {
@@ -532,6 +615,22 @@ export class Board {
   receiveGarbage(amount) {
     const n = Math.max(0, Math.ceil(amount));
     if (n > 0) this.garbageEntries.push({ amount: n, timer: GAME_TIMING.GARBAGE_ARM_DELAY });
+  }
+
+  addDurableGarbage(lines, hp = 2) {
+    const hole = Math.floor(Math.random() * this.cols);
+    for (let i = 0; i < lines; i++) {
+      if (this.grid[0].some(Boolean)) {
+        this.defeated = true;
+        return;
+      }
+      this.grid.shift();
+      this.bombFx.forEach(fx => { fx.y -= 1; });
+      this.bombFx = this.bombFx.filter(fx => fx.y >= 0);
+      this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole
+        ? null
+        : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage', 'durable'], hp }));
+    }
   }
 
   wouldOverflowGarbage(lines) {
@@ -609,6 +708,70 @@ export class Board {
     return removed;
   }
 
+  scramble() {
+    for (let r = 0; r < this.rows; r++) {
+      const row = this.grid[r];
+      if (!row.some(Boolean)) continue;
+      const shift = Math.random() < 0.5 ? -1 : 1;
+      const next = Array.from({ length: this.cols }, () => null);
+      for (let c = 0; c < this.cols; c++) {
+        if (!row[c]) continue;
+        const nc = c + shift;
+        if (nc >= 0 && nc < this.cols) next[nc] = row[c];
+        else next[c] = row[c];
+      }
+      this.grid[r] = next;
+    }
+  }
+
+  punchHoles(count = 5) {
+    const filled = [];
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.grid[r][c]) filled.push([r, c]);
+      }
+    }
+    for (let i = filled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filled[i], filled[j]] = [filled[j], filled[i]];
+    }
+    let punched = 0;
+    for (const [r, c] of filled) {
+      if (punched >= count) break;
+      this.grid[r][c] = null;
+      punched++;
+    }
+    return punched;
+  }
+
+  shaveBottom(count = 2) {
+    let removed = 0;
+    for (let r = this.rows - 1; r >= 0 && removed < count; r--) {
+      if (this.grid[r].some(Boolean)) {
+        this.grid.splice(r, 1);
+        this.grid.unshift(emptyRow());
+        removed++;
+        r++;
+      }
+    }
+    return removed;
+  }
+
+  rerollQueue() {
+    this.deck.refill();
+    this.nextQueue = [];
+    this.fillQueue();
+  }
+
+  clearAllGarbage() {
+    const kept = this.grid.filter(row => !row.some(c => c?.type === TYPES.GARBAGE));
+    const removed = this.rows - kept.length;
+    while (kept.length < this.rows) kept.unshift(emptyRow());
+    this.grid = kept;
+    this.garbageEntries = [];
+    return removed;
+  }
+
   collapseColumns() {
     for (let c = 0; c < this.cols; c++) {
       const stack = [];
@@ -646,7 +809,14 @@ export class Board {
       flash: this.flash,
       attackPool: this.attackPool,
       nextAttackDouble: this.nextAttackDouble,
-      attackChargeStacks: this.attackChargeStacks
+      attackChargeStacks: this.attackChargeStacks,
+      rotateLocked: this.rotateLocked,
+      iPieceForce: this.iPieceForce,
+      mpCap: this.mpCap,
+      comboGuard: this.comboGuard,
+      comboGuardCharged: this.comboGuardCharged,
+      chainReactor: this.chainReactor,
+      overchargeShots: this.overchargeShots
     };
   }
 }
