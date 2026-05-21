@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko14';
-import { Deck, shuffle } from './deck.js?v=20260521-ko14';
-import { SKILLS } from './skills.js?v=20260521-ko14';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko14';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko15';
+import { Deck, shuffle } from './deck.js?v=20260521-ko15';
+import { SKILLS } from './skills.js?v=20260521-ko15';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko15';
 
 export const RELICS = {
   combo_amp: {
@@ -474,7 +474,7 @@ export function makeEventChoices(run, eventKey) {
       to: upgrade.to,
       tier: CARD_LIBRARY[upgrade.to].tier || TIERS.BRONZE,
       title: '블록 주입',
-      desc: `${CARD_LIBRARY[upgrade.from].name}을(를) ${CARD_LIBRARY[upgrade.to].name}으로 업그레이드합니다.`
+      desc: `${CARD_LIBRARY[upgrade.from].name} → ${CARD_LIBRARY[upgrade.to].name}: ${CARD_DESCRIPTIONS[upgrade.to] || '이 블록으로 업그레이드합니다.'}`
     });
   }
   const skill = pickByTier(SKILLS, roundTier(run.round), { exclude: run.ownedSkills });
@@ -484,7 +484,7 @@ export function makeEventChoices(run, eventKey) {
       id: skill.id,
       tier: skill.tier,
       title: '스킬 교관',
-      desc: `${skill.name}을(를) 배웁니다. 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
+      desc: `${skill.name}: ${SKILLS[skill.id].desc} 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
     });
   }
   sideChoices.push({
@@ -493,7 +493,7 @@ export function makeEventChoices(run, eventKey) {
     card: eventKey === 'start' ? TYPES.HEAVY_JUNK : TYPES.WIDE_JUNK,
     tier: eventKey === 'start' ? TIERS.BRONZE : TIERS.SILVER,
     title: '강화 필드',
-    desc: '최대 HP 행이 증가하지만, 방해 블록이 덱에 추가됩니다.'
+    desc: `최대 HP 행이 증가하지만, ${CARD_LIBRARY[eventKey === 'start' ? TYPES.HEAVY_JUNK : TYPES.WIDE_JUNK].name}(${CARD_DESCRIPTIONS[eventKey === 'start' ? TYPES.HEAVY_JUNK : TYPES.WIDE_JUNK]})이 덱에 추가됩니다.`
   });
   const supply = pickByTier(CONSUMABLES, roundTier(run.round));
   sideChoices.push({
@@ -511,7 +511,7 @@ export function makeEventChoices(run, eventKey) {
       amount: 3,
       tier: digRelic.tier,
       title: '유물 발굴',
-      desc: `최대 HP 3줄을 소모하여 ${RELICS[digRelic.id].name}을(를) 획득합니다.`
+      desc: `${RELICS[digRelic.id].name}: ${RELICS[digRelic.id].desc} 최대 HP 3줄을 소모하여 획득합니다.`
     });
   }
   if (eventKey !== 'start') {
