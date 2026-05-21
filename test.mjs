@@ -176,7 +176,10 @@ assert.equal(expandedBoard.defeated, false);
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].shapeId, 'CROSS5');
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.POWER_CROSS].tier, TIERS.SILVER);
-assert.equal(CARD_LIBRARY[TYPES.MANA_T].tier, TIERS.GOLD);
+assert.equal(CARD_LIBRARY[TYPES.MANA_T].tier, TIERS.SILVER);
+assert.equal(CARD_LIBRARY[TYPES.POWER_T].tier, TIERS.GOLD);
+assert.equal(CARD_LIBRARY[TYPES.MANA_L].tier, TIERS.SILVER);
+assert.equal(CARD_LIBRARY[TYPES.BOUNTY].tier, TIERS.SILVER);
 assert.equal(CARD_LIBRARY[TYPES.WIDE_JUNK].cellCount, 6);
 assert.equal(CARD_LIBRARY[TYPES.POWER_T].abilityId, 'highPower');
 assert.equal(CARD_LIBRARY[TYPES.BOMB_I].shapeId, 'I');
@@ -423,7 +426,7 @@ assert.equal(CARD_LIBRARY[TYPES.CLEANSE_Z].abilityId, 'purgeGarbage');
 const addedShapeSpecials = [
   [TYPES.MANA_I, 'I', TIERS.GOLD, 'manaBonus'],
   [TYPES.CHAIN_I, 'I', TIERS.GOLD, 'chain'],
-  [TYPES.COOLANT_J, 'J', TIERS.GOLD, 'coolant'],
+  [TYPES.COOLANT_J, 'J', TIERS.SILVER, 'coolant'],
   [TYPES.BOMB_J, 'J', TIERS.GOLD, 'bomb'],
   [TYPES.POWER_L, 'L', TIERS.GOLD, 'highPower'],
   [TYPES.BOMB_L, 'L', TIERS.GOLD, 'bomb'],
@@ -432,7 +435,7 @@ const addedShapeSpecials = [
   [TYPES.CLEANSE_S, 'S', TIERS.SILVER, 'purgeGarbage'],
   [TYPES.BOUNTY_S, 'S', TIERS.SILVER, 'bounty'],
   [TYPES.BOMB_T, 'T', TIERS.GOLD, 'bomb'],
-  [TYPES.COOLANT_T, 'T', TIERS.GOLD, 'coolant'],
+  [TYPES.COOLANT_T, 'T', TIERS.SILVER, 'coolant'],
   [TYPES.CHAIN_Z, 'Z', TIERS.SILVER, 'chain'],
   [TYPES.COOLANT_Z, 'Z', TIERS.SILVER, 'coolant']
 ];
