@@ -1,4 +1,17 @@
-import { COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko21';
+import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko23';
+
+// 블록 셀에 표시할 글자: 능력 기준이라 신규 블록도 자동 커버된다.
+const ABILITY_GLYPH = {
+  highPower: 'P', oddPower: 'P', overdrive: 'P',
+  bomb: 'B', timeBomb: '0',
+  manaBonus: 'M', instantMana: 'M',
+  purgeGarbage: 'C', instantPurge: 'C', megaCleanse: 'C', aidCleanse: 'C',
+  instantAttack: 'A', flashStrike: 'A',
+  instantGuard: 'G', panicWall: 'G',
+  coolant: 'S', comboCharge: 'X', bounty: '$', leadPower: 'H',
+  unstable: '?', chain: '&', glass: 'V', crush: 'W', dispel: 'D',
+  curse: '!', wideCurse: '!'
+};
 
 export class Renderer {
   constructor(canvas) {
@@ -35,7 +48,7 @@ export class Renderer {
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
 
-  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0 }) {
+  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0, alert = null }) {
     if (!this.layout) this.resize(player.rows, enemy.rows);
     const L = this.layout;
     const ctx = this.ctx;
@@ -64,9 +77,27 @@ export class Renderer {
       this.effectBadges(effects.enemy, L.eX, L.y + enemy.rows * L.cell + 6, L.cell);
       this.sidePanel(player, 20, L.y, L.cell, run, false, skillCooldowns);
     }
+    if (alert) this.alertBanner(alert, L);
     if (battle === 'VICTORY' || battle === 'DEFEAT') this.battleOverlay(battle, L);
     if (battle === 'PAUSED' && L.mobile) this.pauseOverlay(message, L);
     if (!L.mobile) this.status(player, enemy, run, battle, message);
+  }
+
+  alertBanner(text, L) {
+    const ctx = this.ctx;
+    ctx.font = `bold ${L.mobile ? 13 : 17}px Courier New`;
+    const w = Math.min(L.w - 16, ctx.measureText(text).width + 28);
+    const x = (L.w - w) / 2;
+    const y = L.mobile ? 30 : 52;
+    ctx.fillStyle = 'rgba(255,90,110,.92)';
+    ctx.fillRect(x, y, w, L.mobile ? 22 : 26);
+    ctx.strokeStyle = '#ffd0d6';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, w, L.mobile ? 22 : 26);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, L.w / 2, y + (L.mobile ? 15 : 18));
+    ctx.textAlign = 'left';
   }
 
   pauseOverlay(message, L) {
@@ -104,7 +135,7 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.font = `bold ${Math.max(8, Math.floor(cs * 0.38))}px Courier New`;
     let x = ox;
-    for (const item of items.slice(0, 3)) {
+    for (const item of items.slice(0, 5)) {
       const w = Math.max(42, ctx.measureText(item).width + 12);
       ctx.fillStyle = '#182538';
       ctx.fillRect(x, oy, w, 14);
@@ -251,23 +282,8 @@ export class Renderer {
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
       const mark = fuse > 0 ? String(fuse)
-        : type === TYPES.BOMB || type === TYPES.BOMB_I || type === TYPES.BOMB_Z || type === TYPES.BOMB_T || type === TYPES.BOMB_J || type === TYPES.BOMB_L ? 'B'
-        : type === TYPES.POWER_I || type === TYPES.POWER_T || type === TYPES.POWER_S || type === TYPES.POWER_CROSS || type === TYPES.POWER_Z || type === TYPES.POWER_L || type === TYPES.POWER_PENTA ? 'P'
         : type === TYPES.CROSS ? '+'
-        : type === TYPES.MANA_T || type === TYPES.MANA_L || type === TYPES.INSTANT_MANA || type === TYPES.MANA_Z || type === TYPES.MANA_I || type === TYPES.MANA_O ? 'M'
-        : type === TYPES.PURGE_O || type === TYPES.CLEANSE_J || type === TYPES.INSTANT_PURGE || type === TYPES.CLEANSE_Z || type === TYPES.CLEANSE_S ? 'C'
-        : type === TYPES.INSTANT_STRIKE ? 'A'
-        : type === TYPES.INSTANT_GUARD ? 'G'
-        : type === TYPES.COOLANT || type === TYPES.COOLANT_J || type === TYPES.COOLANT_T || type === TYPES.COOLANT_Z ? 'S'
-        : type === TYPES.COMBO_CHARGE ? 'X'
-        : type === TYPES.BOUNTY || type === TYPES.BOUNTY_O || type === TYPES.BOUNTY_S ? '$'
-        : type === TYPES.LEAD ? 'H'
-        : type === TYPES.UNSTABLE ? '?'
-        : type === TYPES.CHAIN || type === TYPES.CHAIN_Z || type === TYPES.CHAIN_I ? '&'
-        : type === TYPES.GLASS ? 'V'
-        : type === TYPES.TIMEBOMB ? '0'
-        : type === TYPES.HEAVY_JUNK || type === TYPES.WIDE_JUNK ? '!'
-        : '';
+        : ABILITY_GLYPH[CARD_LIBRARY[type]?.abilityId] || '';
       if (mark) {
         ctx.fillStyle = '#06101d';
         ctx.font = `bold ${Math.floor(cs * 0.48)}px Courier New`;

@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko21';
-import { Deck, shuffle } from './deck.js?v=20260521-ko21';
-import { SKILLS } from './skills.js?v=20260521-ko21';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko21';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko23';
+import { Deck, shuffle } from './deck.js?v=20260521-ko23';
+import { SKILLS } from './skills.js?v=20260521-ko23';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko23';
 
 export const RELICS = {
   combo_amp: {
@@ -116,7 +116,7 @@ export const RELICS = {
     id: 'set_overload',
     name: '과부하 코어',
     tier: TIERS.GOLD,
-    desc: '[파워 세트] 한 번에 주는 공격이 2 이상이면 +1 추가 피해.'
+    desc: '[파워 세트] 한 클리어의 공격력이 2 이상이면 +1 추가 피해(상쇄에 밀리지 않도록 공격력 기준).'
   },
   set_blastcap: {
     id: 'set_blastcap',
@@ -146,7 +146,7 @@ export const RELICS = {
     id: 'set_goldhand',
     name: '황금의 손',
     tier: TIERS.GOLD,
-    desc: '[현상금 세트] 보유 골드에 비례해 적에게 주는 피해 강화(최대 +100%).'
+    desc: '[현상금 세트] 보유 골드에 비례해 적에게 주는 피해 강화(200골드에서 최대 +100%, 골드를 쓰면 그만큼 감소).'
   },
   set_resonator: {
     id: 'set_resonator',
@@ -350,8 +350,8 @@ export function makeBoss(round) {
   card.ability = 'overload';
   card.name = BOSS.name;
   card.style = BOSS.style;
-  card.startingRows = Math.round(card.startingRows * 1.4);
-  card.startingGarbage = card.startingGarbage + 2;
+  card.startingRows = Math.round(card.startingRows * 1.25);
+  card.startingGarbage = card.startingGarbage + 1;
   card.rewardGold = Math.round(card.rewardGold * 1.4);
   return card;
 }
@@ -594,13 +594,14 @@ export function makeEventChoices(run, eventKey) {
   });
   const digRelic = pickByTier(RELICS, roundTier(run.round), { exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
   if (digRelic && eventKey !== 'start') {
+    const digCost = { [TIERS.BRONZE]: 1, [TIERS.SILVER]: 2, [TIERS.GOLD]: 3 }[digRelic.tier] || 2;
     sideChoices.push({
       kind: 'relicDig',
       id: digRelic.id,
-      amount: 3,
+      amount: digCost,
       tier: digRelic.tier,
       title: '유물 발굴',
-      desc: `${RELICS[digRelic.id].name}: ${RELICS[digRelic.id].desc} 최대 HP 3줄을 소모하여 획득합니다.`
+      desc: `${RELICS[digRelic.id].name}: ${RELICS[digRelic.id].desc} 최대 HP ${digCost}줄을 소모하여 획득합니다.`
     });
   }
   if (eventKey !== 'start' && !run.gambleClosed && !run.gambleNext) {
