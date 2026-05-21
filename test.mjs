@@ -475,6 +475,7 @@ bombGravityBoard.grid[10][8] = { type: TYPES.Z, attack: 0.1, traits: [] };
 bombGravityBoard.grid[18][4] = { type: TYPES.L, attack: 0.1, traits: [] };
 bombGravityBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
 const bombGravity = bombGravityBoard.clearLines();
+bombGravityBoard.flushPendingDrops();
 assert.equal(bombGravity.cleared, 1);
 assert.equal(bombGravityBoard.grid[19][3].type, TYPES.S);
 assert.equal(bombGravityBoard.grid[19][4].type, TYPES.I);
@@ -488,6 +489,7 @@ doubleBombGravityBoard.grid[10][4] = { type: TYPES.I, attack: 0.1, traits: [] };
 doubleBombGravityBoard.grid[18] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
 doubleBombGravityBoard.grid[19] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
 const doubleBombGravity = doubleBombGravityBoard.clearLines();
+doubleBombGravityBoard.flushPendingDrops();
 assert.equal(doubleBombGravity.cleared, 2);
 assert.equal(doubleBombGravityBoard.grid[19][3].type, TYPES.S);
 assert.equal(doubleBombGravityBoard.grid[19][4].type, TYPES.I);
@@ -855,5 +857,27 @@ assert.equal(glassBesideBoard.grid[19][0]?.traits.includes('glass'), true, 'glas
 assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].cellCount, 6, 'overdrive is a 6-cell block');
 assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].tier, TIERS.GOLD, 'overdrive is gold tier');
 assert.equal(CARD_LIBRARY[TYPES.OVERDRIVE_PENTA].exhaust, true, 'overdrive is once-per-battle');
+
+// 폭발 후 위 칸 낙하는 약간 지연된 뒤 적용된다
+const delayDropBoard = new Board({ rows: 20, deck: new Deck() });
+delayDropBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+delayDropBoard.grid[10][4] = { type: TYPES.S, attack: 0.1, traits: [] };
+delayDropBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+delayDropBoard.clearLines();
+assert.ok(delayDropBoard.pendingDropTimer > 0, 'explosion schedules a delayed drop');
+assert.equal(delayDropBoard.grid[19][4], null, 'cell above does not fall immediately');
+delayDropBoard.tickEffects(1000);
+assert.equal(delayDropBoard.pendingDropTimer, 0, 'pending drop resolves after delay');
+assert.equal(delayDropBoard.grid[19][4]?.type, TYPES.S, 'cell above falls once the delay elapses');
+
+// 다음 블록이 잠기면 보류된 낙하가 먼저 정리된다
+const flushOnLockBoard = new Board({ rows: 20, deck: new Deck() });
+flushOnLockBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+flushOnLockBoard.grid[10][4] = { type: TYPES.S, attack: 0.1, traits: [] };
+flushOnLockBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+flushOnLockBoard.clearLines();
+flushOnLockBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 0, SPAWN_Y);
+flushOnLockBoard.lock();
+assert.equal(flushOnLockBoard.pendingDropTimer, 0, 'locking flushes pending drops');
 
 console.log('All Battle Block Star v3.0 checks passed.');
