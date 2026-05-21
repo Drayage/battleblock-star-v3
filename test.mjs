@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, grantEliteRelic, isShopRound, makeBoss, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, rerollShopStock, restockShopItem, RunState, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, completedAbilitySets, grantEliteRelic, isShopRound, makeBoss, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, rerollShopStock, restockShopItem, RunState, setProgress, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -879,5 +879,67 @@ flushOnLockBoard.clearLines();
 flushOnLockBoard.current = new Mino(CARD_LIBRARY[TYPES.O], 0, SPAWN_Y);
 flushOnLockBoard.lock();
 assert.equal(flushOnLockBoard.pendingDropTimer, 0, 'locking flushes pending drops');
+
+// Phase 6: 세트 정의 — 8능력 각 7형태가 카드로 존재하고 abilityId 일치
+assert.equal(Object.keys(SET_DEFINITIONS).length, 8, '8 ability sets defined');
+for (const ab of Object.keys(SET_DEFINITIONS)) {
+  const shapes = Object.keys(SET_DEFINITIONS[ab]);
+  assert.equal(shapes.length, 7, `${ab} set has 7 shapes`);
+  for (const sh of shapes) {
+    const id = SET_DEFINITIONS[ab][sh];
+    assert.ok(CARD_LIBRARY[id], `${ab}.${sh} card exists`);
+    assert.equal(CARD_LIBRARY[id].abilityId, ab, `${ab}.${sh} has matching ability`);
+  }
+}
+
+// completedAbilitySets / setProgress
+const setRun = new RunState();
+setRun.round = 4;
+assert.equal(completedAbilitySets(setRun).length, 0, 'no sets complete initially');
+for (const id of Object.values(SET_DEFINITIONS.highPower)) setRun.deck.addCard(id);
+assert.deepEqual(completedAbilitySets(setRun), ['highPower'], 'highPower set detected when all 7 present');
+assert.deepEqual(setProgress(setRun, 'highPower'), { have: 7, total: 7 }, 'setProgress 7/7');
+
+// 세트 완성 시 다음 이벤트에 setRelic 확정 포함, 제시 후 소비(재등장 안 함)
+const setChoices = makeEventChoices(setRun, 'after-2');
+assert.ok(setChoices.some(c => c.kind === 'setRelic' && c.id === SET_RELICS.highPower), 'setRelic injected into next event');
+assert.ok(setRun.seenSets.has('highPower'), 'set marked seen on present');
+const setChoices2 = makeEventChoices(setRun, 'after-4');
+assert.ok(!setChoices2.some(c => c.kind === 'setRelic'), 'setRelic not offered again after consumed');
+
+// 중량 블록: 놓인 열 빈칸 압착(compactColumns)
+const crushBoard = new Board({ rows: 20, deck: new Deck() });
+crushBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+crushBoard.grid[5][2] = { type: TYPES.I, attack: 0.1, traits: [] };
+crushBoard.grid[10][2] = { type: TYPES.I, attack: 0.1, traits: [] };
+crushBoard.grid[18][2] = { type: TYPES.I, attack: 0.1, traits: [] };
+crushBoard.compactColumns([2]);
+assert.equal(crushBoard.grid[19][2]?.type, TYPES.I, 'compact pulls cells to bottom');
+assert.equal(crushBoard.grid[18][2]?.type, TYPES.I, 'compact stacks with no gaps');
+assert.equal(crushBoard.grid[17][2]?.type, TYPES.I, 'all three cells compacted to bottom');
+assert.equal(crushBoard.grid[16][2], null, 'no floating cells remain');
+
+// forceCrushNext: 다음 스폰이 CRUSHER
+const fcBoard = new Board({ rows: 20, deck: new Deck() });
+fcBoard.forceCrushNext = 1;
+fcBoard.spawn();
+assert.equal(fcBoard.current.card.id, TYPES.CRUSHER, 'forceCrushNext spawns crusher');
+
+// 소멸 면역: exhaust 카드가 battleExhausted에 등록되지 않음
+const exDeck = new Deck();
+exDeck.beginBattle();
+exDeck.draw = [TYPES.FLASH_I];
+exDeck.next();
+assert.ok(exDeck.battleExhausted.has(TYPES.FLASH_I), 'exhaust normally registered');
+const immDeck = new Deck();
+immDeck.beginBattle();
+immDeck.exhaustImmune = true;
+immDeck.draw = [TYPES.FLASH_I];
+immDeck.next();
+assert.equal(immDeck.battleExhausted.has(TYPES.FLASH_I), false, 'exhaust immune skips registration');
+
+// dispel 카드 onPlace 플래그
+assert.equal(CARD_LIBRARY[TYPES.DISPEL_T].onPlace?.dispelEnemy, true, 'dispel block carries dispelEnemy');
+assert.equal(CARD_LIBRARY[TYPES.DISPEL_T].exhaust, false, 'dispel block is not exhaust (reward pool)');
 
 console.log('All Battle Block Star v3.0 checks passed.');

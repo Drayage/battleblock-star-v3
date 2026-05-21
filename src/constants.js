@@ -85,7 +85,36 @@ export const TYPES = {
   MEGA_CLEANSE: 'MEGA_CLEANSE',
   PANIC_WALL: 'PANIC_WALL',
   FLASH_I: 'FLASH_I',
-  AID_O: 'AID_O'
+  AID_O: 'AID_O',
+  POWER_J: 'POWER_J',
+  POWER_O: 'POWER_O',
+  BOMB_S: 'BOMB_S',
+  MANA_J: 'MANA_J',
+  MANA_S: 'MANA_S',
+  CLEANSE_I: 'CLEANSE_I',
+  CLEANSE_L: 'CLEANSE_L',
+  CLEANSE_T: 'CLEANSE_T',
+  COOLANT_O: 'COOLANT_O',
+  COOLANT_L: 'COOLANT_L',
+  COOLANT_S: 'COOLANT_S',
+  BOUNTY_I: 'BOUNTY_I',
+  BOUNTY_J: 'BOUNTY_J',
+  BOUNTY_T: 'BOUNTY_T',
+  BOUNTY_Z: 'BOUNTY_Z',
+  CHAIN_J: 'CHAIN_J',
+  CHAIN_L: 'CHAIN_L',
+  CHAIN_O: 'CHAIN_O',
+  CHAIN_S: 'CHAIN_S',
+  COMBO_I: 'COMBO_I',
+  COMBO_J: 'COMBO_J',
+  COMBO_L: 'COMBO_L',
+  COMBO_O: 'COMBO_O',
+  COMBO_S: 'COMBO_S',
+  COMBO_Z: 'COMBO_Z',
+  CRUSHER: 'CRUSHER',
+  DISPEL_T: 'DISPEL_T',
+  DISPEL_O: 'DISPEL_O',
+  DISPEL_I: 'DISPEL_I'
 };
 
 export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T, TYPES.Z];
@@ -158,6 +187,35 @@ export const COLORS = {
   [TYPES.PANIC_WALL]: '#7fb6ff',
   [TYPES.FLASH_I]: '#ffe66b',
   [TYPES.AID_O]: '#b9ffe0',
+  [TYPES.POWER_J]: '#ff6f9c',
+  [TYPES.POWER_O]: '#ff5c8a',
+  [TYPES.BOMB_S]: '#ff7a3a',
+  [TYPES.MANA_J]: '#4ad6c0',
+  [TYPES.MANA_S]: '#52e8c4',
+  [TYPES.CLEANSE_I]: '#cfe2ff',
+  [TYPES.CLEANSE_L]: '#cdd9ff',
+  [TYPES.CLEANSE_T]: '#d6e0ff',
+  [TYPES.COOLANT_O]: '#9be4ff',
+  [TYPES.COOLANT_L]: '#90dcff',
+  [TYPES.COOLANT_S]: '#8ad6ff',
+  [TYPES.BOUNTY_I]: '#f4c63a',
+  [TYPES.BOUNTY_J]: '#f1c230',
+  [TYPES.BOUNTY_T]: '#f6cf45',
+  [TYPES.BOUNTY_Z]: '#efc52a',
+  [TYPES.CHAIN_J]: '#7fa8ff',
+  [TYPES.CHAIN_L]: '#86b0ff',
+  [TYPES.CHAIN_O]: '#90b8ff',
+  [TYPES.CHAIN_S]: '#7cb4ff',
+  [TYPES.COMBO_I]: '#ffd84a',
+  [TYPES.COMBO_J]: '#ffd23a',
+  [TYPES.COMBO_L]: '#ffdb55',
+  [TYPES.COMBO_O]: '#ffce2f',
+  [TYPES.COMBO_S]: '#ffe066',
+  [TYPES.COMBO_Z]: '#ffd040',
+  [TYPES.CRUSHER]: '#5a5f70',
+  [TYPES.DISPEL_T]: '#c98bff',
+  [TYPES.DISPEL_O]: '#c07bff',
+  [TYPES.DISPEL_I]: '#d29bff',
   [TYPES.GARBAGE]: '#4a4b56'
 };
 
@@ -347,7 +405,36 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.MEGA_CLEANSE]: 'CROSS5',
   [TYPES.PANIC_WALL]: 'WIDE6',
   [TYPES.FLASH_I]: 'I',
-  [TYPES.AID_O]: 'O'
+  [TYPES.AID_O]: 'O',
+  [TYPES.POWER_J]: 'J',
+  [TYPES.POWER_O]: 'O',
+  [TYPES.BOMB_S]: 'S',
+  [TYPES.MANA_J]: 'J',
+  [TYPES.MANA_S]: 'S',
+  [TYPES.CLEANSE_I]: 'I',
+  [TYPES.CLEANSE_L]: 'L',
+  [TYPES.CLEANSE_T]: 'T',
+  [TYPES.COOLANT_O]: 'O',
+  [TYPES.COOLANT_L]: 'L',
+  [TYPES.COOLANT_S]: 'S',
+  [TYPES.BOUNTY_I]: 'I',
+  [TYPES.BOUNTY_J]: 'J',
+  [TYPES.BOUNTY_T]: 'T',
+  [TYPES.BOUNTY_Z]: 'Z',
+  [TYPES.CHAIN_J]: 'J',
+  [TYPES.CHAIN_L]: 'L',
+  [TYPES.CHAIN_O]: 'O',
+  [TYPES.CHAIN_S]: 'S',
+  [TYPES.COMBO_I]: 'I',
+  [TYPES.COMBO_J]: 'J',
+  [TYPES.COMBO_L]: 'L',
+  [TYPES.COMBO_O]: 'O',
+  [TYPES.COMBO_S]: 'S',
+  [TYPES.COMBO_Z]: 'Z',
+  [TYPES.CRUSHER]: 'O',
+  [TYPES.DISPEL_T]: 'T',
+  [TYPES.DISPEL_O]: 'O',
+  [TYPES.DISPEL_I]: 'I'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
 export const ABILITY_LIBRARY = {
@@ -375,7 +462,9 @@ export const ABILITY_LIBRARY = {
   megaCleanse: { id: 'megaCleanse', name: '메가 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 6 }, desc: '배치 즉시 쓰레기 행 6줄을 제거합니다.' },
   panicWall: { id: 'panicWall', name: '패닉 월', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 8 }, desc: '배치 즉시 들어오는 공격 게이지를 최대 8 차단합니다.' },
   flashStrike: { id: 'flashStrike', name: '섬광', cellAttack: 0.1, traits: [], onPlace: { attack: 2 }, desc: '배치 즉시 2.0 공격력을 발사합니다.' },
-  aidCleanse: { id: 'aidCleanse', name: '응급 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 2 }, desc: '배치 즉시 쓰레기 행 2줄을 제거합니다.' }
+  aidCleanse: { id: 'aidCleanse', name: '응급 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 2 }, desc: '배치 즉시 쓰레기 행 2줄을 제거합니다.' },
+  crush: { id: 'crush', name: '중량', cellAttack: 0.3, traits: ['heavyCrush'], desc: '놓는 순간 점유한 각 열의 빈칸을 모두 눌러 없앱니다(아래로 압착).' },
+  dispel: { id: 'dispel', name: '해제', cellAttack: 0.1, traits: [], onPlace: { dispelEnemy: true }, desc: '배치 즉시 적의 현재 특수능력을 일시 제거하고 게이지를 비웁니다.' }
 };
 
 function tierFromShapeAbility(shapeId, abilityId, rarity) {
@@ -483,7 +572,36 @@ export const CARD_LIBRARY = {
   [TYPES.MEGA_CLEANSE]: blockCard(TYPES.MEGA_CLEANSE, '메가 클렌즈', 'CROSS5', 'megaCleanse', 'rare', { exhaust: true }),
   [TYPES.PANIC_WALL]: blockCard(TYPES.PANIC_WALL, '패닉 월', 'WIDE6', 'panicWall', 'uncommon', { exhaust: true }),
   [TYPES.FLASH_I]: blockCard(TYPES.FLASH_I, '섬광 I', 'I', 'flashStrike', 'uncommon', { exhaust: true }),
-  [TYPES.AID_O]: blockCard(TYPES.AID_O, '응급 클렌즈', 'O', 'aidCleanse', 'uncommon', { exhaust: true })
+  [TYPES.AID_O]: blockCard(TYPES.AID_O, '응급 클렌즈', 'O', 'aidCleanse', 'uncommon', { exhaust: true }),
+  [TYPES.POWER_J]: blockCard(TYPES.POWER_J, '파워 J', 'J', 'highPower', 'rare'),
+  [TYPES.POWER_O]: blockCard(TYPES.POWER_O, '파워 O', 'O', 'highPower', 'rare'),
+  [TYPES.BOMB_S]: blockCard(TYPES.BOMB_S, '봄브 S', 'S', 'bomb', 'uncommon'),
+  [TYPES.MANA_J]: blockCard(TYPES.MANA_J, '마나 J', 'J', 'manaBonus', 'uncommon'),
+  [TYPES.MANA_S]: blockCard(TYPES.MANA_S, '마나 S', 'S', 'manaBonus', 'uncommon'),
+  [TYPES.CLEANSE_I]: blockCard(TYPES.CLEANSE_I, '클렌즈 I', 'I', 'purgeGarbage', 'rare'),
+  [TYPES.CLEANSE_L]: blockCard(TYPES.CLEANSE_L, '클렌즈 L', 'L', 'purgeGarbage', 'uncommon'),
+  [TYPES.CLEANSE_T]: blockCard(TYPES.CLEANSE_T, '클렌즈 T', 'T', 'purgeGarbage', 'uncommon'),
+  [TYPES.COOLANT_O]: blockCard(TYPES.COOLANT_O, '냉각 O', 'O', 'coolant', 'uncommon'),
+  [TYPES.COOLANT_L]: blockCard(TYPES.COOLANT_L, '냉각 L', 'L', 'coolant', 'uncommon'),
+  [TYPES.COOLANT_S]: blockCard(TYPES.COOLANT_S, '냉각 S', 'S', 'coolant', 'uncommon'),
+  [TYPES.BOUNTY_I]: blockCard(TYPES.BOUNTY_I, '현상금 I', 'I', 'bounty', 'uncommon'),
+  [TYPES.BOUNTY_J]: blockCard(TYPES.BOUNTY_J, '현상금 J', 'J', 'bounty', 'uncommon'),
+  [TYPES.BOUNTY_T]: blockCard(TYPES.BOUNTY_T, '현상금 T', 'T', 'bounty', 'uncommon'),
+  [TYPES.BOUNTY_Z]: blockCard(TYPES.BOUNTY_Z, '현상금 Z', 'Z', 'bounty', 'uncommon'),
+  [TYPES.CHAIN_J]: blockCard(TYPES.CHAIN_J, '사슬 J', 'J', 'chain', 'rare'),
+  [TYPES.CHAIN_L]: blockCard(TYPES.CHAIN_L, '사슬 L', 'L', 'chain', 'rare'),
+  [TYPES.CHAIN_O]: blockCard(TYPES.CHAIN_O, '사슬 O', 'O', 'chain', 'rare'),
+  [TYPES.CHAIN_S]: blockCard(TYPES.CHAIN_S, '사슬 S', 'S', 'chain', 'rare'),
+  [TYPES.COMBO_I]: blockCard(TYPES.COMBO_I, '콤보 I', 'I', 'comboCharge', 'rare'),
+  [TYPES.COMBO_J]: blockCard(TYPES.COMBO_J, '콤보 J', 'J', 'comboCharge', 'rare'),
+  [TYPES.COMBO_L]: blockCard(TYPES.COMBO_L, '콤보 L', 'L', 'comboCharge', 'rare'),
+  [TYPES.COMBO_O]: blockCard(TYPES.COMBO_O, '콤보 O', 'O', 'comboCharge', 'rare'),
+  [TYPES.COMBO_S]: blockCard(TYPES.COMBO_S, '콤보 S', 'S', 'comboCharge', 'rare'),
+  [TYPES.COMBO_Z]: blockCard(TYPES.COMBO_Z, '콤보 Z', 'Z', 'comboCharge', 'rare'),
+  [TYPES.CRUSHER]: blockCard(TYPES.CRUSHER, '중량 블록', 'O', 'crush', 'gold', { exhaust: true }),
+  [TYPES.DISPEL_T]: blockCard(TYPES.DISPEL_T, '해제 T', 'T', 'dispel', 'rare'),
+  [TYPES.DISPEL_O]: blockCard(TYPES.DISPEL_O, '해제 O', 'O', 'dispel', 'rare'),
+  [TYPES.DISPEL_I]: blockCard(TYPES.DISPEL_I, '해제 I', 'I', 'dispel', 'rare')
 };
 
 export const CARD_DESCRIPTIONS = {
@@ -542,5 +660,61 @@ export const CARD_DESCRIPTIONS = {
   [TYPES.MEGA_CLEANSE]: '[1회용] 배치 즉시 쓰레기 행 6줄을 제거합니다. 전투당 한 번만 등장합니다.',
   [TYPES.PANIC_WALL]: '[1회용] 배치 즉시 들어오는 쓰레기 게이지를 최대 8줄 차단합니다. 전투당 한 번만 등장합니다.',
   [TYPES.FLASH_I]: '[소멸] 배치 즉시 2.0 공격력을 발사합니다. 전투당 한 번만 등장합니다.',
-  [TYPES.AID_O]: '[소멸] 배치 즉시 쓰레기 행 2줄을 제거합니다. 전투당 한 번만 등장합니다.'
+  [TYPES.AID_O]: '[소멸] 배치 즉시 쓰레기 행 2줄을 제거합니다. 전투당 한 번만 등장합니다.',
+  [TYPES.POWER_J]: 'J 모양 고출력 블록. 클리어된 셀당 0.3 공격력.',
+  [TYPES.POWER_O]: 'O 모양 고출력 블록. 클리어된 셀당 0.3 공격력.',
+  [TYPES.BOMB_S]: 'S 모양 폭탄. 줄 클리어 시 주변 3x3을 파괴합니다.',
+  [TYPES.MANA_J]: 'J 모양 마나 블록. 클리어된 셀이 추가 MP를 제공합니다.',
+  [TYPES.MANA_S]: 'S 모양 마나 블록. 클리어된 셀이 추가 MP를 제공합니다.',
+  [TYPES.CLEANSE_I]: 'I 모양 클렌즈 블록. 클리어 시 쓰레기 행을 제거합니다.',
+  [TYPES.CLEANSE_L]: 'L 모양 클렌즈 블록. 클리어 시 쓰레기 행을 제거합니다.',
+  [TYPES.CLEANSE_T]: 'T 모양 클렌즈 블록. 클리어 시 쓰레기 행을 제거합니다.',
+  [TYPES.COOLANT_O]: 'O 모양 냉각 블록. 클리어된 냉각 셀마다 적 행동을 늦춥니다.',
+  [TYPES.COOLANT_L]: 'L 모양 냉각 블록. 클리어된 냉각 셀마다 적 행동을 늦춥니다.',
+  [TYPES.COOLANT_S]: 'S 모양 냉각 블록. 클리어된 냉각 셀마다 적 행동을 늦춥니다.',
+  [TYPES.BOUNTY_I]: 'I 모양 현상금 블록. 클리어된 현상금 셀 수에 따라 골드를 얻습니다.',
+  [TYPES.BOUNTY_J]: 'J 모양 현상금 블록. 클리어된 현상금 셀 수에 따라 골드를 얻습니다.',
+  [TYPES.BOUNTY_T]: 'T 모양 현상금 블록. 클리어된 현상금 셀 수에 따라 골드를 얻습니다.',
+  [TYPES.BOUNTY_Z]: 'Z 모양 현상금 블록. 클리어된 현상금 셀 수에 따라 골드를 얻습니다.',
+  [TYPES.CHAIN_J]: 'J 모양 사슬 블록. 다른 사슬 블록과 맞붙어야 연결 행 제거가 발동합니다.',
+  [TYPES.CHAIN_L]: 'L 모양 사슬 블록. 다른 사슬 블록과 맞붙어야 연결 행 제거가 발동합니다.',
+  [TYPES.CHAIN_O]: 'O 모양 사슬 블록. 다른 사슬 블록과 맞붙어야 연결 행 제거가 발동합니다.',
+  [TYPES.CHAIN_S]: 'S 모양 사슬 블록. 다른 사슬 블록과 맞붙어야 연결 행 제거가 발동합니다.',
+  [TYPES.COMBO_I]: 'I 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.COMBO_J]: 'J 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.COMBO_L]: 'L 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.COMBO_O]: 'O 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.COMBO_S]: 'S 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.COMBO_Z]: 'Z 모양 콤보 차지. 클리어 시 다음 클리어 공격력이 누적 증가합니다.',
+  [TYPES.CRUSHER]: '[소멸·골드] 중량 블록. 놓는 순간 점유한 각 열의 빈칸을 모두 눌러 없앱니다(아래로 압착). 구멍 복구에 최적. 전투당 한 번만 등장합니다.',
+  [TYPES.DISPEL_T]: 'T 모양 해제 블록. 배치 즉시 적의 현재 특수능력을 일시 제거하고 능력 게이지를 비웁니다(보스 OVERLOAD 포함).',
+  [TYPES.DISPEL_O]: 'O 모양 해제 블록. 배치 즉시 적의 현재 특수능력을 일시 제거하고 능력 게이지를 비웁니다(보스 OVERLOAD 포함).',
+  [TYPES.DISPEL_I]: 'I 모양 해제 블록. 배치 즉시 적의 현재 특수능력을 일시 제거하고 능력 게이지를 비웁니다(보스 OVERLOAD 포함).'
+};
+
+export const SET_DEFINITIONS = {
+  highPower: { I: TYPES.POWER_I, J: TYPES.POWER_J, L: TYPES.POWER_L, O: TYPES.POWER_O, S: TYPES.POWER_S, T: TYPES.POWER_T, Z: TYPES.POWER_Z },
+  bomb: { I: TYPES.BOMB_I, J: TYPES.BOMB_J, L: TYPES.BOMB_L, O: TYPES.BOMB, S: TYPES.BOMB_S, T: TYPES.BOMB_T, Z: TYPES.BOMB_Z },
+  manaBonus: { I: TYPES.MANA_I, J: TYPES.MANA_J, L: TYPES.MANA_L, O: TYPES.MANA_O, S: TYPES.MANA_S, T: TYPES.MANA_T, Z: TYPES.MANA_Z },
+  purgeGarbage: { I: TYPES.CLEANSE_I, J: TYPES.CLEANSE_J, L: TYPES.CLEANSE_L, O: TYPES.PURGE_O, S: TYPES.CLEANSE_S, T: TYPES.CLEANSE_T, Z: TYPES.CLEANSE_Z },
+  coolant: { I: TYPES.COOLANT, J: TYPES.COOLANT_J, L: TYPES.COOLANT_L, O: TYPES.COOLANT_O, S: TYPES.COOLANT_S, T: TYPES.COOLANT_T, Z: TYPES.COOLANT_Z },
+  bounty: { I: TYPES.BOUNTY_I, J: TYPES.BOUNTY_J, L: TYPES.BOUNTY, O: TYPES.BOUNTY_O, S: TYPES.BOUNTY_S, T: TYPES.BOUNTY_T, Z: TYPES.BOUNTY_Z },
+  chain: { I: TYPES.CHAIN_I, J: TYPES.CHAIN_J, L: TYPES.CHAIN_L, O: TYPES.CHAIN_O, S: TYPES.CHAIN_S, T: TYPES.CHAIN, Z: TYPES.CHAIN_Z },
+  comboCharge: { I: TYPES.COMBO_I, J: TYPES.COMBO_J, L: TYPES.COMBO_L, O: TYPES.COMBO_O, S: TYPES.COMBO_S, T: TYPES.COMBO_CHARGE, Z: TYPES.COMBO_Z }
+};
+
+export const SET_RELICS = {
+  highPower: 'set_overload',
+  bomb: 'set_blastcap',
+  manaBonus: 'set_manawell',
+  purgeGarbage: 'set_sanctuary',
+  coolant: 'set_abszero',
+  bounty: 'set_goldhand',
+  chain: 'set_resonator',
+  comboCharge: 'set_comboengine'
+};
+
+export const SET_LABELS = {
+  highPower: '파워', bomb: '봄브', manaBonus: '마나', purgeGarbage: '클렌즈',
+  coolant: '냉각', bounty: '현상금', chain: '사슬', comboCharge: '콤보'
 };

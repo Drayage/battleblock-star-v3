@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko20';
-import { Deck, shuffle } from './deck.js?v=20260521-ko20';
-import { SKILLS } from './skills.js?v=20260521-ko20';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko20';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko21';
+import { Deck, shuffle } from './deck.js?v=20260521-ko21';
+import { SKILLS } from './skills.js?v=20260521-ko21';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko21';
 
 export const RELICS = {
   combo_amp: {
@@ -99,6 +99,66 @@ export const RELICS = {
     name: '현상금 거래소',
     tier: TIERS.GOLD,
     desc: '현상금 블록으로 얻는 골드가 2배가 됩니다.'
+  },
+  preservation_seal: {
+    id: 'preservation_seal',
+    name: '소멸 봉인',
+    tier: TIERS.GOLD,
+    desc: '소멸/1회용 블록이 소멸되지 않고 계속 덱에 남습니다.'
+  },
+  alchemy_core: {
+    id: 'alchemy_core',
+    name: '연금술 핵',
+    tier: TIERS.GOLD,
+    desc: '획득 즉시 내 덱의 기본 블록을 각각 랜덤한 특수 블록으로 변환합니다.'
+  },
+  set_overload: {
+    id: 'set_overload',
+    name: '과부하 코어',
+    tier: TIERS.GOLD,
+    desc: '[파워 세트] 한 번에 주는 공격이 2 이상이면 +1 추가 피해.'
+  },
+  set_blastcap: {
+    id: 'set_blastcap',
+    name: '대폭발 신관',
+    tier: TIERS.GOLD,
+    desc: '[봄브 세트] 모든 폭발 반경이 +1 증가합니다.'
+  },
+  set_manawell: {
+    id: 'set_manawell',
+    name: '마나 우물',
+    tier: TIERS.GOLD,
+    desc: '[마나 세트] 모든 스킬 쿨타임이 50% 감소합니다.'
+  },
+  set_sanctuary: {
+    id: 'set_sanctuary',
+    name: '정화의 성소',
+    tier: TIERS.GOLD,
+    desc: '[클렌즈 세트] 쓰레기 줄을 정화할 때마다 공격력 +0.5.'
+  },
+  set_abszero: {
+    id: 'set_abszero',
+    name: '절대영도',
+    tier: TIERS.GOLD,
+    desc: '[냉각 세트] 냉각 둔화 지속 2배. 둔화 중 내 공격 +1, 받는 피해 -1.'
+  },
+  set_goldhand: {
+    id: 'set_goldhand',
+    name: '황금의 손',
+    tier: TIERS.GOLD,
+    desc: '[현상금 세트] 보유 골드에 비례해 적에게 주는 피해 강화(최대 +100%).'
+  },
+  set_resonator: {
+    id: 'set_resonator',
+    name: '사슬 공명기',
+    tier: TIERS.GOLD,
+    desc: '[사슬 세트] 사슬로 함께 지워진 줄도 더블/트리플/쿼드 폭발 배수 계산에 포함됩니다.'
+  },
+  set_comboengine: {
+    id: 'set_comboengine',
+    name: '콤보 엔진',
+    tier: TIERS.GOLD,
+    desc: '[콤보 세트] 콤보 공격 배수 증가폭이 강화됩니다.'
   }
 };
 
@@ -118,13 +178,13 @@ const SHOP_PRICE = {
 };
 
 export const BLOCK_UPGRADES = {
-  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.COOLANT, TYPES.MANA_I, TYPES.CHAIN_I],
-  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.UNSTABLE, TYPES.COOLANT_J, TYPES.BOMB_J],
-  [TYPES.L]: [TYPES.MANA_L, TYPES.BOUNTY, TYPES.POWER_L, TYPES.BOMB_L],
-  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.LEAD, TYPES.TIMEBOMB, TYPES.BOUNTY_O, TYPES.MANA_O],
-  [TYPES.S]: [TYPES.POWER_S, TYPES.GLASS, TYPES.CLEANSE_S, TYPES.BOUNTY_S],
-  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.COMBO_CHARGE, TYPES.CHAIN, TYPES.BOMB_T, TYPES.COOLANT_T],
-  [TYPES.Z]: [TYPES.POWER_Z, TYPES.MANA_Z, TYPES.BOMB_Z, TYPES.CLEANSE_Z, TYPES.CHAIN_Z, TYPES.COOLANT_Z]
+  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.COOLANT, TYPES.MANA_I, TYPES.CHAIN_I, TYPES.CLEANSE_I, TYPES.BOUNTY_I, TYPES.COMBO_I],
+  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.UNSTABLE, TYPES.COOLANT_J, TYPES.BOMB_J, TYPES.POWER_J, TYPES.MANA_J, TYPES.BOUNTY_J, TYPES.CHAIN_J, TYPES.COMBO_J],
+  [TYPES.L]: [TYPES.MANA_L, TYPES.BOUNTY, TYPES.POWER_L, TYPES.BOMB_L, TYPES.CLEANSE_L, TYPES.COOLANT_L, TYPES.CHAIN_L, TYPES.COMBO_L],
+  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.LEAD, TYPES.TIMEBOMB, TYPES.BOUNTY_O, TYPES.MANA_O, TYPES.POWER_O, TYPES.COOLANT_O, TYPES.CHAIN_O, TYPES.COMBO_O],
+  [TYPES.S]: [TYPES.POWER_S, TYPES.GLASS, TYPES.CLEANSE_S, TYPES.BOUNTY_S, TYPES.BOMB_S, TYPES.MANA_S, TYPES.COOLANT_S, TYPES.CHAIN_S, TYPES.COMBO_S],
+  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.COMBO_CHARGE, TYPES.CHAIN, TYPES.BOMB_T, TYPES.COOLANT_T, TYPES.CLEANSE_T, TYPES.BOUNTY_T],
+  [TYPES.Z]: [TYPES.POWER_Z, TYPES.MANA_Z, TYPES.BOMB_Z, TYPES.CLEANSE_Z, TYPES.CHAIN_Z, TYPES.COOLANT_Z, TYPES.BOUNTY_Z, TYPES.COMBO_Z]
 };
 
 export class RunState {
@@ -142,6 +202,8 @@ export class RunState {
     this.shopStock = {};
     this.seenEvents = new Set();
     this.starterPicked = false;
+    this.seenSets = new Set();
+    this.gambleNext = null;
   }
 
   deckCount() {
@@ -252,8 +314,35 @@ function categoryBlocklist(source, card) {
 }
 
 function isPlayerRewardCard(card) {
-  return card.tier && card.rarity !== 'base' && card.rarity !== 'curse' && card.id !== TYPES.CROSS;
+  return card.tier && card.rarity !== 'base' && card.rarity !== 'curse' && card.id !== TYPES.CROSS && !card.exhaust;
 }
+
+export function setProgress(run, ability) {
+  const def = SET_DEFINITIONS[ability];
+  if (!def) return null;
+  const owned = new Set(run.deck.extraCards);
+  const have = Object.values(def).filter(id => owned.has(id)).length;
+  return { have, total: 7 };
+}
+
+export function abilityOf(cardId) {
+  return CARD_LIBRARY[cardId]?.abilityId;
+}
+
+export function completedAbilitySets(run) {
+  const owned = new Set(run.deck.extraCards);
+  return Object.keys(SET_DEFINITIONS).filter(ability =>
+    Object.values(SET_DEFINITIONS[ability]).every(id => owned.has(id)));
+}
+
+// 세트/연금술 유물은 전용 경로(세트 완성·도박 체인)로만 획득 → 무작위 유물 풀에서 제외.
+const EARNED_ONLY_RELICS = [...Object.values(SET_RELICS), 'alchemy_core'];
+
+const GAMBLE_TIERS = {
+  bronze: { gtier: 'bronze', tier: TIERS.BRONZE, bet: 20, reward: 60, chance: 0.55, title: '도박', desc: '20골드를 겁니다. 55% 확률로 60골드를 받고, 실패하면 잃습니다. (성공 시 다음 이벤트에 실버 도박 등장)' },
+  silver: { gtier: 'silver', tier: TIERS.SILVER, bet: 40, reward: 130, chance: 0.45, title: '실버 도박', desc: '40골드를 겁니다. 45% 확률로 130골드. 성공 시 다음 이벤트에 골드 도박 등장. 안 하면 이후 도박이 사라집니다.' },
+  gold: { gtier: 'gold', tier: TIERS.GOLD, bet: 80, reward: 220, chance: 0.4, title: '골드 도박', desc: '80골드를 겁니다. 40% 확률로 220골드 + 연금술 핵(유물). 안 하면 이후 도박이 사라집니다.' }
+};
 
 export function makeBoss(round) {
   const card = makeEnemy(round, true, BOSS);
@@ -359,7 +448,7 @@ export function makeShopItems(run) {
   }
   const skill = pickByTier(SKILLS, tier, { exclude: run.ownedSkills });
   const consumable = pickByTier(CONSUMABLES, tier);
-  const relic = pickByTier(RELICS, tier, { exclude: run.relics });
+  const relic = pickByTier(RELICS, tier, { exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
   const removable = removableDeckCards(run);
   const hpTier = tier;
   const items = [
@@ -391,7 +480,7 @@ export function restockShopItem(run, item) {
     return s ? { kind: 'skill', id: s.id, tier: s.tier, title: `Skill: ${SKILLS[s.id].name}`, price: shopPrice('skill', s.tier) } : null;
   }
   if (item.kind === 'relic') {
-    const r = pickByTier(RELICS, tier, { exclude: run.relics });
+    const r = pickByTier(RELICS, tier, { exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
     return r ? { kind: 'relic', id: r.id, tier: r.tier, title: `Relic: ${RELICS[r.id].name}`, price: shopPrice('relic', r.tier) } : null;
   }
   if (item.kind === 'consumable') {
@@ -503,7 +592,7 @@ export function makeEventChoices(run, eventKey) {
     title: '보급 캐시',
     desc: `${supply.name}: ${supply.desc} 아이템 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
   });
-  const digRelic = pickByTier(RELICS, roundTier(run.round), { exclude: run.relics });
+  const digRelic = pickByTier(RELICS, roundTier(run.round), { exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
   if (digRelic && eventKey !== 'start') {
     sideChoices.push({
       kind: 'relicDig',
@@ -514,14 +603,10 @@ export function makeEventChoices(run, eventKey) {
       desc: `${RELICS[digRelic.id].name}: ${RELICS[digRelic.id].desc} 최대 HP 3줄을 소모하여 획득합니다.`
     });
   }
+  if (eventKey !== 'start' && !run.gambleClosed && !run.gambleNext) {
+    sideChoices.push({ kind: 'gamble', ...GAMBLE_TIERS.bronze });
+  }
   if (eventKey !== 'start') {
-    sideChoices.push({
-      kind: 'gamble',
-      bet: 20,
-      tier: TIERS.BRONZE,
-      title: '도박',
-      desc: '20골드를 겁니다. 55% 확률로 60골드를 받고, 실패하면 건 돈을 잃습니다.'
-    });
     const contractCard = shuffle([TYPES.OVERDRIVE_PENTA, TYPES.MEGA_CLEANSE, TYPES.PANIC_WALL, TYPES.FLASH_I])[0];
     sideChoices.push({
       kind: 'contract',
@@ -530,6 +615,16 @@ export function makeEventChoices(run, eventKey) {
       title: '계약',
       desc: `${CARD_LIBRARY[contractCard].name}: ${CARD_DESCRIPTIONS[contractCard]} 덱에 영구 추가됩니다.`
     });
+    if (Math.random() < 0.16 && !run.seenEvents.has('crusher')) {
+      sideChoices.push({
+        kind: 'grantCard',
+        id: TYPES.CRUSHER,
+        eventTag: 'crusher',
+        tier: TIERS.GOLD,
+        title: '버려진 중량기',
+        desc: `${CARD_LIBRARY[TYPES.CRUSHER].name}: ${CARD_DESCRIPTIONS[TYPES.CRUSHER]}`
+      });
+    }
   }
   if (eventKey !== 'start') {
     sideChoices.push({
@@ -547,7 +642,28 @@ export function makeEventChoices(run, eventKey) {
       desc: '소량의 골드를 가져갑니다.'
     });
   }
-  return [...choices, ...shuffle(sideChoices)].slice(0, 3);
+  const forced = [];
+  // 도박 체인: 직전 단계 성공으로 예약된 상위 등급 도박을 다음 이벤트에 확정 포함.
+  if (eventKey !== 'start' && (run.gambleNext === 'silver' || run.gambleNext === 'gold')) {
+    forced.push({ kind: 'gamble', ...GAMBLE_TIERS[run.gambleNext] });
+  }
+  // 세트 완성: 미수령 완성 세트가 있으면 전용 유물을 확정 포함하고, 제시 시점에 소비(seenSets).
+  if (eventKey !== 'start') {
+    const ready = completedAbilitySets(run).find(ab => !run.seenSets.has(ab) && !run.relics.includes(SET_RELICS[ab]));
+    if (ready) {
+      const rid = SET_RELICS[ready];
+      run.seenSets.add(ready);
+      forced.unshift({
+        kind: 'setRelic',
+        id: rid,
+        ability: ready,
+        tier: TIERS.GOLD,
+        title: `${SET_LABELS[ready]} 세트 완성`,
+        desc: `${RELICS[rid].name}: ${RELICS[rid].desc}`
+      });
+    }
+  }
+  return [...forced, ...choices, ...shuffle(sideChoices)].slice(0, 3);
 }
 
 export function removableDeckCards(run) {
@@ -584,7 +700,7 @@ export function addConsumable(run, id) {
 }
 
 export function grantEliteRelic(run) {
-  const relic = pickByTier(RELICS, TIERS.GOLD, { elite: true, minTier: TIERS.SILVER, exclude: run.relics });
+  const relic = pickByTier(RELICS, TIERS.GOLD, { elite: true, minTier: TIERS.SILVER, exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
   if (!relic) return null;
   if (!run.relics.includes(relic.id)) run.relics.push(relic.id);
   return relic.id;
