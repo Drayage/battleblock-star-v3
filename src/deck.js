@@ -1,4 +1,4 @@
-import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko20';
+import { BASE_TYPES, CARD_LIBRARY } from './constants.js?v=20260521-ko21';
 
 export function shuffle(items) {
   const out = [...items];
@@ -106,7 +106,7 @@ export class Deck {
       if (!this.draw.length) this.refill();
       const id = this.draw.shift();
       const card = CARD_LIBRARY[id];
-      if (card?.exhaust) {
+      if (card?.exhaust && !this.exhaustImmune) {
         if (this.battleExhausted && this.battleExhausted.has(id)) {
           // 이번 전투에서 이미 등장한 1회용/소멸 블록은 다시 뽑지 않는다.
           if (++guard > 200) { this.discard.push(id); return card; }

@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko20';
-import { Deck } from './deck.js?v=20260521-ko20';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko21';
+import { Deck } from './deck.js?v=20260521-ko21';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -90,6 +90,11 @@ export class Board {
     this.comboGuardCharged = false;
     this.chainReactor = false;
     this.overchargeShots = 0;
+    this.forceCrushNext = 0;
+    this.explodeRadiusBonus = 0;
+    this.sanctuaryActive = false;
+    this.chainResonator = false;
+    this.comboEngine = false;
     this.pendingDrops = [];
     this.pendingDropTimer = 0;
     this.fillQueue();
@@ -129,6 +134,11 @@ export class Board {
     board.comboGuardCharged = !!state.comboGuardCharged;
     board.chainReactor = !!state.chainReactor;
     board.overchargeShots = state.overchargeShots || 0;
+    board.forceCrushNext = state.forceCrushNext || 0;
+    board.explodeRadiusBonus = state.explodeRadiusBonus || 0;
+    board.sanctuaryActive = !!state.sanctuaryActive;
+    board.chainResonator = !!state.chainResonator;
+    board.comboEngine = !!state.comboEngine;
     board.pendingDrops = (state.pendingDrops || []).map(d => ({ ...d }));
     board.pendingDropTimer = state.pendingDropTimer || 0;
     board.fillQueue();
@@ -175,6 +185,10 @@ export class Board {
     if (this.iPieceForce > 0) {
       card = CARD_LIBRARY[TYPES.I];
       this.iPieceForce--;
+    }
+    if (this.forceCrushNext > 0) {
+      card = CARD_LIBRARY[TYPES.CRUSHER];
+      this.forceCrushNext--;
     }
     this.pieceSerial++;
     this.current = new Mino(card, 3, SPAWN_Y);
@@ -306,16 +320,22 @@ export class Board {
         this.bombFx.push({ x: gx, y: gy, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'glass', radius: 0 });
       }
     }
+    if (this.current.card.traits.includes('heavyCrush')) {
+      this.compactColumns([...new Set(cells.map(p => p.x))]);
+    }
     const placedCard = this.current.card;
     const result = this.clearLines();
     if (result.cleared > 0) {
       result.tSpin = wasTSpin;
-      result.tetris = result.fullCleared === 4;
+      // 사슬 공명기: 멀티라인 폭발 배수 판정에 사슬로 함께 지워진 줄도 합산(공격/마나 0.5배는 유지).
+      const burstLines = this.chainResonator ? result.cleared : result.fullCleared;
+      result.tetris = burstLines >= 4;
       result.clearText = this.clearLabel(result);
       const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
       this.combo++;
-      const comboMult = this.combo >= 2 ? 1.0 + this.combo * 0.1 : 1.0;
+      const comboStep = this.comboEngine ? 0.15 : 0.1;
+      const comboMult = this.combo >= 2 ? 1.0 + this.combo * comboStep : 1.0;
       result.attack = Number((result.attack * comboMult).toFixed(2));
       this.mp = Math.min(this.mpCap, this.mp + result.mana);
       if (this.comboGuard) this.comboGuardCharged = true;
@@ -480,15 +500,17 @@ export class Board {
 
     const clearedBelow = y => rows.filter(r => r > y).length;
     const drops = [];
+    const bombR = 1 + this.explodeRadiusBonus;
+    const timeR = 2 + this.explodeRadiusBonus;
     for (const { x, y } of bombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
-      this.explodeBombAt(x, targetY, 1);
-      drops.push({ x, y: targetY, radius: 1 });
+      this.explodeBombAt(x, targetY, bombR);
+      drops.push({ x, y: targetY, radius: bombR });
     }
     for (const { x, y } of timeBombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
-      this.explodeBombAt(x, targetY, 2);
-      drops.push({ x, y: targetY, radius: 2 });
+      this.explodeBombAt(x, targetY, timeR);
+      drops.push({ x, y: targetY, radius: timeR });
     }
     if (drops.length) this.queueExplosionDrops(drops);
     if (purge) this.purgeGarbageRows(1);
@@ -577,6 +599,14 @@ export class Board {
         }
         write--;
       }
+    }
+  }
+
+  compactColumns(cols) {
+    for (const x of cols) {
+      const stack = [];
+      for (let r = this.rows - 1; r >= 0; r--) if (this.grid[r][x]) stack.push(this.grid[r][x]);
+      for (let r = this.rows - 1; r >= 0; r--) this.grid[r][x] = stack.length ? stack.shift() : null;
     }
   }
 
@@ -744,6 +774,7 @@ export class Board {
         removed++;
       }
     }
+    if (this.sanctuaryActive && removed > 0) this.attackPool += removed * 0.5;
     return removed;
   }
 
@@ -856,6 +887,11 @@ export class Board {
       comboGuardCharged: this.comboGuardCharged,
       chainReactor: this.chainReactor,
       overchargeShots: this.overchargeShots,
+      forceCrushNext: this.forceCrushNext,
+      explodeRadiusBonus: this.explodeRadiusBonus,
+      sanctuaryActive: this.sanctuaryActive,
+      chainResonator: this.chainResonator,
+      comboEngine: this.comboEngine,
       pendingDrops: this.pendingDrops.map(d => ({ ...d })),
       pendingDropTimer: this.pendingDropTimer
     };

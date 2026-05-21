@@ -149,13 +149,14 @@ export const SKILLS = {
   },
   magnetic_collapse: {
     id: 'magnetic_collapse',
-    name: '자기 붕괴',
+    name: '중량 주입',
     tier: 'gold',
-    cost: 50,
+    cost: 55,
     cooldown: 12000,
-    desc: '필드의 모든 블록을 수직으로 낙하시킵니다.',
+    desc: '다음 블록을 중량 블록으로 만듭니다(놓으면 점유한 열의 빈칸을 모두 압착).',
     activate({ player }) {
-      player.magneticCollapse();
+      if (player.defeated) return false;
+      player.forceCrushNext = 1;
       return true;
     }
   },
