@@ -127,56 +127,56 @@ export const RELICS = {
     id: 'alchemy_core',
     icon: '⚗️',
     name: '연금술 핵',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '획득 즉시 내 덱의 기본 블록을 각각 랜덤한 특수 블록으로 변환합니다.'
   },
   set_overload: {
     id: 'set_overload',
     icon: '⚡',
     name: '과부하 코어',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[파워 세트] 한 클리어의 공격력이 2 이상이면 +1 추가 피해(상쇄에 밀리지 않도록 공격력 기준).'
   },
   set_blastcap: {
     id: 'set_blastcap',
     icon: '💣',
     name: '대폭발 신관',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[봄브 세트] 모든 폭발 반경이 +1 증가합니다.'
   },
   set_manawell: {
     id: 'set_manawell',
     icon: '🌊',
     name: '마나 우물',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[마나 세트] 모든 스킬 쿨타임이 50% 감소합니다.'
   },
   set_sanctuary: {
     id: 'set_sanctuary',
     icon: '✨',
     name: '정화의 성소',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[클렌즈 세트] 쓰레기 줄을 정화할 때마다 공격력 +0.5.'
   },
   set_abszero: {
     id: 'set_abszero',
     icon: '❄️',
     name: '절대영도',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[냉각 세트] 냉각 둔화 지속 2배. 둔화 중 내 공격 +1, 받는 피해 -1.'
   },
   set_goldhand: {
     id: 'set_goldhand',
     icon: '🤚',
     name: '황금의 손',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[현상금 세트] 보유 골드에 비례해 적에게 주는 피해 강화(200골드에서 최대 +100%, 골드를 쓰면 그만큼 감소).'
   },
   set_bulwark: {
     id: 'set_bulwark',
     icon: '🛡️',
     name: '철벽 장막',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[차단 세트] 받는 공격이 게이지에서 빨간색(도착)으로 바뀌는 시간 +2초, 파란색→빨간색 전환 시간도 +2초.'
   },
   ward_delay: {
@@ -190,7 +190,7 @@ export const RELICS = {
     id: 'set_comboengine',
     icon: '🧮',
     name: '콤보 엔진',
-    tier: TIERS.GOLD,
+    tier: TIERS.DIAMOND,
     desc: '[콤보 세트] 콤보 공격 배수 증가폭이 강화됩니다.'
   },
   foresight: {
@@ -301,8 +301,8 @@ const BOSS = {
   style: 'OVERLOAD: 게이지가 차면 안개·반전·회전봉인·하이퍼·둔화·지속 가비지를 무작위로 시전합니다.',
   profile: 'stride',
   rows: 7,
-  speed: 235,
-  garbage: 3,
+  speed: 300,
+  garbage: 2,
   risk: 2.4,
   rewardBonus: 30,
   deckExtras: [TYPES.POWER_I, TYPES.POWER_T, TYPES.BOMB_I],
@@ -466,8 +466,9 @@ function rollChallengeReward(round) {
   return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
 }
 
-export function makeChallenge(round) {
-  const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'];
+export function makeChallenge(round, exclude = []) {
+  const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'].filter(id => !exclude.includes(id));
+  if (!ids.length) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
   const params = id === 'timeAttack' ? { limit: 40 + round * 2 }
     : id === 'clearLines' ? { target: Math.min(40, 14 + round) }
@@ -486,15 +487,18 @@ export function makeEnemyChoices(round) {
   const elitePool = shuffle(ELITES.filter(enemy => !enemy.minRound || round >= enemy.minRound));
   const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
   const choices = [];
+  const usedChallengeIds = [];
   for (let i = 0; i < count; i++) {
     const elite = eliteSlot && i === count - 1;
     const base = elite ? elitePool.shift() : normalPool.shift();
-    choices.push(makeEnemy(round, elite, base));
+    const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round, usedChallengeIds) : null;
+    if (challenge) usedChallengeIds.push(challenge.id);
+    choices.push(makeEnemy(round, elite, base, challenge));
   }
   return choices;
 }
 
-export function makeEnemy(round, elite = false, selectedBase = null) {
+export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined) {
   const pool = elite ? ELITES : ENEMIES;
   const base = selectedBase || pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
@@ -517,7 +521,7 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
   };
   const rewardTier = elite ? TIERS.GOLD : maxTier(base.tier || TIERS.BRONZE, roundTier(round));
   const mirror = !!base.mirror;
-  const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round) : null;
+  const challenge = preChallenge !== undefined ? preChallenge : ((!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round) : null);
   const goldMult = challenge ? 0.9 : 1; // 도전과제 적은 일반 보상 골드가 약간 적다.
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
