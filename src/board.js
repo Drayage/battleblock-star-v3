@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko24';
-import { Deck } from './deck.js?v=20260521-ko24';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko25';
+import { Deck } from './deck.js?v=20260521-ko25';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -669,7 +669,8 @@ export class Board {
   clearLabel(result) {
     const parts = [];
     if (result.tSpin) parts.push('T-SPIN');
-    if (result.cleared === 4) parts.push('QUAD');
+    if (result.cleared >= 5) parts.push(`OVERKILL x${result.cleared}`);
+    else if (result.cleared === 4) parts.push('QUAD');
     else if (result.cleared === 3) parts.push('TRIPLE');
     else if (result.cleared === 2) parts.push('DOUBLE');
     if (!parts.length && result.cleared === 1) parts.push('SINGLE');
