@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko29';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko29';
-import { Deck } from './deck.js?v=20260521-ko29';
-import { AI } from './ai.js?v=20260521-ko29';
-import { Renderer } from './renderer.js?v=20260521-ko29';
-import { InputController } from './input.js?v=20260521-ko29';
-import { SKILLS } from './skills.js?v=20260521-ko29';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko29';
+import { Board } from './board.js?v=20260521-ko30';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko30';
+import { Deck } from './deck.js?v=20260521-ko30';
+import { AI } from './ai.js?v=20260521-ko30';
+import { Renderer } from './renderer.js?v=20260521-ko30';
+import { InputController } from './input.js?v=20260521-ko30';
+import { SKILLS } from './skills.js?v=20260521-ko30';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko30';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko29';
+} from './progression.js?v=20260521-ko30';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1621,12 +1621,12 @@ class Game {
   challengeStatus() {
     const c = this.activeChallenge;
     if (!c) return null;
-    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: this.battleUsedHold ? '홀드사용✗' : '노홀드 OK' };
-    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: this.battleUsedSkill ? '스킬사용✗' : '노스킬 OK' };
-    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: this.battleUsedHardDrop ? '하드드랍✗' : '하드드랍금지 OK' };
-    if (c.id === 'cwOnly') return { ok: !this.battleUsedCcw, text: this.battleUsedCcw ? '반시계회전✗' : '시계회전만 OK' };
-    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
-    if (c.id === 'clearLines') return { ok: this.battleClearedLines >= c.params.target, text: `${this.battleClearedLines}/${c.params.target}줄` };
+    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: `${c.label}(${this.battleUsedHold ? '실패' : '유지'})` };
+    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
+    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCcw, text: `${c.label}(${this.battleUsedCcw ? '실패' : '유지'})` };
+    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
+    if (c.id === 'clearLines') return { ok: this.battleClearedLines >= c.params.target, text: `${c.label} ${this.battleClearedLines}/${c.params.target}줄` };
     return null;
   }
 
@@ -1892,6 +1892,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko29').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko30').catch(() => {});
   });
 }
