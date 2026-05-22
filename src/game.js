@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko38';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko38';
-import { Deck } from './deck.js?v=20260521-ko38';
-import { AI } from './ai.js?v=20260521-ko38';
-import { Renderer } from './renderer.js?v=20260521-ko38';
-import { InputController } from './input.js?v=20260521-ko38';
-import { SKILLS } from './skills.js?v=20260521-ko38';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko38';
+import { Board } from './board.js?v=20260521-ko39';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko39';
+import { Deck } from './deck.js?v=20260521-ko39';
+import { AI } from './ai.js?v=20260521-ko39';
+import { Renderer } from './renderer.js?v=20260521-ko39';
+import { InputController } from './input.js?v=20260521-ko39';
+import { SKILLS } from './skills.js?v=20260521-ko39';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko39';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko38';
+} from './progression.js?v=20260521-ko39';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -707,6 +707,14 @@ class Game {
         preview.appendChild(cell);
       }
     }
+    const glyph = ABILITY_GLYPH[card.abilityId];
+    if (glyph) {
+      const g = document.createElement('span');
+      g.className = 'block-glyph';
+      g.textContent = glyph;
+      g.style.fontSize = `${Math.round(size * 1.7)}px`;
+      preview.appendChild(g);
+    }
     return preview;
   }
 
@@ -1172,7 +1180,7 @@ class Game {
     rewards.forEach(reward => {
       const btn = document.createElement('button');
       btn.className = `choice reward ${this.tierClass(reward.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         applyReward(this.run, reward);
@@ -1910,6 +1918,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko38').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko39').catch(() => {});
   });
 }
