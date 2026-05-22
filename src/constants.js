@@ -446,7 +446,7 @@ export const ABILITY_GLYPH = {
   manaBonus: '◆', instantMana: '◆',
   purgeGarbage: '✚', instantPurge: '✚', megaCleanse: '✚', aidCleanse: '✚',
   instantAttack: '➤', flashStrike: '➤',
-  instantGuard: '▣', panicWall: '▣', wardBlock: '⊟',
+  instantGuard: '▣', panicWall: '▣', wardBlock: '▣',
   coolant: '✻', comboCharge: '✖', bounty: '$', leadPower: '▼',
   unstable: '?', glass: '◈', crush: '▽', dispel: '✺',
   curse: '⊘', wideCurse: '⊘'
