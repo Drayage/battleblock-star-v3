@@ -995,9 +995,10 @@ assert.ok(previewBoard.nextQueue.length >= 5, 'next queue holds at least 5 piece
 // 도전과제 구조: 유효한 id/조건/보상
 for (let i = 0; i < 20; i++) {
   const ch = makeChallenge(10);
-  assert.ok(['noHold', 'noSkill', 'timeAttack', 'clearLines'].includes(ch.id), 'challenge id valid');
+  assert.ok(['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'].includes(ch.id), 'challenge id valid');
   assert.equal(typeof ch.cond, 'string', 'challenge has a condition string');
   assert.ok(ch.reward && ch.reward.kind && ch.reward.label, 'challenge has a concrete reward');
+  assert.equal(typeof ch.reward.detail, 'string', 'challenge reward has a description');
   if (ch.id === 'timeAttack') assert.ok(ch.params.limit > 0);
   if (ch.id === 'clearLines') assert.ok(ch.params.target > 0 && ch.params.target <= 40);
 }

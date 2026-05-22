@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko28';
-import { Deck, shuffle } from './deck.js?v=20260521-ko28';
-import { SKILLS } from './skills.js?v=20260521-ko28';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko28';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko29';
+import { Deck, shuffle } from './deck.js?v=20260521-ko29';
+import { SKILLS } from './skills.js?v=20260521-ko29';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko29';
 
 export const RELICS = {
   combo_amp: {
@@ -366,6 +366,8 @@ export function makeBoss(round) {
 export const CHALLENGES = {
   noHold: { id: 'noHold', label: '홀드 금지', desc: () => '홀드를 한 번도 쓰지 않고 승리' },
   noSkill: { id: 'noSkill', label: '스킬 금지', desc: () => '스킬을 한 번도 쓰지 않고 승리' },
+  noHardDrop: { id: 'noHardDrop', label: '하드드랍 금지', desc: () => '하드드랍을 쓰지 않고 승리' },
+  cwOnly: { id: 'cwOnly', label: '시계회전만', desc: () => '반시계 회전 없이 시계방향 회전만 써서 승리' },
   timeAttack: { id: 'timeAttack', label: '타임어택', desc: p => `${p.limit}초 안에 승리` },
   clearLines: { id: 'clearLines', label: '라인 러시', desc: p => `이 전투에서 ${p.target}라인 이상 지우고 승리` }
 };
@@ -375,22 +377,25 @@ function rollChallengeReward(round) {
   const roll = Math.random();
   if (roll < 0.4) {
     const amount = 30 + round * 4;
-    return { kind: 'gold', amount, label: `골드 +${amount}` };
+    return { kind: 'gold', amount, label: `골드 +${amount}`, detail: `전투 보상으로 ${amount}골드를 받습니다.` };
   }
   if (roll < 0.65) {
     const c = pickByTier(CONSUMABLES, tier);
-    return c ? { kind: 'consumable', id: c.id, label: `소모품: ${c.name}` } : { kind: 'gold', amount: 40, label: '골드 +40' };
+    if (c) return { kind: 'consumable', id: c.id, label: `소모품 「${c.name}」`, detail: c.desc || '' };
+    return { kind: 'gold', amount: 40, label: '골드 +40', detail: '전투 보상으로 40골드를 받습니다.' };
   }
   if (roll < 0.85) {
     const r = pickByTier(RELICS, tier, { exclude: EARNED_ONLY_RELICS });
-    return r ? { kind: 'relic', id: r.id, label: `유물: ${RELICS[r.id].name}` } : { kind: 'gold', amount: 50, label: '골드 +50' };
+    if (r) return { kind: 'relic', id: r.id, label: `유물 「${RELICS[r.id].name}」`, detail: RELICS[r.id].desc || '' };
+    return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
   }
   const s = pickByTier(SKILLS, tier);
-  return s ? { kind: 'skill', id: s.id, label: `스킬: ${s.name}` } : { kind: 'gold', amount: 50, label: '골드 +50' };
+  if (s) return { kind: 'skill', id: s.id, label: `스킬 「${s.name}」`, detail: s.desc || '' };
+  return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
 }
 
 export function makeChallenge(round) {
-  const ids = ['noHold', 'noSkill', 'timeAttack', 'clearLines'];
+  const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'];
   const id = ids[Math.floor(Math.random() * ids.length)];
   const params = id === 'timeAttack' ? { limit: 40 + round * 2 }
     : id === 'clearLines' ? { target: Math.min(40, 14 + round) }

@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko28';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko28';
-import { Deck } from './deck.js?v=20260521-ko28';
-import { AI } from './ai.js?v=20260521-ko28';
-import { Renderer } from './renderer.js?v=20260521-ko28';
-import { InputController } from './input.js?v=20260521-ko28';
-import { SKILLS } from './skills.js?v=20260521-ko28';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko28';
+import { Board } from './board.js?v=20260521-ko29';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko29';
+import { Deck } from './deck.js?v=20260521-ko29';
+import { AI } from './ai.js?v=20260521-ko29';
+import { Renderer } from './renderer.js?v=20260521-ko29';
+import { InputController } from './input.js?v=20260521-ko29';
+import { SKILLS } from './skills.js?v=20260521-ko29';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko29';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko28';
+} from './progression.js?v=20260521-ko29';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -213,7 +213,7 @@ class Game {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
-        ? `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond} → 보상 ${enemy.challenge.reward.label} (일반 골드 10%↓)</small>`
+        ? `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond}<br>　└ 보상 ${enemy.challenge.reward.label}${enemy.challenge.reward.detail ? ` — ${enemy.challenge.reward.detail}` : ''}</small>`
         : '';
       btn.innerHTML = `
         <strong>${enemy.name}</strong>
@@ -876,6 +876,8 @@ class Game {
     this.playerDebuffs = {};
     this.battleUsedHold = false;
     this.battleUsedSkill = false;
+    this.battleUsedHardDrop = false;
+    this.battleUsedCcw = false;
     this.activeChallenge = enemyCard.challenge || null;
     this.challengeRewarded = false;
     this.paused = false;
@@ -937,9 +939,9 @@ class Game {
       else this.message = 'Grounded';
     }
     if (action === 'rotate') this.groundAdjust(() => this.player.rotate(1));
-    if (action === 'ccw') this.groundAdjust(() => this.player.rotate(-1));
+    if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCcw = true; }
     if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
-    if (action === 'hard') this.resolve(this.player.hardDrop(), this.player);
+    if (action === 'hard') { this.battleUsedHardDrop = true; this.resolve(this.player.hardDrop(), this.player); }
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
   }
@@ -1307,6 +1309,8 @@ class Game {
         battleClearedLines: this.battleClearedLines,
         battleUsedHold: this.battleUsedHold,
         battleUsedSkill: this.battleUsedSkill,
+        battleUsedHardDrop: this.battleUsedHardDrop,
+        battleUsedCcw: this.battleUsedCcw,
         activeChallenge: this.activeChallenge,
         challengeRewarded: this.challengeRewarded,
         battlePlayerPieces: this.battlePlayerPieces,
@@ -1362,6 +1366,8 @@ class Game {
         this.battleClearedLines = state.battle.battleClearedLines || 0;
         this.battleUsedHold = !!state.battle.battleUsedHold;
         this.battleUsedSkill = !!state.battle.battleUsedSkill;
+        this.battleUsedHardDrop = !!state.battle.battleUsedHardDrop;
+        this.battleUsedCcw = !!state.battle.battleUsedCcw;
         this.activeChallenge = state.battle.activeChallenge || null;
         this.challengeRewarded = !!state.battle.challengeRewarded;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
@@ -1617,6 +1623,8 @@ class Game {
     if (!c) return null;
     if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: this.battleUsedHold ? '홀드사용✗' : '노홀드 OK' };
     if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: this.battleUsedSkill ? '스킬사용✗' : '노스킬 OK' };
+    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: this.battleUsedHardDrop ? '하드드랍✗' : '하드드랍금지 OK' };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCcw, text: this.battleUsedCcw ? '반시계회전✗' : '시계회전만 OK' };
     if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
     if (c.id === 'clearLines') return { ok: this.battleClearedLines >= c.params.target, text: `${this.battleClearedLines}/${c.params.target}줄` };
     return null;
@@ -1884,6 +1892,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko28').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko29').catch(() => {});
   });
 }

@@ -1,4 +1,4 @@
-import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko28';
+import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko29';
 
 // 블록 셀에 표시할 글자: 능력 기준이라 신규 블록도 자동 커버된다.
 const ABILITY_GLYPH = {
