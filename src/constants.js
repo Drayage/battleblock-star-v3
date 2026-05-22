@@ -123,13 +123,15 @@ export const BASE_TYPES = [TYPES.I, TYPES.J, TYPES.L, TYPES.O, TYPES.S, TYPES.T,
 export const TIERS = {
   BRONZE: 'bronze',
   SILVER: 'silver',
-  GOLD: 'gold'
+  GOLD: 'gold',
+  DIAMOND: 'diamond'
 };
-export const TIER_ORDER = [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD];
+export const TIER_ORDER = [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD, TIERS.DIAMOND];
 export const TIER_LABELS = {
   [TIERS.BRONZE]: 'BRONZE',
   [TIERS.SILVER]: 'SILVER',
-  [TIERS.GOLD]: 'GOLD'
+  [TIERS.GOLD]: 'GOLD',
+  [TIERS.DIAMOND]: 'DIAMOND'
 };
 
 export const COLORS = {
@@ -495,6 +497,7 @@ function tierFromShapeAbility(shapeId, abilityId, rarity) {
     'megaCleanse',
     'panicWall'
   ]);
+  if (rarity === 'diamond') return TIERS.DIAMOND;
   if (rarity === 'curse') return TIERS.BRONZE;
   if (shapeId === 'I') return TIERS.GOLD;
   if (['J', 'L', 'T'].includes(shapeId)) return strongAbilities.has(abilityId) ? TIERS.GOLD : TIERS.SILVER;
@@ -613,7 +616,7 @@ export const CARD_LIBRARY = {
   [TYPES.COMBO_O]: blockCard(TYPES.COMBO_O, '콤보 O', 'O', 'comboCharge', 'rare'),
   [TYPES.COMBO_S]: blockCard(TYPES.COMBO_S, '콤보 S', 'S', 'comboCharge', 'rare'),
   [TYPES.COMBO_Z]: blockCard(TYPES.COMBO_Z, '콤보 Z', 'Z', 'comboCharge', 'rare'),
-  [TYPES.CRUSHER]: blockCard(TYPES.CRUSHER, '중량 블록', 'O', 'crush', 'gold', { exhaust: true }),
+  [TYPES.CRUSHER]: blockCard(TYPES.CRUSHER, '중량 블록', 'O', 'crush', 'diamond', { exhaust: true }),
   [TYPES.DISPEL_T]: blockCard(TYPES.DISPEL_T, '해제 T', 'T', 'dispel', 'rare'),
   [TYPES.DISPEL_O]: blockCard(TYPES.DISPEL_O, '해제 O', 'O', 'dispel', 'rare'),
   [TYPES.DISPEL_I]: blockCard(TYPES.DISPEL_I, '해제 I', 'I', 'dispel', 'rare')

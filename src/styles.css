@@ -30,6 +30,7 @@ button{font:inherit}
 .tier-bronze{border-color:#8b6a43!important;box-shadow:inset 0 0 0 1px rgba(139,106,67,.2)}
 .tier-silver{border-color:#b8c6d9!important;box-shadow:0 0 0 1px rgba(184,198,217,.18),0 0 12px rgba(184,198,217,.08)}
 .tier-gold{border-color:#f0c45c!important;box-shadow:0 0 0 1px rgba(240,196,92,.25),0 0 16px rgba(240,196,92,.14)}
+.tier-diamond{border-color:#7df9ff!important;box-shadow:0 0 0 1px rgba(125,249,255,.35),0 0 18px rgba(125,249,255,.22),0 0 6px rgba(200,160,255,.18)}
 #slotPicker{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,5,12,.78)}
 #slotPicker.active{display:flex}
 .slot-dialog{width:min(440px,100%);max-height:88vh;display:flex;flex-direction:column;background:#101827;border:1px solid #38568f;border-radius:10px;padding:16px;box-shadow:0 18px 60px rgba(0,0,0,.45)}

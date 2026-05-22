@@ -293,6 +293,9 @@ export class Board {
 
   lock(hardDropped = false) {
     this.flushPendingDrops();
+    for (const row of this.grid)
+      for (const c of row)
+        if (c?.freshGarbage) delete c.freshGarbage;
     const placed = [];
     const wasTSpin = this.isTSpin();
     const cells = this.current.cells;
@@ -751,7 +754,7 @@ export class Board {
       this.grid.shift();
       this.bombFx.forEach(fx => { fx.y -= 1; });
       this.bombFx = this.bombFx.filter(fx => fx.y >= 0);
-      this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage'] }));
+      this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage'], freshGarbage: true }));
     }
   }
 
@@ -760,17 +763,20 @@ export class Board {
     while (removed < count) {
       let r = -1;
       for (let i = this.rows - 1; i >= 0; i--) {
-        if (this.grid[i].some(c => c?.type === TYPES.GARBAGE)) {
+        const row = this.grid[i];
+        if (
+          row.some(c => c?.type === TYPES.GARBAGE) &&
+          !row.some(c => c?.traits?.includes('durable')) &&
+          !row.some(c => c?.freshGarbage)
+        ) {
           r = i;
           break;
         }
       }
       if (r < 0) break;
-      if (this.grid[r].some(c => c?.type === TYPES.GARBAGE)) {
-        this.grid.splice(r, 1);
-        this.grid.unshift(emptyRow());
-        removed++;
-      }
+      this.grid.splice(r, 1);
+      this.grid.unshift(emptyRow());
+      removed++;
     }
     return removed;
   }
