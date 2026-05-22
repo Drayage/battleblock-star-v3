@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko39';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko39';
-import { Deck } from './deck.js?v=20260521-ko39';
-import { AI } from './ai.js?v=20260521-ko39';
-import { Renderer } from './renderer.js?v=20260521-ko39';
-import { InputController } from './input.js?v=20260521-ko39';
-import { SKILLS } from './skills.js?v=20260521-ko39';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko39';
+import { Board } from './board.js?v=20260521-ko40';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko40';
+import { Deck } from './deck.js?v=20260521-ko40';
+import { AI } from './ai.js?v=20260521-ko40';
+import { Renderer } from './renderer.js?v=20260521-ko40';
+import { InputController } from './input.js?v=20260521-ko40';
+import { SKILLS } from './skills.js?v=20260521-ko40';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko40';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko39';
+} from './progression.js?v=20260521-ko40';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -87,6 +87,14 @@ const ENEMY_ABILITIES = {
     cast(g) {
       g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
       g.flashAlert(`${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`);
+    }
+  },
+  rushGauge: {
+    cost: 60,
+    cooldown: 20000,
+    cast(g) {
+      g.playerGaugeRushTimer = 5000;
+      g.flashAlert(`${g.enemyCard.name} 능력: 게이지 가속 (5초)`);
     }
   }
 };
@@ -868,8 +876,12 @@ class Game {
     if (this.run.relics.includes('chain_reactor')) this.player.chainReactor = true;
     if (this.run.relics.includes('set_blastcap')) this.player.explodeRadiusBonus = 1;
     if (this.run.relics.includes('set_sanctuary')) this.player.sanctuaryActive = true;
-    if (this.run.relics.includes('set_resonator')) this.player.chainResonator = true;
     if (this.run.relics.includes('set_comboengine')) this.player.comboEngine = true;
+    // 클리어 지연(파란색)은 플레이어만, AI는 미적용 → 포커스 중에도 정상 착탄.
+    this.player.delaysGarbageOnClear = true;
+    this.enemy.delaysGarbageOnClear = false;
+    this.gaugeStallTimer = 0;
+    this.playerGaugeRushTimer = 0;
     this.enemyAbilitySuppressTimer = 0;
     this.alertText = '';
     this.alertTimer = 0;
@@ -1330,6 +1342,8 @@ class Game {
         enemyActionStall: this.enemyActionStall,
         enemyAbilityTimer: this.enemyAbilityTimer,
         enemyAbilitySuppressTimer: this.enemyAbilitySuppressTimer,
+        gaugeStallTimer: this.gaugeStallTimer || 0,
+        playerGaugeRushTimer: this.playerGaugeRushTimer || 0,
         enemySlowTimer: this.enemySlowTimer,
         playerSlowTimer: this.playerSlowTimer,
         battleClearedLines: this.battleClearedLines,
@@ -1377,6 +1391,8 @@ class Game {
       if (state.battle && state.screen === 'gameScreen') {
         this.player = Board.fromState(state.battle.player);
         this.enemy = Board.fromState(state.battle.enemy);
+        this.player.delaysGarbageOnClear = true;
+        this.enemy.delaysGarbageOnClear = false;
         this.enemyCard = state.battle.enemyCard;
         this.ai = new AI(this.enemyCard?.aiProfile || 'balanced', this.enemyCard?.aiSkill);
         this.fallTimer = state.battle.fallTimer || 0;
@@ -1387,6 +1403,8 @@ class Game {
         this.enemyActionStall = state.battle.enemyActionStall || 0;
         this.enemyAbilityTimer = state.battle.enemyAbilityTimer || 0;
         this.enemyAbilitySuppressTimer = state.battle.enemyAbilitySuppressTimer || 0;
+        this.gaugeStallTimer = state.battle.gaugeStallTimer || 0;
+        this.playerGaugeRushTimer = state.battle.playerGaugeRushTimer || 0;
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
         this.battleClearedLines = state.battle.battleClearedLines || 0;
@@ -1534,6 +1552,9 @@ class Game {
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
+    this.gaugeStallTimer = Math.max(0, (this.gaugeStallTimer || 0) - dt);
+    this.playerGaugeRushTimer = Math.max(0, (this.playerGaugeRushTimer || 0) - dt);
+    this.applyGaugeBonuses();
     this.playerFreezeTimer = Math.max(0, (this.playerFreezeTimer || 0) - dt);
     this.playerFogTimer = Math.max(0, (this.playerFogTimer || 0) - dt);
     this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
@@ -1568,6 +1589,18 @@ class Game {
         alert: this.alertTimer > 0 ? this.alertText : null
     });
     this.message = '';
+  }
+
+  applyGaugeBonuses() {
+    const relics = this.run.relics;
+    let arm = 0;
+    let clr = 0;
+    if (relics.includes('ward_delay')) arm += 1000;
+    if (relics.includes('set_bulwark')) { arm += 2000; clr += 2000; }
+    if (this.gaugeStallTimer > 0) { arm += 2000; clr += 2000; }
+    if (this.playerGaugeRushTimer > 0) { arm -= 1500; clr -= 700; }
+    this.player.armDelayBonus = arm;
+    this.player.clearDelayBonus = clr;
   }
 
   currentEnemyDelay() {
@@ -1918,6 +1951,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko39').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko40').catch(() => {});
   });
 }

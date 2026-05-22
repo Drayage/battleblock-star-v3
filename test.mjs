@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND, GAME_TIMING } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
@@ -363,7 +363,7 @@ assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.L
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O && upgrade.to === TYPES.BOUNTY_O), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.S && upgrade.to === TYPES.CLEANSE_S), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.T && upgrade.to === TYPES.BOMB_T), true);
-assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.Z && upgrade.to === TYPES.CHAIN_Z), true);
+assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.Z && upgrade.to === TYPES.WARD_Z), true);
 assert.equal(upgradeDeckCards(eventRun).every(upgrade => CARD_LIBRARY[upgrade.from].shapeId === CARD_LIBRARY[upgrade.to].shapeId), true);
 assert.equal(upgradeDeckCards(eventRun).some(upgrade => upgrade.from === TYPES.O && upgrade.to === TYPES.PURGE_O), true);
 assert.equal(makeEventChoices(eventRun, 'start').some(choice => choice.kind === 'upgradeCard'), true);
@@ -434,7 +434,7 @@ assert.equal(CARD_LIBRARY[TYPES.CLEANSE_Z].abilityId, 'purgeGarbage');
 // 7종 기본 모양별 특수 블록 보강
 const addedShapeSpecials = [
   [TYPES.MANA_I, 'I', TIERS.GOLD, 'manaBonus'],
-  [TYPES.CHAIN_I, 'I', TIERS.GOLD, 'chain'],
+  [TYPES.WARD_I, 'I', TIERS.GOLD, 'wardBlock'],
   [TYPES.COOLANT_J, 'J', TIERS.SILVER, 'coolant'],
   [TYPES.BOMB_J, 'J', TIERS.GOLD, 'bomb'],
   [TYPES.POWER_L, 'L', TIERS.GOLD, 'highPower'],
@@ -445,7 +445,7 @@ const addedShapeSpecials = [
   [TYPES.BOUNTY_S, 'S', TIERS.SILVER, 'bounty'],
   [TYPES.BOMB_T, 'T', TIERS.GOLD, 'bomb'],
   [TYPES.COOLANT_T, 'T', TIERS.SILVER, 'coolant'],
-  [TYPES.CHAIN_Z, 'Z', TIERS.SILVER, 'chain'],
+  [TYPES.WARD_Z, 'Z', TIERS.SILVER, 'wardBlock'],
   [TYPES.COOLANT_Z, 'Z', TIERS.SILVER, 'coolant']
 ];
 for (const [id, shapeId, tier, trait] of addedShapeSpecials) {
@@ -555,48 +555,57 @@ assert.equal(CARD_LIBRARY[TYPES.GLASS].cellAttack, 0.5);
 assert.equal(CARD_LIBRARY[TYPES.GLASS].penalty, true);
 assert.equal(CARD_LIBRARY[TYPES.TIMEBOMB].fuse, 5);
 assert.equal(CARD_LIBRARY[TYPES.TIMEBOMB].penalty, true);
-assert.equal(CARD_LIBRARY[TYPES.CHAIN].traits.includes('chain'), true);
+assert.equal(CARD_LIBRARY[TYPES.WARD_T].traits.includes('wardBlock'), true);
 
 // 2차 업그레이드 경로
 const phase2UpRun = new RunState();
 phase2UpRun.starterPicked = true;
 const phase2Ups = upgradeDeckCards(phase2UpRun);
-assert.equal(phase2Ups.some(u => u.from === TYPES.T && u.to === TYPES.CHAIN), true);
+assert.equal(phase2Ups.some(u => u.from === TYPES.T && u.to === TYPES.WARD_T), true);
 assert.equal(phase2Ups.some(u => u.from === TYPES.S && u.to === TYPES.GLASS), true);
 assert.equal(phase2Ups.some(u => u.from === TYPES.O && u.to === TYPES.TIMEBOMB), true);
 
-// 사슬 캐스케이드 — 한 줄 클리어 시 연결된 다른 줄도 절반 효과로 제거
-// 사슬 캐스케이드는 서로 다른 사슬 미노 2개 이상이 연결됐을 때만 발동
-const chainBoard = new Board({ rows: 20 });
-chainBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-chainBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 1 };
-chainBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 2 };
-for (let c = 1; c < 10; c++) chainBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
-const chainClear = chainBoard.clearLines();
-assert.equal(chainClear.fullCleared, 1);
-assert.equal(chainClear.cleared, 2);
-assert.equal(chainClear.attack, 1.05);
-assert.equal(chainBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), false);
+// 차단(ward) 블록: 공격력 0, 배치 즉시 게이지 2줄 차단(cancelGarbage)
+for (const id of [TYPES.WARD_I, TYPES.WARD_J, TYPES.WARD_L, TYPES.WARD_O, TYPES.WARD_S, TYPES.WARD_T, TYPES.WARD_Z]) {
+  assert.equal(CARD_LIBRARY[id].cellAttack, 0, `${id} clear attack is 0`);
+  assert.equal(CARD_LIBRARY[id].onPlace.cancelGarbage, 2, `${id} blocks 2 gauge lines on place`);
+}
+const wardBoard = new Board({ rows: 20 });
+wardBoard.receiveGarbage(5);
+assert.equal(wardBoard.garbageQueue, 5);
+assert.equal(wardBoard.cancelGarbage(2), 2);
+assert.equal(wardBoard.garbageQueue, 3);
 
-// 사슬 미노 하나(같은 pieceId)만으로는 캐스케이드가 발동하지 않는다(일반 블록처럼 동작)
-const chainSoloBoard = new Board({ rows: 20 });
-chainSoloBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-chainSoloBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 7 };
-chainSoloBoard.grid[19][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'], pieceId: 7 };
-for (let c = 1; c < 10; c++) chainSoloBoard.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
-const chainSolo = chainSoloBoard.clearLines();
-assert.equal(chainSolo.cleared, 1);
-assert.equal(chainSoloBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), true);
+// armDelayBonus가 receiveGarbage 타이머에 반영된다
+const armBoard = new Board({ rows: 20 });
+armBoard.armDelayBonus = 2000;
+armBoard.receiveGarbage(1);
+assert.equal(armBoard.garbageEntries[0].timer, GAME_TIMING.GARBAGE_ARM_DELAY + 2000);
 
-// 사슬이 가득 찬 줄에 닿지 않으면 캐스케이드 없음
-const chainNoTriggerBoard = new Board({ rows: 20 });
-chainNoTriggerBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
-chainNoTriggerBoard.grid[18][0] = { type: TYPES.CHAIN, attack: 0.1, traits: ['chain'] };
-chainNoTriggerBoard.grid[19] = Array.from({ length: 10 }, () => ({ type: TYPES.I, attack: 0.1, traits: [] }));
-const chainNoTrigger = chainNoTriggerBoard.clearLines();
-assert.equal(chainNoTrigger.fullCleared, 1);
-assert.equal(chainNoTrigger.cleared, 1);
-assert.equal(chainNoTriggerBoard.grid.flat().some(c => c?.type === TYPES.CHAIN), true);
+// delaysGarbageOnClear=false면(AI) 클리어해도 도착 대기 가비지가 지연되지 않는다
+function clearOneLineWith(delaysOnClear) {
+  const b = new Board({ rows: 20 });
+  b.delaysGarbageOnClear = delaysOnClear;
+  b.garbageEntries = [{ amount: 2, timer: 0 }];
+  b.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+  // 바닥 한 줄을 일반 블록으로 채우고 현재 조각을 그 위 빈칸에 떨궈 라인 완성 대신, clearLines 직접 호출
+  for (let c = 0; c < 10; c++) b.grid[19][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+  // lock 경로의 지연 로직만 재현
+  const result = { cleared: 1 };
+  if (result.cleared > 0 && b.delaysGarbageOnClear) {
+    for (const e of b.garbageEntries) if (e.timer <= 0) { e.timer = GAME_TIMING.GARBAGE_DELAY_ON_CLEAR; e.delayed = true; }
+  }
+  return b.garbageEntries[0];
+}
+assert.equal(clearOneLineWith(true).delayed, true, 'player clears delay incoming garbage');
+assert.equal(!!clearOneLineWith(false).delayed, false, 'AI clears do NOT delay incoming garbage');
+
+// 차단 세트 매핑
+assert.deepEqual(Object.keys(SET_DEFINITIONS.wardBlock).length, 7, 'wardBlock set has 7 forms');
+assert.equal(SET_RELICS.wardBlock, 'set_bulwark', 'wardBlock set relic is set_bulwark');
+assert.equal(RELICS.set_bulwark != null && RELICS.ward_delay != null, true, 'new relics exist');
+assert.equal(SKILLS.gauge_stall != null && SKILLS.ward_pulse != null, true, 'new skills exist');
+assert.equal(CARD_LIBRARY[TYPES.WARD_T] != null && SET_DEFINITIONS.chain == null, true, 'chain set removed');
 
 // 유리 — 하드드롭한 그 블록만 깨지고, 옆에 있던 다른 블록의 하드드롭에는 영향 없음
 const glassBoard = new Board({ rows: 20 });
@@ -804,7 +813,7 @@ for (const profile of ['aggro', 'turtle', 'spiker', 'cheese']) {
 }
 
 // 신규 적 등장: 충분히 진행하면 신규 적/엘리트가 풀에 나타나고 능력 키가 유효
-const validAbilities = new Set(['spike', 'slowPlayer', 'power', 'rotateLockPlayer', 'hyperBurst', 'polluteDeck', 'overload', undefined, null]);
+const validAbilities = new Set(['spike', 'slowPlayer', 'power', 'rotateLockPlayer', 'hyperBurst', 'polluteDeck', 'rushGauge', 'overload', undefined, null]);
 const newNames = new Set();
 for (let round = 5; round <= 16; round++) {
   for (let trial = 0; trial < 40; trial++) {

@@ -219,6 +219,33 @@ export const SKILLS = {
       return true;
     }
   },
+  gauge_stall: {
+    id: 'gauge_stall',
+    icon: '⏳',
+    name: '게이지 지연',
+    tier: 'silver',
+    cost: 40,
+    cooldown: 12000,
+    desc: '10초 동안 받는 공격이 게이지에서 도착·전환되는 시간이 2초 늘어납니다.',
+    activate({ game }) {
+      game.gaugeStallTimer = 10000;
+      return true;
+    }
+  },
+  ward_pulse: {
+    id: 'ward_pulse',
+    icon: '🛡️',
+    name: '게이지 차단',
+    tier: 'silver',
+    cost: 35,
+    cooldown: 9000,
+    desc: '게이지에 쌓인 적 공격을 즉시 4줄 차단합니다.',
+    activate({ player }) {
+      if (player.defeated) return false;
+      player.cancelGarbage(4);
+      return true;
+    }
+  },
   hold_lock: {
     id: 'hold_lock',
     icon: '🔒',
