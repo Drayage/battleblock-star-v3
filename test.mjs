@@ -576,6 +576,16 @@ assert.equal(wardBoard.garbageQueue, 5);
 assert.equal(wardBoard.cancelGarbage(2), 2);
 assert.equal(wardBoard.garbageQueue, 3);
 
+// 클렌즈: 지운 줄의 클렌즈 칸 수만큼 내 필드 가비지 행 제거(칸당 1줄)
+const cleanseBoard = new Board({ rows: 20 });
+cleanseBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+// 가비지 줄은 구멍(끝칸 빈칸)이 있어 스스로 클리어되지 않는다.
+for (let r = 16; r <= 18; r++) cleanseBoard.grid[r] = Array.from({ length: 10 }, (_, c) => c === 9 ? null : { type: TYPES.GARBAGE, attack: 0, traits: ['garbage'] });
+cleanseBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c < 2 ? TYPES.CLEANSE_I : TYPES.I, attack: 0.1, traits: c < 2 ? ['purgeGarbage'] : [] }));
+const cleanseRes = cleanseBoard.clearLines();
+assert.equal(cleanseRes.purge, true, 'cleanse triggered');
+assert.equal(cleanseBoard.grid.flat().filter(c => c?.type === TYPES.GARBAGE).length, 9, '2 cleanse cells removed 2 of 3 garbage rows (1 row of 9 remains)');
+
 // armDelayBonus가 receiveGarbage 타이머에 반영된다
 const armBoard = new Board({ rows: 20 });
 armBoard.armDelayBonus = 2000;

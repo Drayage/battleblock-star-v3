@@ -1,4 +1,4 @@
-import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko41';
+import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko42';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
 // 일부 글리프는 폰트상 작게 렌더돼 키워서 그린다.
@@ -35,8 +35,13 @@ export class Renderer {
       eX: mobile ? 272 : 600,
       y: mobile ? mobileY : 72
     };
-    this.canvas.width = this.layout.w;
-    this.canvas.height = this.layout.h;
+    // 백킹스토어를 devicePixelRatio 배로 키워 고DPI에서도 또렷하게 렌더한다.
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    this.canvas.width = Math.round(this.layout.w * dpr);
+    this.canvas.height = Math.round(this.layout.h * dpr);
+    this.canvas.style.width = `${this.layout.w}px`;
+    this.canvas.style.height = `${this.layout.h}px`;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const scale = mobile
       ? Math.min(1, (window.innerWidth - 4) / this.layout.w, (viewportH - 190) / this.layout.h)
       : Math.min(1, (window.innerWidth - 8) / this.layout.w, (window.innerHeight - 162) / this.layout.h);

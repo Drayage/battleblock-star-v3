@@ -458,7 +458,7 @@ export const ABILITY_LIBRARY = {
   oddPower: { id: 'oddPower', name: '고효율', cellAttack: 0.16, traits: ['oddShape'], desc: '배치가 까다로운 대신 기본보다 높은 공격력을 가집니다.' },
   bomb: { id: 'bomb', name: '폭탄', cellAttack: 0.1, traits: ['bomb'], desc: '클리어 시 중심 3×3 영역을 파괴합니다.' },
   manaBonus: { id: 'manaBonus', name: '마나', cellAttack: 0.1, traits: ['manaBonus'], desc: '클리어된 셀이 추가 MP를 제공합니다.' },
-  purgeGarbage: { id: 'purgeGarbage', name: '클렌즈', cellAttack: 0.1, traits: ['purgeGarbage'], desc: '클리어 시 쓰레기 행을 제거합니다.' },
+  purgeGarbage: { id: 'purgeGarbage', name: '클렌즈', cellAttack: 0.1, traits: ['purgeGarbage'], desc: '줄을 지울 때 그 줄에 포함된 클렌즈 칸 수만큼 내 필드의 쓰레기 행을 제거합니다(칸당 1줄).' },
   instantAttack: { id: 'instantAttack', name: '즉발 공격', cellAttack: 0.1, traits: [], onPlace: { attack: 1.2 }, desc: '배치 즉시 1.2 공격력을 발사합니다.' },
   instantGuard: { id: 'instantGuard', name: '즉발 방어', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 3 }, desc: '배치 즉시 들어오는 공격 게이지를 최대 3 차단합니다.' },
   instantMana: { id: 'instantMana', name: '즉발 마나', cellAttack: 0.1, traits: [], onPlace: { mana: 18 }, desc: '배치 즉시 MP를 18 회복합니다.' },
