@@ -1,6 +1,7 @@
 export const SKILLS = {
   minor_purge: {
     id: 'minor_purge',
+    icon: '🧹',
     name: '마이너 퍼지',
     tier: 'bronze',
     cost: 28,
@@ -12,6 +13,7 @@ export const SKILLS = {
   },
   double_shot: {
     id: 'double_shot',
+    icon: '⚔️',
     name: '더블샷',
     tier: 'bronze',
     cost: 50,
@@ -25,6 +27,7 @@ export const SKILLS = {
   },
   quick_cycle: {
     id: 'quick_cycle',
+    icon: '🔄',
     name: '빠른 순환',
     tier: 'bronze',
     cost: 26,
@@ -38,6 +41,7 @@ export const SKILLS = {
   },
   emergency_shard: {
     id: 'emergency_shard',
+    icon: '🔳',
     name: '긴급 파편',
     tier: 'bronze',
     cost: 16,
@@ -52,6 +56,7 @@ export const SKILLS = {
   },
   bomb_piece: {
     id: 'bomb_piece',
+    icon: '💣',
     name: '폭탄 변환',
     tier: 'silver',
     cost: 38,
@@ -63,6 +68,7 @@ export const SKILLS = {
   },
   line_shave: {
     id: 'line_shave',
+    icon: '✂️',
     name: '라인 셰이브',
     tier: 'silver',
     cost: 40,
@@ -74,6 +80,7 @@ export const SKILLS = {
   },
   panic_guard: {
     id: 'panic_guard',
+    icon: '🛡️',
     name: '패닉 가드',
     tier: 'bronze',
     cost: 30,
@@ -86,6 +93,7 @@ export const SKILLS = {
   },
   overcharge: {
     id: 'overcharge',
+    icon: '⚡',
     name: '과충전',
     tier: 'gold',
     cost: 60,
@@ -99,6 +107,7 @@ export const SKILLS = {
   },
   hyper_force: {
     id: 'hyper_force',
+    icon: '⏩',
     name: '하이퍼 강제',
     tier: 'gold',
     cost: 55,
@@ -113,6 +122,7 @@ export const SKILLS = {
   },
   purge: {
     id: 'purge',
+    icon: '🧼',
     name: '퍼지',
     tier: 'silver',
     cost: 38,
@@ -124,6 +134,7 @@ export const SKILLS = {
   },
   all_i_mode: {
     id: 'all_i_mode',
+    icon: '🟦',
     name: '올 I 모드',
     tier: 'silver',
     cost: 45,
@@ -137,6 +148,7 @@ export const SKILLS = {
   },
   time_warp: {
     id: 'time_warp',
+    icon: '🐌',
     name: '타임 워프',
     tier: 'silver',
     cost: 40,
@@ -149,6 +161,7 @@ export const SKILLS = {
   },
   magnetic_collapse: {
     id: 'magnetic_collapse',
+    icon: '🧲',
     name: '중량 주입',
     tier: 'gold',
     cost: 55,
@@ -162,6 +175,7 @@ export const SKILLS = {
   },
   garbage_barrage: {
     id: 'garbage_barrage',
+    icon: '🗑️',
     name: '쓰레기 일제',
     tier: 'bronze',
     cost: 35,
@@ -175,6 +189,7 @@ export const SKILLS = {
   },
   scramble_strike: {
     id: 'scramble_strike',
+    icon: '🌀',
     name: '줄 뒤틀기',
     tier: 'silver',
     cost: 55,
@@ -188,6 +203,7 @@ export const SKILLS = {
   },
   rotate_seal: {
     id: 'rotate_seal',
+    icon: '🚫',
     name: '회전 봉인',
     tier: 'silver',
     cost: 45,
@@ -205,6 +221,7 @@ export const SKILLS = {
   },
   hold_lock: {
     id: 'hold_lock',
+    icon: '🔒',
     name: '홀드 잠금',
     tier: 'bronze',
     cost: 30,

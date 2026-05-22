@@ -1,6 +1,7 @@
 export const CONSUMABLES = {
   battery: {
     id: 'battery',
+    icon: '🔋',
     name: 'MP 배터리',
     tier: 'bronze',
     short: 'B',
@@ -12,6 +13,7 @@ export const CONSUMABLES = {
   },
   shield: {
     id: 'shield',
+    icon: '🛡️',
     name: '쓰레기 방어막',
     tier: 'silver',
     short: 'S',
@@ -23,6 +25,7 @@ export const CONSUMABLES = {
   },
   bomb: {
     id: 'bomb',
+    icon: '💥',
     name: '바닥 폭탄',
     tier: 'gold',
     short: 'X',
@@ -42,6 +45,7 @@ export const CONSUMABLES = {
   },
   focus: {
     id: 'focus',
+    icon: '🎯',
     name: '집중 칩',
     tier: 'silver',
     short: 'F',
@@ -53,6 +57,7 @@ export const CONSUMABLES = {
   },
   cleanse: {
     id: 'cleanse',
+    icon: '🧹',
     name: '만능 클렌즈',
     tier: 'silver',
     short: 'C',
@@ -64,6 +69,7 @@ export const CONSUMABLES = {
   },
   reroll_token: {
     id: 'reroll_token',
+    icon: '🎲',
     name: '리롤 토큰',
     tier: 'silver',
     short: 'R',
@@ -75,6 +81,7 @@ export const CONSUMABLES = {
   },
   gold_pouch: {
     id: 'gold_pouch',
+    icon: '💰',
     name: '골드 주머니',
     tier: 'bronze',
     short: 'G',
@@ -87,6 +94,7 @@ export const CONSUMABLES = {
   },
   hp_patch: {
     id: 'hp_patch',
+    icon: '❤️',
     name: 'HP 패치',
     tier: 'gold',
     short: 'H',
@@ -98,6 +106,7 @@ export const CONSUMABLES = {
   },
   time_stop: {
     id: 'time_stop',
+    icon: '⏸️',
     name: '시간 정지',
     tier: 'gold',
     short: 'T',
@@ -109,6 +118,7 @@ export const CONSUMABLES = {
   },
   igniter: {
     id: 'igniter',
+    icon: '🔥',
     name: '점화기',
     tier: 'silver',
     short: 'I',
@@ -120,6 +130,7 @@ export const CONSUMABLES = {
   },
   hole_grenade: {
     id: 'hole_grenade',
+    icon: '🕳️',
     name: '구멍 수류탄',
     tier: 'silver',
     short: 'O',
@@ -132,6 +143,7 @@ export const CONSUMABLES = {
   },
   blackout_packet: {
     id: 'blackout_packet',
+    icon: '📵',
     name: '정전 패킷',
     tier: 'gold',
     short: 'P',

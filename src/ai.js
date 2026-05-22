@@ -1,5 +1,5 @@
-import { Mino } from './board.js?v=20260521-ko30';
-import { COLS } from './constants.js?v=20260521-ko30';
+import { Mino } from './board.js?v=20260521-ko31';
+import { COLS } from './constants.js?v=20260521-ko31';
 
 function analyzeGrid(grid) {
   const rows = grid.length;

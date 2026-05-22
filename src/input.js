@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260521-ko30';
+import { GAME_TIMING } from './constants.js?v=20260521-ko31';
 
 export class InputController {
   constructor(game) {

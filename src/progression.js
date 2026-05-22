@@ -1,172 +1,212 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko30';
-import { Deck, shuffle } from './deck.js?v=20260521-ko30';
-import { SKILLS } from './skills.js?v=20260521-ko30';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko30';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko31';
+import { Deck, shuffle } from './deck.js?v=20260521-ko31';
+import { SKILLS } from './skills.js?v=20260521-ko31';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko31';
 
 export const RELICS = {
   combo_amp: {
     id: 'combo_amp',
+    icon: '🔥',
     name: '콤보 증폭기',
     tier: TIERS.GOLD,
     desc: '2콤보 이상 시 공격력이 25% 증가합니다.'
   },
   mana_lens: {
     id: 'mana_lens',
+    icon: '🔷',
     name: '마나 렌즈',
     tier: TIERS.SILVER,
     desc: '라인 클리어 후 기본 마나 회복량의 35%를 추가 회복합니다.'
   },
   garbage_buffer: {
     id: 'garbage_buffer',
+    icon: '🧱',
     name: '쓰레기 완충기',
     tier: TIERS.GOLD,
     desc: '적의 공격이 명중할 때마다 쓰레기가 1줄 줄어듭니다.'
   },
   hold_cache: {
     id: 'hold_cache',
+    icon: '📥',
     name: '홀드 캐시',
     tier: TIERS.BRONZE,
     desc: '전투 중 홀드 슬롯이 비어있으면 마나 회복량이 50% 증가합니다.'
   },
   steel_heart: {
     id: 'steel_heart',
+    icon: '🛡️',
     name: '강철 심장',
     tier: TIERS.SILVER,
     desc: '전투를 시작할 때마다 최대 HP(필드 높이)가 1 증가합니다.'
   },
   natural_heal: {
     id: 'natural_heal',
+    icon: '💚',
     name: '자연 치유',
     tier: TIERS.SILVER,
     desc: '전투를 시작할 때마다 내 쓰레기 2줄을 정화합니다.'
   },
   first_strike: {
     id: 'first_strike',
+    icon: '🥇',
     name: '첫수 보너스',
     tier: TIERS.SILVER,
     desc: '매 전투의 첫 라인 클리어 공격력이 3배가 됩니다.'
   },
   merchant_token: {
     id: 'merchant_token',
+    icon: '🏷️',
     name: '상인의 증표',
     tier: TIERS.GOLD,
     desc: '상점 물품 가격이 25% 저렴해집니다.'
   },
   warehouse_key: {
     id: 'warehouse_key',
+    icon: '🔑',
     name: '창고지기의 열쇠',
     tier: TIERS.GOLD,
     desc: '상점에서 물건을 구매하면 같은 종류의 새 물건으로 무한 재입고됩니다.'
   },
   phoenix_feather: {
     id: 'phoenix_feather',
+    icon: '🐦‍🔥',
     name: '불사조 깃털',
     tier: TIERS.GOLD,
     desc: '쓰러질 위기에 처하면 모든 쓰레기 줄을 제거하고 한 번 버팁니다. (전투 무관 1회용)'
   },
   greed: {
     id: 'greed',
+    icon: '💰',
     name: '욕심쟁이',
     tier: TIERS.BRONZE,
     desc: '전투 승리 보상 골드가 20% 증가합니다.'
   },
   first_aid: {
     id: 'first_aid',
+    icon: '🚑',
     name: '응급 처치',
     tier: TIERS.GOLD,
     desc: '내 필드에 쓰레기가 6줄 이상 쌓여 있으면 공격력이 30% 증가합니다.'
   },
   combo_keeper: {
     id: 'combo_keeper',
+    icon: '🔗',
     name: '콤보 보존',
     tier: TIERS.GOLD,
     desc: '한 번의 미스로는 콤보가 끊기지 않습니다(다음 클리어 시 재충전).'
   },
   mana_surge: {
     id: 'mana_surge',
+    icon: '🔋',
     name: '마나 과급',
     tier: TIERS.SILVER,
     desc: '최대 MP가 100에서 120으로 증가합니다.'
   },
   chain_reactor: {
     id: 'chain_reactor',
+    icon: '💥',
     name: '연쇄 반응로',
     tier: TIERS.GOLD,
     desc: '폭발이 범위 내의 다른 폭탄·시한폭탄을 연쇄로 터뜨립니다.'
   },
   bounty_market: {
     id: 'bounty_market',
+    icon: '🪙',
     name: '현상금 거래소',
     tier: TIERS.GOLD,
     desc: '현상금 블록으로 얻는 골드가 2배가 됩니다.'
   },
   preservation_seal: {
     id: 'preservation_seal',
+    icon: '🔏',
     name: '소멸 봉인',
     tier: TIERS.GOLD,
     desc: '소멸/1회용 블록이 소멸되지 않고 계속 덱에 남습니다.'
   },
   alchemy_core: {
     id: 'alchemy_core',
+    icon: '⚗️',
     name: '연금술 핵',
     tier: TIERS.GOLD,
     desc: '획득 즉시 내 덱의 기본 블록을 각각 랜덤한 특수 블록으로 변환합니다.'
   },
   set_overload: {
     id: 'set_overload',
+    icon: '⚡',
     name: '과부하 코어',
     tier: TIERS.GOLD,
     desc: '[파워 세트] 한 클리어의 공격력이 2 이상이면 +1 추가 피해(상쇄에 밀리지 않도록 공격력 기준).'
   },
   set_blastcap: {
     id: 'set_blastcap',
+    icon: '💣',
     name: '대폭발 신관',
     tier: TIERS.GOLD,
     desc: '[봄브 세트] 모든 폭발 반경이 +1 증가합니다.'
   },
   set_manawell: {
     id: 'set_manawell',
+    icon: '🌊',
     name: '마나 우물',
     tier: TIERS.GOLD,
     desc: '[마나 세트] 모든 스킬 쿨타임이 50% 감소합니다.'
   },
   set_sanctuary: {
     id: 'set_sanctuary',
+    icon: '✨',
     name: '정화의 성소',
     tier: TIERS.GOLD,
     desc: '[클렌즈 세트] 쓰레기 줄을 정화할 때마다 공격력 +0.5.'
   },
   set_abszero: {
     id: 'set_abszero',
+    icon: '❄️',
     name: '절대영도',
     tier: TIERS.GOLD,
     desc: '[냉각 세트] 냉각 둔화 지속 2배. 둔화 중 내 공격 +1, 받는 피해 -1.'
   },
   set_goldhand: {
     id: 'set_goldhand',
+    icon: '🤚',
     name: '황금의 손',
     tier: TIERS.GOLD,
     desc: '[현상금 세트] 보유 골드에 비례해 적에게 주는 피해 강화(200골드에서 최대 +100%, 골드를 쓰면 그만큼 감소).'
   },
   set_resonator: {
     id: 'set_resonator',
+    icon: '⛓️',
     name: '사슬 공명기',
     tier: TIERS.GOLD,
     desc: '[사슬 세트] 사슬로 함께 지워진 줄도 더블/트리플/쿼드 폭발 배수 계산에 포함됩니다.'
   },
   set_comboengine: {
     id: 'set_comboengine',
+    icon: '🧮',
     name: '콤보 엔진',
     tier: TIERS.GOLD,
     desc: '[콤보 세트] 콤보 공격 배수 증가폭이 강화됩니다.'
   },
   foresight: {
     id: 'foresight',
+    icon: '👁️',
     name: '예지의 눈',
     tier: TIERS.SILVER,
     desc: '다음 블록 미리보기가 3개에서 5개로 늘어납니다.'
   }
 };
+
+const PROFILE_ICON = {
+  balanced: '⚖️', fast: '⚡', opener: '🚀', turtle: '🐢', spiker: '🔱',
+  stacker: '🧱', aggro: '😡', cheese: '🤡', stride: '🏃', plonk: '💣',
+  infds: '🌀', elite: '👑'
+};
+
+function enemyIcon(base, type) {
+  if (type === 'boss') return '💀';
+  if (base.mirror) return '🪞';
+  if (type === 'elite') return '👑';
+  return PROFILE_ICON[base.profile] || '👾';
+}
 
 const TIER_WEIGHTS = {
   [TIERS.BRONZE]: { bronze: 72, silver: 26, gold: 2 },
@@ -354,6 +394,7 @@ const GAMBLE_TIERS = {
 export function makeBoss(round) {
   const card = makeEnemy(round, true, BOSS);
   card.type = 'boss';
+  card.icon = '💀';
   card.ability = 'overload';
   card.name = BOSS.name;
   card.style = BOSS.style;
@@ -461,7 +502,8 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
     deckExtras: base.deckExtras || [],
     ability: round >= 4 || elite ? base.ability : null,
     mirror,
-    challenge
+    challenge,
+    icon: enemyIcon(base, elite ? 'elite' : 'normal')
   };
 }
 

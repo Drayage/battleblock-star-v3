@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
@@ -986,6 +986,13 @@ tbBoard.tickTimeBombs(7);
 assert.equal(tbBoard.grid[10][3].fuse, 5, 'just-placed timebomb is skipped this turn (by serial, survives row shifts)');
 tbBoard.tickTimeBombs(8);
 assert.equal(tbBoard.grid[10][3].fuse, 4, 'timebomb ticks down on later turns');
+
+// 아이콘: 모든 스킬/소모품/유물에 icon 문자열, 적 카드에 icon 부여
+for (const [id, s] of Object.entries(SKILLS)) assert.equal(typeof s.icon, 'string', `skill ${id} has icon`);
+for (const [id, c] of Object.entries(CONSUMABLES)) assert.equal(typeof c.icon, 'string', `consumable ${id} has icon`);
+for (const [id, r] of Object.entries(RELICS)) assert.equal(typeof r.icon, 'string', `relic ${id} has icon`);
+assert.ok(makeEnemy(8).icon, 'enemy card has icon');
+assert.equal(makeBoss(MAX_ROUND).icon, '💀', 'boss icon');
 
 // 예지의 눈 유물 + next 5개 미리보기를 위한 큐 길이
 assert.ok(RELICS.foresight, 'foresight relic exists');
