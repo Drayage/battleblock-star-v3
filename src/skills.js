@@ -208,14 +208,14 @@ export const SKILLS = {
     name: '홀드 잠금',
     tier: 'bronze',
     cost: 30,
-    cooldown: 13000,
-    desc: '10초 동안 적의 홀드 슬롯을 잠급니다.',
+    cooldown: 22000,
+    desc: '20초 동안 적의 홀드 슬롯을 잠급니다.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;
-      game.applyEnemyDebuff?.('hold', 10000);
+      game.applyEnemyDebuff?.('hold', 20000);
       game.scheduleBattleTimeout(() => {
         if (game.enemy === enemy) enemy.holdLocked = false;
-      }, 10000);
+      }, 20000);
       return true;
     }
   }
