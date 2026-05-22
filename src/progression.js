@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko27';
-import { Deck, shuffle } from './deck.js?v=20260521-ko27';
-import { SKILLS } from './skills.js?v=20260521-ko27';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko27';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko28';
+import { Deck, shuffle } from './deck.js?v=20260521-ko28';
+import { SKILLS } from './skills.js?v=20260521-ko28';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko28';
 
 export const RELICS = {
   combo_amp: {
@@ -159,6 +159,12 @@ export const RELICS = {
     name: '콤보 엔진',
     tier: TIERS.GOLD,
     desc: '[콤보 세트] 콤보 공격 배수 증가폭이 강화됩니다.'
+  },
+  foresight: {
+    id: 'foresight',
+    name: '예지의 눈',
+    tier: TIERS.SILVER,
+    desc: '다음 블록 미리보기가 3개에서 5개로 늘어납니다.'
   }
 };
 
@@ -226,7 +232,8 @@ const ENEMIES = [
   { name: '사슬술사', tier: TIERS.SILVER, style: '사슬 캐스케이드와 콤보 차지로 누적 압박합니다.', profile: 'stride', rows: 0, speed: 410, garbage: 1, risk: 1.35, rewardBonus: 5, minRound: 6, deckExtras: [TYPES.CHAIN, TYPES.COMBO_CHARGE], ability: 'spike', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.13 } },
   { name: '폭파공', tier: TIERS.SILVER, style: '시한폭탄과 폭탄을 깔고 덱을 오염시킵니다.', profile: 'plonk', rows: -2, speed: 380, garbage: 1, risk: 1.5, rewardBonus: 6, minRound: 7, deckExtras: [TYPES.TIMEBOMB, TYPES.BOMB], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.12 } },
   { name: '거북 수문장', tier: TIERS.GOLD, style: 'TURTLE 패턴: 구멍을 극도로 피하며 장기전으로 끕니다.', profile: 'turtle', rows: 4, speed: 430, garbage: 2, risk: 1.4, rewardBonus: 5, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.COOLANT], ability: 'slowPlayer', aiSkill: { mistakeRate: 0.0025, noise: 0, hesitateRate: 0.1 } },
-  { name: '유리 무희', tier: TIERS.GOLD, style: 'SPIKER 패턴: 우물을 파 쿼드 대량 폭발을 노립니다.', profile: 'spiker', rows: -3, speed: 320, garbage: 1, risk: 1.75, rewardBonus: 9, minRound: 9, deckExtras: [TYPES.GLASS, TYPES.POWER_S], ability: 'hyperBurst', aiSkill: { mistakeRate: 0.002, noise: 0, hesitateRate: 0.1 } }
+  { name: '유리 무희', tier: TIERS.GOLD, style: 'SPIKER 패턴: 우물을 파 쿼드 대량 폭발을 노립니다.', profile: 'spiker', rows: -3, speed: 320, garbage: 1, risk: 1.75, rewardBonus: 9, minRound: 9, deckExtras: [TYPES.GLASS, TYPES.POWER_S], ability: 'hyperBurst', aiSkill: { mistakeRate: 0.002, noise: 0, hesitateRate: 0.1 } },
+  { name: '거울상', tier: TIERS.SILVER, style: 'MIRROR: 내 덱과 똑같은 블록을 내 낙하 속도에 맞춰 사용하는 도플갱어(스킬·유물·소모품은 없음).', profile: 'balanced', rows: -4, speed: 430, garbage: 0, risk: 1.5, rewardBonus: 7, minRound: 4, mirror: true, aiSkill: { mistakeRate: 0.006, noise: 0, hesitateRate: 0.14, holdMistakeRate: 0.012 } }
 ];
 
 const ELITES = [
@@ -356,6 +363,42 @@ export function makeBoss(round) {
   return card;
 }
 
+export const CHALLENGES = {
+  noHold: { id: 'noHold', label: '홀드 금지', desc: () => '홀드를 한 번도 쓰지 않고 승리' },
+  noSkill: { id: 'noSkill', label: '스킬 금지', desc: () => '스킬을 한 번도 쓰지 않고 승리' },
+  timeAttack: { id: 'timeAttack', label: '타임어택', desc: p => `${p.limit}초 안에 승리` },
+  clearLines: { id: 'clearLines', label: '라인 러시', desc: p => `이 전투에서 ${p.target}라인 이상 지우고 승리` }
+};
+
+function rollChallengeReward(round) {
+  const tier = roundTier(round);
+  const roll = Math.random();
+  if (roll < 0.4) {
+    const amount = 30 + round * 4;
+    return { kind: 'gold', amount, label: `골드 +${amount}` };
+  }
+  if (roll < 0.65) {
+    const c = pickByTier(CONSUMABLES, tier);
+    return c ? { kind: 'consumable', id: c.id, label: `소모품: ${c.name}` } : { kind: 'gold', amount: 40, label: '골드 +40' };
+  }
+  if (roll < 0.85) {
+    const r = pickByTier(RELICS, tier, { exclude: EARNED_ONLY_RELICS });
+    return r ? { kind: 'relic', id: r.id, label: `유물: ${RELICS[r.id].name}` } : { kind: 'gold', amount: 50, label: '골드 +50' };
+  }
+  const s = pickByTier(SKILLS, tier);
+  return s ? { kind: 'skill', id: s.id, label: `스킬: ${s.name}` } : { kind: 'gold', amount: 50, label: '골드 +50' };
+}
+
+export function makeChallenge(round) {
+  const ids = ['noHold', 'noSkill', 'timeAttack', 'clearLines'];
+  const id = ids[Math.floor(Math.random() * ids.length)];
+  const params = id === 'timeAttack' ? { limit: 40 + round * 2 }
+    : id === 'clearLines' ? { target: Math.min(40, 14 + round) }
+      : {};
+  const tpl = CHALLENGES[id];
+  return { id, label: tpl.label, cond: tpl.desc(params), params, reward: rollChallengeReward(round) };
+}
+
 export function makeEnemyChoices(round) {
   if (round === MAX_ROUND) return [makeBoss(round)];
   const count = round % 3 === 0 ? 3 : 2;
@@ -394,6 +437,9 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
     holdMistakeRate: Math.max(0, (baseSkill.holdMistakeRate ?? (baseSkill.mistakeRate || 0) * 0.6) - level * 0.006 - tier * 0.018 - (elite ? 0.04 : 0))
   };
   const rewardTier = elite ? TIERS.GOLD : maxTier(base.tier || TIERS.BRONZE, roundTier(round));
+  const mirror = !!base.mirror;
+  const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round) : null;
+  const goldMult = challenge ? 0.9 : 1; // 도전과제 적은 일반 보상 골드가 약간 적다.
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
     type: elite ? 'elite' : 'normal',
@@ -402,13 +448,15 @@ export function makeEnemy(round, elite = false, selectedBase = null) {
     style: base.style,
     aiProfile: base.profile,
     aiSkill,
-    rewardGold,
+    rewardGold: Math.round(rewardGold * goldMult),
     rewardPool: elite ? `elite:${rewardTier}` : rewardTier,
     startingRows: elite ? Math.max(18, eliteRows) : Math.max(round === 1 ? 10 : 12, normalRows),
     startingGarbage,
     speed,
     deckExtras: base.deckExtras || [],
-    ability: round >= 4 || elite ? base.ability : null
+    ability: round >= 4 || elite ? base.ability : null,
+    mirror,
+    challenge
   };
 }
 

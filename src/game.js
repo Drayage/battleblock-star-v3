@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko27';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko27';
-import { Deck } from './deck.js?v=20260521-ko27';
-import { AI } from './ai.js?v=20260521-ko27';
-import { Renderer } from './renderer.js?v=20260521-ko27';
-import { InputController } from './input.js?v=20260521-ko27';
-import { SKILLS } from './skills.js?v=20260521-ko27';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko27';
+import { Board } from './board.js?v=20260521-ko28';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko28';
+import { Deck } from './deck.js?v=20260521-ko28';
+import { AI } from './ai.js?v=20260521-ko28';
+import { Renderer } from './renderer.js?v=20260521-ko28';
+import { InputController } from './input.js?v=20260521-ko28';
+import { SKILLS } from './skills.js?v=20260521-ko28';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko28';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko27';
+} from './progression.js?v=20260521-ko28';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -212,11 +212,15 @@ class Game {
     for (const enemy of makeEnemyChoices(this.run.round)) {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
+      const challengeHtml = enemy.challenge
+        ? `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond} → 보상 ${enemy.challenge.reward.label} (일반 골드 10%↓)</small>`
+        : '';
       btn.innerHTML = `
         <strong>${enemy.name}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
+        ${challengeHtml}
       `;
       btn.addEventListener('click', () => this.startBattle(enemy));
       wrap.appendChild(btn);
@@ -829,7 +833,8 @@ class Game {
     this.run.deck.beginBattle();
     this.run.deck.exhaustImmune = this.run.relics.includes('preservation_seal');
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
-    this.enemy = new Board({ rows: enemyCard.startingRows, deck: new Deck(enemyCard.deckExtras || []) });
+    const enemyDeck = enemyCard.mirror ? new Deck([...this.run.deck.extraCards]) : new Deck(enemyCard.deckExtras || []);
+    this.enemy = new Board({ rows: enemyCard.startingRows, deck: enemyDeck });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
     if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
     if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
@@ -869,6 +874,10 @@ class Game {
     this.bossOverloadCharge = 0;
     this.enemyDebuffs = {};
     this.playerDebuffs = {};
+    this.battleUsedHold = false;
+    this.battleUsedSkill = false;
+    this.activeChallenge = enemyCard.challenge || null;
+    this.challengeRewarded = false;
     this.paused = false;
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
@@ -929,7 +938,7 @@ class Game {
     }
     if (action === 'rotate') this.groundAdjust(() => this.player.rotate(1));
     if (action === 'ccw') this.groundAdjust(() => this.player.rotate(-1));
-    if (action === 'hold') this.player.hold();
+    if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
     if (action === 'hard') this.resolve(this.player.hardDrop(), this.player);
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
@@ -974,6 +983,7 @@ class Game {
       this.message = `${skill.name} 실패`;
       return;
     }
+    this.battleUsedSkill = true;
     this.player.mp -= skill.cost;
     const cdFactor = this.run.relics.includes('set_manawell') ? 0.5 : 1;
     this.skillCooldowns[id] = (skill.cooldown || 0) * cdFactor;
@@ -1108,6 +1118,16 @@ class Game {
   }
 
   winBattle() {
+    this.pendingChallengeText = '';
+    if (this.activeChallenge && !this.challengeRewarded) {
+      const st = this.challengeStatus();
+      if (st && st.ok) {
+        this.challengeRewarded = true;
+        this.pendingChallengeText = ` · 도전 성공! ${this.grantChallengeReward(this.activeChallenge.reward)}`;
+      } else {
+        this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
+      }
+    }
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
@@ -1122,7 +1142,7 @@ class Game {
     this.show('mapScreen');
     document.getElementById('mapTitle').textContent = `${this.run.round}라운드 클리어`;
     const relicText = grantedRelic ? ` · 유물 획득: ${RELICS[grantedRelic].name}` : '';
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText} · 보상 선택`;
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText}${this.pendingChallengeText || ''} · 보상 선택`;
     document.getElementById('enemyChoices').innerHTML = '';
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
@@ -1285,6 +1305,10 @@ class Game {
         enemySlowTimer: this.enemySlowTimer,
         playerSlowTimer: this.playerSlowTimer,
         battleClearedLines: this.battleClearedLines,
+        battleUsedHold: this.battleUsedHold,
+        battleUsedSkill: this.battleUsedSkill,
+        activeChallenge: this.activeChallenge,
+        challengeRewarded: this.challengeRewarded,
         battlePlayerPieces: this.battlePlayerPieces,
         battlePlayerAttacks: this.battlePlayerAttacks,
         battleEnemyPieces: this.battleEnemyPieces,
@@ -1336,6 +1360,10 @@ class Game {
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
         this.battleClearedLines = state.battle.battleClearedLines || 0;
+        this.battleUsedHold = !!state.battle.battleUsedHold;
+        this.battleUsedSkill = !!state.battle.battleUsedSkill;
+        this.activeChallenge = state.battle.activeChallenge || null;
+        this.challengeRewarded = !!state.battle.challengeRewarded;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
         this.battlePlayerAttacks = state.battle.battlePlayerAttacks || 0;
         this.battleEnemyPieces = state.battle.battleEnemyPieces || 0;
@@ -1511,6 +1539,12 @@ class Game {
   }
 
   currentEnemyDelay() {
+    // 거울 적: 내 낙하 속도(pps)를 그대로 따라간다.
+    if (this.enemyCard.mirror && this.battlePlayerPieces >= 3 && this.battleElapsedSec > 0) {
+      const pieceMs = (this.battleElapsedSec * 1000) / this.battlePlayerPieces;
+      const slow = this.enemySlowTimer > 0 ? GAME_TIMING.ENEMY_SLOW_FACTOR : 1;
+      return Math.round(Math.max(150, Math.min(1100, pieceMs)) * slow);
+    }
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
     return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
   }
@@ -1573,7 +1607,33 @@ class Game {
     if (relics.includes('set_overload')) player.push('과부하');
     if (relics.includes('set_abszero') && this.enemySlowTimer > 0) player.push('절대영도');
     if (relics.includes('set_sanctuary')) player.push('성소');
+    const ch = this.challengeStatus();
+    if (ch) player.unshift(`도전 ${ch.text}`);
     return { player, enemy };
+  }
+
+  challengeStatus() {
+    const c = this.activeChallenge;
+    if (!c) return null;
+    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: this.battleUsedHold ? '홀드사용✗' : '노홀드 OK' };
+    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: this.battleUsedSkill ? '스킬사용✗' : '노스킬 OK' };
+    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
+    if (c.id === 'clearLines') return { ok: this.battleClearedLines >= c.params.target, text: `${this.battleClearedLines}/${c.params.target}줄` };
+    return null;
+  }
+
+  grantChallengeReward(reward) {
+    if (!reward) return '';
+    if (reward.kind === 'gold') this.run.gold += reward.amount;
+    else if (reward.kind === 'relic') { if (!this.run.relics.includes(reward.id)) this.run.relics.push(reward.id); else this.run.gold += 40; }
+    else if (reward.kind === 'consumable') { if (this.run.consumables.length < 3) this.run.consumables.push(reward.id); else this.run.gold += 20; }
+    else if (reward.kind === 'skill') {
+      if (!this.run.ownedSkills.includes(reward.id)) {
+        this.run.ownedSkills.push(reward.id);
+        if (this.run.equippedSkills.length < 3) this.run.equippedSkills.push(reward.id);
+      } else this.run.gold += 30;
+    }
+    return reward.label;
   }
 
   resolveEnemyStep() {
@@ -1824,6 +1884,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko27').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko28').catch(() => {});
   });
 }

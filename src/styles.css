@@ -35,6 +35,7 @@ button{font:inherit}
 .slot-dialog{width:min(440px,100%);max-height:88vh;display:flex;flex-direction:column;background:#101827;border:1px solid #38568f;border-radius:10px;padding:16px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
 .slot-dialog h2{font-size:16px;color:#e2ecff;margin-bottom:8px}.slot-dialog p{font-size:12px;color:#8d9ab7;line-height:1.45;margin-bottom:12px}.slot-options{display:grid;gap:8px;margin-bottom:10px;overflow-y:auto;flex:1 1 auto;min-height:0}.slot-options .choice{min-height:48px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .kind-tag{font-style:normal;font-size:10px;color:#9fb4dc;opacity:.85;margin-right:2px}
+.challenge-tag{display:block;margin-top:4px;color:#ffd76a;font-weight:bold;line-height:1.35}
 .topbar-actions{display:flex;gap:8px;align-items:center}
 #deckModal{position:fixed;inset:0;z-index:60;display:none;align-items:flex-start;justify-content:center;padding:16px;background:rgba(3,5,12,.82);overflow-y:auto}
 #deckModal.active{display:flex}
