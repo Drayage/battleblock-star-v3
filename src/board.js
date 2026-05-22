@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko39';
-import { Deck } from './deck.js?v=20260521-ko39';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko40';
+import { Deck } from './deck.js?v=20260521-ko40';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -93,8 +93,10 @@ export class Board {
     this.forceCrushNext = 0;
     this.explodeRadiusBonus = 0;
     this.sanctuaryActive = false;
-    this.chainResonator = false;
     this.comboEngine = false;
+    this.armDelayBonus = 0;
+    this.clearDelayBonus = 0;
+    this.delaysGarbageOnClear = true;
     this.pendingDrops = [];
     this.pendingDropTimer = 0;
     this.fillQueue();
@@ -137,8 +139,10 @@ export class Board {
     board.forceCrushNext = state.forceCrushNext || 0;
     board.explodeRadiusBonus = state.explodeRadiusBonus || 0;
     board.sanctuaryActive = !!state.sanctuaryActive;
-    board.chainResonator = !!state.chainResonator;
     board.comboEngine = !!state.comboEngine;
+    board.armDelayBonus = 0;
+    board.clearDelayBonus = 0;
+    board.delaysGarbageOnClear = true;
     board.pendingDrops = (state.pendingDrops || []).map(d => ({ ...d }));
     board.pendingDropTimer = state.pendingDropTimer || 0;
     board.fillQueue();
@@ -298,7 +302,6 @@ export class Board {
     }
     for (const pos of cells) {
       const made = cell(this.current.card);
-      if (made.traits.includes('chain')) made.pieceId = this.pieceSerial;
       made.placedSerial = this.pieceSerial;
       this.grid[pos.y][pos.x] = made;
       placed.push({ ...pos, card: this.current.card });
@@ -328,9 +331,7 @@ export class Board {
     const result = this.clearLines();
     if (result.cleared > 0) {
       result.tSpin = wasTSpin;
-      // 사슬 공명기: 멀티라인 폭발 배수 판정에 사슬로 함께 지워진 줄도 합산(공격/마나 0.5배는 유지).
-      const burstLines = this.chainResonator ? result.cleared : result.fullCleared;
-      result.tetris = burstLines >= 4;
+      result.tetris = result.fullCleared >= 4;
       result.clearText = this.clearLabel(result);
       const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
@@ -382,11 +383,13 @@ export class Board {
       }
     }
     this.tickTimeBombs(this.pieceSerial);
-    // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 1초 미룬다(파란색 표시).
-    if (result.cleared > 0) {
+    // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 미룬다(파란색 표시).
+    // delaysGarbageOnClear가 false면(=AI) 이 지연을 적용하지 않아 정상 착탄한다.
+    if (result.cleared > 0 && this.delaysGarbageOnClear) {
+      const delay = Math.max(300, GAME_TIMING.GARBAGE_DELAY_ON_CLEAR + (this.clearDelayBonus || 0));
       for (const entry of this.garbageEntries) {
         if (entry.timer <= 0) {
-          entry.timer = GAME_TIMING.GARBAGE_DELAY_ON_CLEAR;
+          entry.timer = delay;
           entry.delayed = true;
         }
       }
@@ -467,18 +470,6 @@ export class Board {
     }
     if (!fullRows.size) return empty;
 
-    // 사슬 캐스케이드: 서로 다른 사슬 미노 2개 이상이 연결된 그룹만 발동한다.
-    // (사슬 블록 하나만으로는 일반 블록과 동일하게 작동.)
-    const bonusRows = new Set();
-    for (const comp of this.chainComponents()) {
-      const pieceIds = new Set(comp.map(({ x, y }) => this.grid[y][x]?.pieceId));
-      pieceIds.delete(undefined);
-      if (pieceIds.size < 2) continue;
-      if (comp.some(({ y }) => fullRows.has(y))) {
-        for (const { y } of comp) if (!fullRows.has(y)) bonusRows.add(y);
-      }
-    }
-
     let attack = 0;
     let mana = 0;
     let coolantCells = 0;
@@ -489,10 +480,10 @@ export class Board {
     const timeBombCells = [];
     let purge = false;
 
-    const rows = [...fullRows, ...bonusRows];
+    const rows = [...fullRows];
     for (const r of rows) {
       const row = this.grid[r];
-      const factor = bonusRows.has(r) ? 0.5 : 1;
+      const factor = 1;
       attack += row.reduce((sum, c) => sum + (c ? c.attack : 0), 0) * factor;
       mana += (row.reduce((sum, c) => sum + (c ? (c.traits.includes('garbage') ? 0.4 : 0.5) : 0), 0)
               + row.filter(c => c && c.traits.includes('manaBonus')).length * 4) * factor;
@@ -545,34 +536,6 @@ export class Board {
       tetris: false,
       tSpin: false
     };
-  }
-
-  chainComponents() {
-    const seen = Array.from({ length: this.rows }, () => new Array(this.cols).fill(false));
-    const comps = [];
-    const isChain = (y, x) => y >= 0 && y < this.rows && x >= 0 && x < this.cols && !!this.grid[y][x]?.traits.includes('chain');
-    for (let r = 0; r < this.rows; r++) {
-      for (let c = 0; c < this.cols; c++) {
-        if (!isChain(r, c) || seen[r][c]) continue;
-        const comp = [];
-        const stack = [[r, c]];
-        seen[r][c] = true;
-        while (stack.length) {
-          const [y, x] = stack.pop();
-          comp.push({ x, y });
-          for (const [dy, dx] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const ny = y + dy;
-            const nx = x + dx;
-            if (isChain(ny, nx) && !seen[ny][nx]) {
-              seen[ny][nx] = true;
-              stack.push([ny, nx]);
-            }
-          }
-        }
-        comps.push(comp);
-      }
-    }
-    return comps;
   }
 
   tickTimeBombs(skipSerial = null) {
@@ -698,7 +661,8 @@ export class Board {
 
   receiveGarbage(amount) {
     const n = Math.max(0, Math.ceil(amount));
-    if (n > 0) this.garbageEntries.push({ amount: n, timer: GAME_TIMING.GARBAGE_ARM_DELAY });
+    const timer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
+    if (n > 0) this.garbageEntries.push({ amount: n, timer });
   }
 
   addDurableGarbage(lines, hp = 2) {
@@ -909,7 +873,6 @@ export class Board {
       forceCrushNext: this.forceCrushNext,
       explodeRadiusBonus: this.explodeRadiusBonus,
       sanctuaryActive: this.sanctuaryActive,
-      chainResonator: this.chainResonator,
       comboEngine: this.comboEngine,
       pendingDrops: this.pendingDrops.map(d => ({ ...d })),
       pendingDropTimer: this.pendingDropTimer

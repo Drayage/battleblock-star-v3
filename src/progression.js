@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko39';
-import { Deck, shuffle } from './deck.js?v=20260521-ko39';
-import { SKILLS } from './skills.js?v=20260521-ko39';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko39';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko40';
+import { Deck, shuffle } from './deck.js?v=20260521-ko40';
+import { SKILLS } from './skills.js?v=20260521-ko40';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko40';
 
 export const RELICS = {
   combo_amp: {
@@ -172,12 +172,19 @@ export const RELICS = {
     tier: TIERS.GOLD,
     desc: '[현상금 세트] 보유 골드에 비례해 적에게 주는 피해 강화(200골드에서 최대 +100%, 골드를 쓰면 그만큼 감소).'
   },
-  set_resonator: {
-    id: 'set_resonator',
-    icon: '⛓️',
-    name: '사슬 공명기',
+  set_bulwark: {
+    id: 'set_bulwark',
+    icon: '🛡️',
+    name: '철벽 장막',
     tier: TIERS.GOLD,
-    desc: '[사슬 세트] 사슬로 함께 지워진 줄도 더블/트리플/쿼드 폭발 배수 계산에 포함됩니다.'
+    desc: '[차단 세트] 받는 공격이 게이지에서 빨간색(도착)으로 바뀌는 시간 +2초, 파란색→빨간색 전환 시간도 +2초.'
+  },
+  ward_delay: {
+    id: 'ward_delay',
+    icon: '⏳',
+    name: '지연 장막',
+    tier: TIERS.SILVER,
+    desc: '받는 공격이 게이지에서 빨간색(도착)으로 바뀌는 시간이 1초 늘어납니다.'
   },
   set_comboengine: {
     id: 'set_comboengine',
@@ -224,13 +231,13 @@ const SHOP_PRICE = {
 };
 
 export const BLOCK_UPGRADES = {
-  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.COOLANT, TYPES.MANA_I, TYPES.CHAIN_I, TYPES.CLEANSE_I, TYPES.BOUNTY_I, TYPES.COMBO_I],
-  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.UNSTABLE, TYPES.COOLANT_J, TYPES.BOMB_J, TYPES.POWER_J, TYPES.MANA_J, TYPES.BOUNTY_J, TYPES.CHAIN_J, TYPES.COMBO_J],
-  [TYPES.L]: [TYPES.MANA_L, TYPES.BOUNTY, TYPES.POWER_L, TYPES.BOMB_L, TYPES.CLEANSE_L, TYPES.COOLANT_L, TYPES.CHAIN_L, TYPES.COMBO_L],
-  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.LEAD, TYPES.TIMEBOMB, TYPES.BOUNTY_O, TYPES.MANA_O, TYPES.POWER_O, TYPES.COOLANT_O, TYPES.CHAIN_O, TYPES.COMBO_O],
-  [TYPES.S]: [TYPES.POWER_S, TYPES.GLASS, TYPES.CLEANSE_S, TYPES.BOUNTY_S, TYPES.BOMB_S, TYPES.MANA_S, TYPES.COOLANT_S, TYPES.CHAIN_S, TYPES.COMBO_S],
-  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.COMBO_CHARGE, TYPES.CHAIN, TYPES.BOMB_T, TYPES.COOLANT_T, TYPES.CLEANSE_T, TYPES.BOUNTY_T],
-  [TYPES.Z]: [TYPES.POWER_Z, TYPES.MANA_Z, TYPES.BOMB_Z, TYPES.CLEANSE_Z, TYPES.CHAIN_Z, TYPES.COOLANT_Z, TYPES.BOUNTY_Z, TYPES.COMBO_Z]
+  [TYPES.I]: [TYPES.POWER_I, TYPES.BOMB_I, TYPES.COOLANT, TYPES.MANA_I, TYPES.WARD_I, TYPES.CLEANSE_I, TYPES.BOUNTY_I, TYPES.COMBO_I],
+  [TYPES.J]: [TYPES.CLEANSE_J, TYPES.UNSTABLE, TYPES.COOLANT_J, TYPES.BOMB_J, TYPES.POWER_J, TYPES.MANA_J, TYPES.BOUNTY_J, TYPES.WARD_J, TYPES.COMBO_J],
+  [TYPES.L]: [TYPES.MANA_L, TYPES.BOUNTY, TYPES.POWER_L, TYPES.BOMB_L, TYPES.CLEANSE_L, TYPES.COOLANT_L, TYPES.WARD_L, TYPES.COMBO_L],
+  [TYPES.O]: [TYPES.BOMB, TYPES.PURGE_O, TYPES.LEAD, TYPES.TIMEBOMB, TYPES.BOUNTY_O, TYPES.MANA_O, TYPES.POWER_O, TYPES.COOLANT_O, TYPES.WARD_O, TYPES.COMBO_O],
+  [TYPES.S]: [TYPES.POWER_S, TYPES.GLASS, TYPES.CLEANSE_S, TYPES.BOUNTY_S, TYPES.BOMB_S, TYPES.MANA_S, TYPES.COOLANT_S, TYPES.WARD_S, TYPES.COMBO_S],
+  [TYPES.T]: [TYPES.POWER_T, TYPES.MANA_T, TYPES.COMBO_CHARGE, TYPES.WARD_T, TYPES.BOMB_T, TYPES.COOLANT_T, TYPES.CLEANSE_T, TYPES.BOUNTY_T],
+  [TYPES.Z]: [TYPES.POWER_Z, TYPES.MANA_Z, TYPES.BOMB_Z, TYPES.CLEANSE_Z, TYPES.WARD_Z, TYPES.COOLANT_Z, TYPES.BOUNTY_Z, TYPES.COMBO_Z]
 };
 
 export class RunState {
@@ -269,7 +276,8 @@ const ENEMIES = [
   { name: '마나 도둑', tier: TIERS.SILVER, style: '주기적으로 플레이어를 느리게 하는 중반 캐스터.', profile: 'balanced', rows: 1, speed: 430, garbage: 1, risk: 1.3, rewardBonus: 4, deckExtras: [TYPES.MANA_L], ability: 'slowPlayer', aiSkill: { mistakeRate: 0.003, noise: 0, hesitateRate: 0.12 } },
   { name: '클렌즈 워든', tier: TIERS.GOLD, style: '클렌즈 블록을 사용하며 쓰레기 압박에 저항합니다.', profile: 'stacker', rows: 2, speed: 390, garbage: 2, risk: 1.45, rewardBonus: 5, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.001, noise: 0, hesitateRate: 0.09 } },
   { name: '광전사', tier: TIERS.SILVER, style: 'AGGRO 패턴: 지저분해도 빠르게 쌓아 끝없이 공격합니다.', profile: 'aggro', rows: -8, speed: 300, garbage: 0, risk: 1.7, rewardBonus: 8, minRound: 5, deckExtras: [TYPES.POWER_I, TYPES.POWER_Z, TYPES.UNSTABLE], ability: 'power', aiSkill: { mistakeRate: 0.006, noise: 0, hesitateRate: 0.14 } },
-  { name: '사슬술사', tier: TIERS.SILVER, style: '사슬 캐스케이드와 콤보 차지로 누적 압박합니다.', profile: 'stride', rows: 0, speed: 410, garbage: 1, risk: 1.35, rewardBonus: 5, minRound: 6, deckExtras: [TYPES.CHAIN, TYPES.COMBO_CHARGE], ability: 'spike', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.13 } },
+  { name: '방벽술사', tier: TIERS.SILVER, style: '차단 블록으로 게이지를 비우며 콤보 차지로 누적 압박합니다.', profile: 'stride', rows: 0, speed: 410, garbage: 1, risk: 1.35, rewardBonus: 5, minRound: 6, deckExtras: [TYPES.WARD_T, TYPES.COMBO_CHARGE], ability: 'spike', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.13 } },
+  { name: '재촉 드론', tier: TIERS.SILVER, style: '게이지 가속: 내 공격이 게이지에서 도착·전환되는 시간을 잠시 단축시켜 압박을 가속합니다.', profile: 'fast', rows: -8, speed: 320, garbage: 0, risk: 1.55, rewardBonus: 7, minRound: 7, ability: 'rushGauge', aiSkill: { mistakeRate: 0.006, noise: 0, hesitateRate: 0.15, holdMistakeRate: 0.013 } },
   { name: '폭파공', tier: TIERS.SILVER, style: '시한폭탄과 폭탄을 깔고 덱을 오염시킵니다.', profile: 'plonk', rows: -2, speed: 380, garbage: 1, risk: 1.5, rewardBonus: 6, minRound: 7, deckExtras: [TYPES.TIMEBOMB, TYPES.BOMB], ability: 'polluteDeck', aiSkill: { mistakeRate: 0.004, noise: 0, hesitateRate: 0.12 } },
   { name: '거북 수문장', tier: TIERS.GOLD, style: 'TURTLE 패턴: 구멍을 극도로 피하며 장기전으로 끕니다.', profile: 'turtle', rows: 4, speed: 430, garbage: 2, risk: 1.4, rewardBonus: 5, minRound: 8, deckExtras: [TYPES.PURGE_O, TYPES.CLEANSE_J, TYPES.COOLANT], ability: 'slowPlayer', aiSkill: { mistakeRate: 0.0025, noise: 0, hesitateRate: 0.1 } },
   { name: '유리 무희', tier: TIERS.GOLD, style: 'SPIKER 패턴: 우물을 파 쿼드 대량 폭발을 노립니다.', profile: 'spiker', rows: -3, speed: 320, garbage: 1, risk: 1.75, rewardBonus: 9, minRound: 9, deckExtras: [TYPES.GLASS, TYPES.POWER_S], ability: 'hyperBurst', aiSkill: { mistakeRate: 0.002, noise: 0, hesitateRate: 0.1 } },

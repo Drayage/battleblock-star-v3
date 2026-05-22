@@ -1,8 +1,8 @@
-import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko39';
+import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko40';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
-// 일부 글리프(예: 사슬 ∞)는 폰트상 작게 렌더돼 키워서 그린다.
-const GLYPH_SCALE = { '∞': 1.6, '✻': 1.2, '◷': 1.45, '⊘': 1.4, '▽': 1.3, '◈': 1.2 };
+// 일부 글리프는 폰트상 작게 렌더돼 키워서 그린다.
+const GLYPH_SCALE = { '✻': 1.2, '◷': 1.45, '⊘': 1.4, '▽': 1.3, '◈': 1.2, '⊟': 1.2 };
 
 function blockTag(card) {
   const glyph = card && ABILITY_GLYPH[card.abilityId];
