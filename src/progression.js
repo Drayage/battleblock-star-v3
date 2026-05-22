@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko46';
-import { Deck, shuffle } from './deck.js?v=20260521-ko46';
-import { SKILLS } from './skills.js?v=20260521-ko46';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko46';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko47';
+import { Deck, shuffle } from './deck.js?v=20260521-ko47';
+import { SKILLS } from './skills.js?v=20260521-ko47';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko47';
 
 export const RELICS = {
   combo_amp: {
@@ -382,6 +382,23 @@ export function setProgress(run, ability) {
 
 export function abilityOf(cardId) {
   return CARD_LIBRARY[cardId]?.abilityId;
+}
+
+const REMOVABLE_SHAPE_ORDER = new Map(BASE_TYPES.map((id, index) => [CARD_LIBRARY[id]?.shapeId || id, index]));
+
+function compareRemovableCards(a, b) {
+  const ca = CARD_LIBRARY[a];
+  const cb = CARD_LIBRARY[b];
+  const shapeA = REMOVABLE_SHAPE_ORDER.get(ca?.shapeId) ?? 99;
+  const shapeB = REMOVABLE_SHAPE_ORDER.get(cb?.shapeId) ?? 99;
+  if (shapeA !== shapeB) return shapeA - shapeB;
+  const baseA = BASE_TYPES.includes(a) ? 0 : 1;
+  const baseB = BASE_TYPES.includes(b) ? 0 : 1;
+  if (baseA !== baseB) return baseA - baseB;
+  const tierA = TIER_ORDER[ca?.tier] ?? 99;
+  const tierB = TIER_ORDER[cb?.tier] ?? 99;
+  if (tierA !== tierB) return tierA - tierB;
+  return (ca?.name || a).localeCompare(cb?.name || b, 'ko') || a.localeCompare(b);
 }
 
 export function completedAbilitySets(run) {
@@ -775,8 +792,9 @@ export function removableDeckCards(run) {
   for (const id of run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
   for (const id of run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
   for (const id of run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
-  return shuffle([...counts.keys()]
-    .filter(id => CARD_LIBRARY[id] && (run.deck.extraCards.includes(id) || BASE_TYPES.includes(id))));
+  return [...counts.keys()]
+    .filter(id => CARD_LIBRARY[id] && (run.deck.extraCards.includes(id) || BASE_TYPES.includes(id)))
+    .sort(compareRemovableCards);
 }
 
 export function upgradeDeckCards(run) {

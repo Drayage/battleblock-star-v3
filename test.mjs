@@ -376,6 +376,11 @@ assert.equal(Array.from({ length: 20 }, () => makeEventChoices(eventRun, 'start'
 const baseRemoveRun = new RunState();
 assert.equal(removableDeckCards(baseRemoveRun).length, BASE_TYPES.length);
 assert.equal(BASE_TYPES.every(id => removableDeckCards(baseRemoveRun).includes(id)), true);
+const sortedRemoveRun = new RunState();
+sortedRemoveRun.deck.draw = [TYPES.Z, TYPES.POWER_T, TYPES.I, TYPES.WARD_Z, TYPES.T, TYPES.POWER_I];
+sortedRemoveRun.deck.discard = [];
+sortedRemoveRun.deck.extraCards = [TYPES.POWER_T, TYPES.WARD_Z, TYPES.POWER_I];
+assert.deepEqual(removableDeckCards(sortedRemoveRun), [TYPES.I, TYPES.POWER_I, TYPES.T, TYPES.POWER_T, TYPES.Z, TYPES.WARD_Z]);
 eventRun.seenEvents.add('start');
 assert.equal(shouldShowEvent(eventRun), null);
 eventRun.round = 3;
