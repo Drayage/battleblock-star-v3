@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko41';
-import { Deck } from './deck.js?v=20260521-ko41';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko42';
+import { Deck } from './deck.js?v=20260521-ko42';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -479,6 +479,7 @@ export class Board {
     const bombCells = [];
     const timeBombCells = [];
     let purge = false;
+    let purgeCells = 0;
     let powerCells = 0;
 
     const rows = [...fullRows];
@@ -495,7 +496,9 @@ export class Board {
         if (c.traits.includes('timeBomb')) timeBombCells.push({ x, y: r });
       });
       if (row.some(c => c?.traits.includes('bomb'))) bombRows.push(r);
-      if (row.some(c => c?.traits.includes('purgeGarbage'))) purge = true;
+      const purgeInRow = row.filter(c => c?.traits.includes('purgeGarbage')).length;
+      if (purgeInRow > 0) purge = true;
+      purgeCells += purgeInRow;
       coolantCells += row.filter(c => c?.traits.includes('coolant')).length;
       gold += row.filter(c => c?.traits.includes('bounty')).length;
       chargeGained += row.filter(c => c?.traits.includes('comboCharge')).length;
@@ -521,8 +524,9 @@ export class Board {
       drops.push({ x, y: targetY, radius: timeR });
     }
     if (drops.length) this.queueExplosionDrops(drops);
-    if (purge) {
-      const purgedRows = this.purgeGarbageRows(1);
+    if (purgeCells > 0) {
+      // 클렌즈 칸당 가비지 1줄 제거.
+      const purgedRows = this.purgeGarbageRows(purgeCells);
       if (this.sanctuaryActive && purgedRows > 0) attack += purgedRows * 0.5;
     }
     return {
