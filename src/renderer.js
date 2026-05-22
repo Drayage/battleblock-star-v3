@@ -1,4 +1,4 @@
-import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko31';
+import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko32';
 
 // 블록 셀에 표시할 글자: 능력 기준이라 신규 블록도 자동 커버된다.
 // 작은 셀에서도 또렷하도록 컬러 이모지 대신 단색 유니코드 기호를 쓴다.
