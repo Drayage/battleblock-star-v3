@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko49';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko49';
-import { Deck } from './deck.js?v=20260521-ko49';
-import { AI } from './ai.js?v=20260521-ko49';
-import { Renderer } from './renderer.js?v=20260521-ko49';
-import { InputController } from './input.js?v=20260521-ko49';
-import { SKILLS } from './skills.js?v=20260521-ko49';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko49';
+import { Board } from './board.js?v=20260521-ko50';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko50';
+import { Deck } from './deck.js?v=20260521-ko50';
+import { AI } from './ai.js?v=20260521-ko50';
+import { Renderer } from './renderer.js?v=20260521-ko50';
+import { InputController } from './input.js?v=20260521-ko50';
+import { SKILLS } from './skills.js?v=20260521-ko50';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko50';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko49';
+} from './progression.js?v=20260521-ko50';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1949,6 +1949,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko49').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko50').catch(() => {});
   });
 }

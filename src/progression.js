@@ -1,7 +1,7 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko49';
-import { Deck, shuffle } from './deck.js?v=20260521-ko49';
-import { SKILLS } from './skills.js?v=20260521-ko49';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko49';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260521-ko50';
+import { Deck, shuffle } from './deck.js?v=20260521-ko50';
+import { SKILLS } from './skills.js?v=20260521-ko50';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko50';
 
 export const RELICS = {
   combo_amp: {
@@ -360,6 +360,12 @@ function shopPrice(kind, tier) {
   return SHOP_PRICE[kind]?.[tier] || SHOP_PRICE[kind]?.bronze || 20;
 }
 
+function makeHpShopItem(tier) {
+  const amount = 3 + Math.floor(Math.random() * 3);
+  const price = Math.round(shopPrice('hp', tier) * amount / 5);
+  return { kind: 'hp', amount, tier, title: `Max HP +${amount} rows`, price };
+}
+
 // 한 선택 세트에 패널티/즉발 카드가 각각 최대 1개만 등장하도록, 한 장 뽑힌 뒤 같은 계열의 나머지를 제외한다.
 function categoryBlocklist(source, card) {
   const blocked = [];
@@ -474,7 +480,9 @@ export function makeEnemyChoices(round) {
   if (round === MAX_ROUND) return [makeBoss(round)];
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
-  const normalPool = shuffle(round <= 2 ? unlocked.filter(enemy => ['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name)) : round <= 5 ? unlocked.filter(enemy => !['마나 도둑', '클렌즈 워든'].includes(enemy.name)) : unlocked);
+  const mirrorAllowed = Math.random() < 0.35;
+  const normalCandidates = unlocked.filter(enemy => !enemy.mirror || mirrorAllowed);
+  const normalPool = shuffle(round <= 2 ? normalCandidates.filter(enemy => ['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name)) : round <= 5 ? normalCandidates.filter(enemy => !['마나 도둑', '클렌즈 워든'].includes(enemy.name)) : normalCandidates);
   const elitePool = shuffle(ELITES.filter(enemy => !enemy.minRound || round >= enemy.minRound));
   const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
   const choices = [];
@@ -573,7 +581,7 @@ export function makeShopItems(run) {
   const hpTier = tier;
   const items = [
     ...cardItems.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: `Buy ${CARD_LIBRARY[id].name}`, price: shopPrice('card', CARD_LIBRARY[id].tier) })),
-    { kind: 'hp', amount: 5, tier: hpTier, title: 'Max HP +5 rows', price: shopPrice('hp', hpTier) },
+    makeHpShopItem(hpTier),
     ...(removable.length ? [{ kind: 'removeChoice', tier: TIERS.GOLD, title: '정밀 덱 수술', price: 56 }] : []),
     ...(skill ? [{ kind: 'skill', id: skill.id, tier: skill.tier, title: `Skill: ${SKILLS[skill.id].name}`, price: shopPrice('skill', skill.tier) }] : []),
     ...(relic ? [{ kind: 'relic', id: relic.id, tier: relic.tier, title: `Relic: ${RELICS[relic.id].name}`, price: shopPrice('relic', relic.tier) }] : []),
@@ -593,7 +601,7 @@ export function shopItemKey(item) {
 export function restockShopItem(run, item) {
   const tier = roundTier(run.round);
   if (item.kind === 'hp') {
-    return { kind: 'hp', amount: 5, tier, title: 'Max HP +5 rows', price: shopPrice('hp', tier) };
+    return makeHpShopItem(tier);
   }
   if (item.kind === 'skill') {
     const s = pickByTier(SKILLS, tier, { exclude: run.ownedSkills });

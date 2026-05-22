@@ -326,6 +326,9 @@ const shopItems = makeShopItems(shopRun);
 const shopGoldCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.GOLD);
 const shopSilverCard = shopItems.find(item => item.kind === 'card' && CARD_LIBRARY[item.id].tier === TIERS.SILVER);
 if (shopGoldCard && shopSilverCard) assert.equal(shopGoldCard.price > shopSilverCard.price, true);
+const hpShopItem = shopItems.find(item => item.kind === 'hp');
+assert.equal(hpShopItem.amount >= 3 && hpShopItem.amount <= 5, true);
+assert.equal(hpShopItem.price, Math.round(55 * hpShopItem.amount / 5));
 assert.equal(shopItems.some(item => item.kind === 'card' && item.id === TYPES.CROSS), false);
 assert.equal(shopItems.some(item => item.kind === 'removeChoice' && item.title === '정밀 덱 수술' && item.tier === TIERS.GOLD), true);
 const secondShopItems = makeShopItems(shopRun);
@@ -784,6 +787,9 @@ const restockRun = new RunState();
 restockRun.round = 11;
 const restocked = restockShopItem(restockRun, { kind: 'consumable', tier: TIERS.SILVER });
 assert.equal(restocked.kind, 'consumable', 'restockShopItem keeps kind');
+const restockedHp = restockShopItem(restockRun, { kind: 'hp', tier: TIERS.SILVER });
+assert.equal(restockedHp.amount >= 3 && restockedHp.amount <= 5, true, 'hp restock rolls 3-5 rows');
+assert.equal(restockedHp.price, Math.round(55 * restockedHp.amount / 5), 'hp restock price scales by amount');
 assert.equal(RELICS.merchant_token.desc.includes('25%'), true, 'merchant token is discount-only');
 assert.equal(RELICS.warehouse_key.desc.includes('재입고'), true, 'warehouse key owns restock effect');
 
@@ -1059,5 +1065,8 @@ for (let i = 0; i < 200 && !mirrorSeen; i++) {
   if (makeEnemyChoices(8).some(e => e.mirror)) mirrorSeen = true;
 }
 assert.ok(mirrorSeen, 'mirror enemy appears in enemy choices');
+let mirrorOffers = 0;
+for (let i = 0; i < 600; i++) if (makeEnemyChoices(8).some(e => e.mirror)) mirrorOffers++;
+assert.equal(mirrorOffers < 120, true, 'mirror enemy appears at a reduced frequency');
 
 console.log('All Battle Block Star v3.0 checks passed.');
