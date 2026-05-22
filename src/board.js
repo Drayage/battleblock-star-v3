@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko23';
-import { Deck } from './deck.js?v=20260521-ko23';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko24';
+import { Deck } from './deck.js?v=20260521-ko24';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -154,7 +154,7 @@ export class Board {
   static garbageEntriesFromState(state = {}) {
     if (Array.isArray(state.garbageEntries)) {
       return state.garbageEntries
-        .map(entry => ({ amount: Math.max(0, Math.ceil(entry.amount || 0)), timer: Math.max(0, entry.timer || 0) }))
+        .map(entry => ({ amount: Math.max(0, Math.ceil(entry.amount || 0)), timer: Math.max(0, entry.timer || 0), delayed: !!entry.delayed }))
         .filter(entry => entry.amount > 0);
     }
     const amount = Math.max(0, Math.ceil(state.garbageQueue || 0));
@@ -381,9 +381,14 @@ export class Board {
       }
     }
     this.tickTimeBombs(new Set(placed.map(pos => `${pos.x},${pos.y}`)));
-    // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 한 박자 미룬다.
+    // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 1초 미룬다(파란색 표시).
     if (result.cleared > 0) {
-      for (const entry of this.garbageEntries) if (entry.timer <= 0) entry.timer = GAME_TIMING.GARBAGE_ARM_DELAY;
+      for (const entry of this.garbageEntries) {
+        if (entry.timer <= 0) {
+          entry.timer = GAME_TIMING.GARBAGE_DELAY_ON_CLEAR;
+          entry.delayed = true;
+        }
+      }
     }
     this.applyReadyGarbage();
     this.lastAttack = result.attack;

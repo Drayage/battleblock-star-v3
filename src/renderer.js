@@ -1,4 +1,4 @@
-import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko23';
+import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko24';
 
 // 블록 셀에 표시할 글자: 능력 기준이라 신규 블록도 자동 커버된다.
 const ABILITY_GLYPH = {
@@ -436,7 +436,7 @@ export class Renderer {
     let drawn = 0;
     for (const entry of entries) {
       const cells = Math.min(entry.amount, cap - drawn);
-      ctx.fillStyle = entry.timer <= 0 ? '#ff335f' : '#777f91';
+      ctx.fillStyle = entry.timer <= 0 ? '#ff335f' : entry.delayed ? '#3aa0ff' : '#777f91';
       for (let i = 0; i < cells; i++) {
         ctx.fillRect(ox + 1, oy + h - 7 - (drawn + i) * 8, 5, 6);
       }
