@@ -1,4 +1,4 @@
-import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko35';
+import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko36';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
 function blockTag(card) {
@@ -17,7 +17,7 @@ export class Renderer {
     const rows = Math.max(playerRows, enemyRows);
     const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
     const viewportH = Math.floor(window.visualViewport?.height || window.innerHeight);
-    const mobileY = 52;
+    const mobileY = 68;
     const widthCell = Math.floor((mobileWidth - 44) / COLS);
     const heightCell = Math.floor((viewportH - 228) / playerRows);
     const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
@@ -60,7 +60,10 @@ export class Renderer {
     ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     const curTag = blockTag(player.current?.card);
-    this.board(player, L.pX, L.y, L.cell, curTag ? `YOU ▸ ${curTag.glyph} ${curTag.name}` : 'YOU', playerFog);
+    const youLabel = L.mobile
+      ? (curTag ? `${curTag.glyph} ${curTag.name}` : '')
+      : (curTag ? `YOU ▸ ${curTag.glyph} ${curTag.name}` : 'YOU');
+    this.board(player, L.pX, L.y, L.cell, youLabel, playerFog);
     this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
     this.effectBadges(effects.player, L.pX, L.y + player.rows * L.cell + 6, L.cell);
     if (L.mobile) {
