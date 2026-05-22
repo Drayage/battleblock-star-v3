@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND, GAME_TIMING } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND, GAME_TIMING, COLORS } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
@@ -569,6 +569,7 @@ assert.equal(phase2Ups.some(u => u.from === TYPES.O && u.to === TYPES.TIMEBOMB),
 for (const id of [TYPES.WARD_I, TYPES.WARD_J, TYPES.WARD_L, TYPES.WARD_O, TYPES.WARD_S, TYPES.WARD_T, TYPES.WARD_Z]) {
   assert.equal(CARD_LIBRARY[id].cellAttack, 0, `${id} clear attack is 0`);
   assert.equal(CARD_LIBRARY[id].onPlace.cancelGarbage, 2, `${id} blocks 2 gauge lines on place`);
+  assert.match(COLORS[id], /^#[0-9a-f]{6}$/i, `${id} has a renderable color`);
 }
 const wardBoard = new Board({ rows: 20 });
 wardBoard.receiveGarbage(5);
