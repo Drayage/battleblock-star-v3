@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko48';
-import { Deck } from './deck.js?v=20260521-ko48';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko49';
+import { Deck } from './deck.js?v=20260521-ko49';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -513,16 +513,20 @@ export class Board {
     const drops = [];
     const bombR = 1 + this.explodeRadiusBonus;
     const timeR = 2 + this.explodeRadiusBonus;
+    let blastBonusAttack = 0;
     for (const { x, y } of bombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
-      this.explodeBombAt(x, targetY, bombR);
+      const destroyed = this.explodeBombAt(x, targetY, bombR);
+      blastBonusAttack += Math.min(1.5, destroyed * 0.05);
       drops.push({ x, y: targetY, radius: bombR });
     }
     for (const { x, y } of timeBombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
-      this.explodeBombAt(x, targetY, timeR);
+      const destroyed = this.explodeBombAt(x, targetY, timeR);
+      blastBonusAttack += Math.min(1.5, destroyed * 0.05);
       drops.push({ x, y: targetY, radius: timeR });
     }
+    if (this.explodeRadiusBonus > 0) attack += blastBonusAttack;
     if (drops.length) this.queueExplosionDrops(drops);
     if (purgeCells > 0) {
       // 클렌즈 칸당 가비지 1줄 제거.
@@ -564,6 +568,7 @@ export class Board {
   explodeBombAt(x, y, radius = 1) {
     this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH, radius });
     const chained = [];
+    let destroyed = 0;
     for (let r = Math.max(0, y - radius); r <= Math.min(this.rows - 1, y + radius); r++) {
       for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
         const cell = this.grid[r][c];
@@ -571,10 +576,12 @@ export class Board {
           if (cell.traits.includes('bomb')) chained.push({ x: c, y: r, radius: 1 });
           else if (cell.traits.includes('timeBomb')) chained.push({ x: c, y: r, radius: 2 });
         }
+        if (cell) destroyed++;
         this.grid[r][c] = null;
       }
     }
-    for (const ch of chained) this.explodeBombAt(ch.x, ch.y, ch.radius);
+    for (const ch of chained) destroyed += this.explodeBombAt(ch.x, ch.y, ch.radius);
+    return destroyed;
   }
 
   dropCellsAbove(x, y) {

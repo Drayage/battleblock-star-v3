@@ -700,6 +700,21 @@ tbLineBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? T
 tbLineBoard.clearLines();
 assert.equal(tbLineBoard.grid.flat().some(Boolean), false);
 
+// Blastcap relic: +0.05 attack per block destroyed by explosion, capped at +1.5 per blast.
+const blastDamageBoard = new Board({ rows: 20 });
+blastDamageBoard.explodeRadiusBonus = 1;
+blastDamageBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+for (let r = 17; r <= 18; r++) for (let c = 2; c <= 6; c++) blastDamageBoard.grid[r][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+blastDamageBoard.grid[19] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.BOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['bomb'] : [] }));
+assert.equal(blastDamageBoard.clearLines().attack, 1.5);
+
+const blastCapBoard = new Board({ rows: 20 });
+blastCapBoard.explodeRadiusBonus = 1;
+blastCapBoard.grid = Array.from({ length: 20 }, () => Array.from({ length: 10 }, () => null));
+for (const r of [13, 14, 15, 17, 18, 19]) for (let c = 1; c <= 7; c++) blastCapBoard.grid[r][c] = { type: TYPES.I, attack: 0.1, traits: [] };
+blastCapBoard.grid[16] = Array.from({ length: 10 }, (_, c) => ({ type: c === 4 ? TYPES.TIMEBOMB : TYPES.I, attack: 0.1, traits: c === 4 ? ['timeBomb'] : [] }));
+assert.equal(blastCapBoard.clearLines().attack, 2.5);
+
 // 패널티/즉발 카드 선택지 오염 방지 (세트당 각 최대 1개)
 for (let i = 0; i < 60; i++) {
   const rewards = makeRewards('gold');
