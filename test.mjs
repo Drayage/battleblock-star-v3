@@ -5,7 +5,7 @@ import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
 import { SKILLS } from './src/skills.js';
-import { RELICS, applyReward, completedAbilitySets, grantEliteRelic, isShopRound, makeBoss, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, rerollShopStock, restockShopItem, RunState, setProgress, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
+import { RELICS, applyReward, completedAbilitySets, grantEliteRelic, isShopRound, makeBoss, makeChallenge, makeEnemy, makeEnemyChoices, makeEventChoices, makeRewards, makeShopItems, removableDeckCards, rerollShopStock, restockShopItem, RunState, setProgress, shopItemKey, shouldShowEvent, upgradeDeckCards } from './src/progression.js';
 
 const deck = new Deck();
 const cycle = deck.draw.slice(0, 21);
@@ -986,5 +986,28 @@ tbBoard.tickTimeBombs(7);
 assert.equal(tbBoard.grid[10][3].fuse, 5, 'just-placed timebomb is skipped this turn (by serial, survives row shifts)');
 tbBoard.tickTimeBombs(8);
 assert.equal(tbBoard.grid[10][3].fuse, 4, 'timebomb ticks down on later turns');
+
+// 예지의 눈 유물 + next 5개 미리보기를 위한 큐 길이
+assert.ok(RELICS.foresight, 'foresight relic exists');
+const previewBoard = new Board({ rows: 20, deck: new Deck() });
+assert.ok(previewBoard.nextQueue.length >= 5, 'next queue holds at least 5 pieces for foresight preview');
+
+// 도전과제 구조: 유효한 id/조건/보상
+for (let i = 0; i < 20; i++) {
+  const ch = makeChallenge(10);
+  assert.ok(['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'].includes(ch.id), 'challenge id valid');
+  assert.equal(typeof ch.cond, 'string', 'challenge has a condition string');
+  assert.ok(ch.reward && ch.reward.kind && ch.reward.label, 'challenge has a concrete reward');
+  assert.equal(typeof ch.reward.detail, 'string', 'challenge reward has a description');
+  if (ch.id === 'timeAttack') assert.ok(ch.params.limit > 0);
+  if (ch.id === 'clearLines') assert.ok(ch.params.target > 0 && ch.params.target <= 40);
+}
+
+// 거울 적이 풀에 존재하고 mirror 플래그를 단다 (round 4+)
+let mirrorSeen = false;
+for (let i = 0; i < 200 && !mirrorSeen; i++) {
+  if (makeEnemyChoices(8).some(e => e.mirror)) mirrorSeen = true;
+}
+assert.ok(mirrorSeen, 'mirror enemy appears in enemy choices');
 
 console.log('All Battle Block Star v3.0 checks passed.');

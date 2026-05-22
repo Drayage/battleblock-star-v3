@@ -1,4 +1,4 @@
-import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko27';
+import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko30';
 
 // 블록 셀에 표시할 글자: 능력 기준이라 신규 블록도 자동 커버된다.
 const ABILITY_GLYPH = {
@@ -305,8 +305,9 @@ export class Renderer {
     ctx.font = 'bold 11px Courier New';
     ctx.fillText('HOLD', ox + 8, oy + 18);
     if (board.held) this.preview(board.held, ox + 20, oy + 28, Math.max(7, cs * 0.48));
+    const nextCount = run?.relics?.includes('foresight') ? 5 : 3;
     ctx.fillText('NEXT', ox + 8, oy + 78);
-    board.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + 14, oy + 88 + i * 23, Math.max(6, cs * 0.38)));
+    board.nextQueue.slice(0, nextCount).forEach((card, i) => this.preview(card, ox + 14, oy + 88 + i * 23, Math.max(6, cs * 0.38)));
     ctx.fillStyle = '#10192d';
     ctx.fillRect(ox, oy + 172, width, 14);
     ctx.fillStyle = '#38d0ff';
@@ -396,7 +397,10 @@ export class Renderer {
     ctx.fillText('NEXT', ox + Math.floor(panelW * 0.38), oy + 17);
     ctx.fillText('ENEMY', enemyX, oy + 17);
     if (player.held) this.preview(player.held, ox + 10, oy + 28, 8);
-    player.nextQueue.slice(0, 3).forEach((card, i) => this.preview(card, ox + Math.floor(panelW * 0.38) + i * 28, oy + 28, 7));
+    const nextCount = run?.relics?.includes('foresight') ? 5 : 3;
+    const nextX = ox + Math.floor(panelW * 0.38);
+    const step = Math.min(28, Math.max(14, Math.floor((enemyX - nextX - 6) / nextCount)));
+    player.nextQueue.slice(0, nextCount).forEach((card, i) => this.preview(card, nextX + i * step, oy + 28, step >= 18 ? 7 : 5));
     this.board(enemy, enemyX, oy + 27, enemyCs, '');
     this.garbageMeter(enemy, ox + panelW - 12, oy + 27, enemy.rows * enemyCs);
     this.effectBadges(enemyEffects, enemyX, oy + 120, enemyCs + 10);

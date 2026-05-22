@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko27';
-import { Deck } from './deck.js?v=20260521-ko27';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko30';
+import { Deck } from './deck.js?v=20260521-ko30';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -171,7 +171,7 @@ export class Board {
   }
 
   fillQueue() {
-    while (this.nextQueue.length < 4) this.nextQueue.push(this.deck.next());
+    while (this.nextQueue.length < 6) this.nextQueue.push(this.deck.next());
   }
 
   expandRows(amount = 5) {
