@@ -1073,9 +1073,9 @@ class Game {
       this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
     }
     if (result.attack > 0) {
-      // 가열 보너스는 플레이어 공격에만 적용한다(적은 라운드 난도로 충분). 전투가 길어져도 적이 같이 세지지 않게.
-      const heat = attacker === this.player ? this.battleHeatAttackBonus() : 0;
-      const powerBonus = attacker === this.player ? (result.powerCells || 0) * 0.01 * Math.floor(this.battleClearedLines / 10) : 0;
+      // Heat and power scaling are shared battle pressure and apply to both sides.
+      const heat = this.battleHeatAttackBonus();
+      const powerBonus = (result.powerCells || 0) * 0.01 * Math.floor(this.battleClearedLines / 10);
       let attack = (result.attack + heat + powerBonus) * mult;
       if (attacker === this.player) {
         if (this.run.relics.includes('set_overload') && attack >= 2) attack += 1;
@@ -1594,6 +1594,7 @@ class Game {
     if (relics.includes('set_bulwark')) { arm += 2000; clr += 2000; }
     if (this.gaugeStallTimer > 0) { arm += 2000; clr += 2000; }
     if (this.playerGaugeRushTimer > 0) { arm -= 1500; clr -= 700; }
+    if (this.playerMercyDanger() > 0) arm += 500;
     this.player.armDelayBonus = arm;
     this.player.clearDelayBonus = clr;
   }
@@ -1759,7 +1760,7 @@ class Game {
   playerMercyFactor() {
     const danger = this.playerMercyDanger();
     if (danger <= 0) return 1;
-    return 1 + Math.min(0.6, danger * 0.24) * this.roundCatchupFactor();
+    return 1 + Math.min(0.6, danger * 0.24);
   }
 
   currentAiPressure() {
