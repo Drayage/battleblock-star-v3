@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko42';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko42';
-import { Deck } from './deck.js?v=20260521-ko42';
-import { AI } from './ai.js?v=20260521-ko42';
-import { Renderer } from './renderer.js?v=20260521-ko42';
-import { InputController } from './input.js?v=20260521-ko42';
-import { SKILLS } from './skills.js?v=20260521-ko42';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko42';
+import { Board } from './board.js?v=20260521-ko43';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko43';
+import { Deck } from './deck.js?v=20260521-ko43';
+import { AI } from './ai.js?v=20260521-ko43';
+import { Renderer } from './renderer.js?v=20260521-ko43';
+import { InputController } from './input.js?v=20260521-ko43';
+import { SKILLS } from './skills.js?v=20260521-ko43';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko43';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko42';
+} from './progression.js?v=20260521-ko43';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1073,9 +1073,10 @@ class Game {
       this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
     }
     if (result.attack > 0) {
-      // 10줄당 0.1 기본 가열 보너스 + 클리어 줄의 공격블록당 (사라진 10줄당 0.01) 미세 보너스.
-      const powerBonus = (result.powerCells || 0) * 0.01 * Math.floor(this.battleClearedLines / 10);
-      let attack = (result.attack + this.battleHeatAttackBonus() + powerBonus) * mult;
+      // 가열 보너스는 플레이어 공격에만 적용한다(적은 라운드 난도로 충분). 전투가 길어져도 적이 같이 세지지 않게.
+      const heat = attacker === this.player ? this.battleHeatAttackBonus() : 0;
+      const powerBonus = attacker === this.player ? (result.powerCells || 0) * 0.01 * Math.floor(this.battleClearedLines / 10) : 0;
+      let attack = (result.attack + heat + powerBonus) * mult;
       if (attacker === this.player) {
         if (this.run.relics.includes('set_overload') && attack >= 2) attack += 1;
         if (this.run.relics.includes('set_abszero') && this.enemySlowTimer > 0) attack += 1;
@@ -1947,6 +1948,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko42').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko43').catch(() => {});
   });
 }
