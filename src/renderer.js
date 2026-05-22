@@ -1,4 +1,10 @@
-import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko33';
+import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko34';
+
+// 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
+function blockTag(card) {
+  const glyph = card && ABILITY_GLYPH[card.abilityId];
+  return glyph ? { glyph, name: card.name } : null;
+}
 
 export class Renderer {
   constructor(canvas) {
@@ -53,7 +59,8 @@ export class Renderer {
     }
     ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
-    this.board(player, L.pX, L.y, L.cell, 'YOU', playerFog);
+    const curTag = blockTag(player.current?.card);
+    this.board(player, L.pX, L.y, L.cell, curTag ? `YOU ▸ ${curTag.glyph} ${curTag.name}` : 'YOU', playerFog);
     this.garbageMeter(player, L.pX - 10, L.y, player.rows * L.cell);
     this.effectBadges(effects.player, L.pX, L.y + player.rows * L.cell + 6, L.cell);
     if (L.mobile) {
@@ -294,7 +301,18 @@ export class Renderer {
     if (board.held) this.preview(board.held, ox + 20, oy + 28, Math.max(7, cs * 0.48));
     const nextCount = run?.relics?.includes('foresight') ? 5 : 3;
     ctx.fillText('NEXT', ox + 8, oy + 78);
-    board.nextQueue.slice(0, nextCount).forEach((card, i) => this.preview(card, ox + 14, oy + 88 + i * 23, Math.max(6, cs * 0.38)));
+    board.nextQueue.slice(0, nextCount).forEach((card, i) => {
+      const rowY = oy + 88 + i * 23;
+      this.preview(card, ox + 14, rowY, Math.max(6, cs * 0.38));
+      const tag = blockTag(card);
+      if (tag) {
+        ctx.fillStyle = '#ffe27a';
+        ctx.font = '8px Courier New';
+        ctx.fillText(tag.name.slice(0, 6), ox + 56, rowY + 12);
+        ctx.fillStyle = '#9fb2dc';
+        ctx.font = 'bold 11px Courier New';
+      }
+    });
     ctx.fillStyle = '#10192d';
     ctx.fillRect(ox, oy + 172, width, 14);
     ctx.fillStyle = '#38d0ff';
