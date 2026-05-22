@@ -143,7 +143,7 @@ export const SKILLS = {
     cooldown: 12000,
     desc: '5초 동안 적의 행동 속도를 늦춥니다.',
     activate({ game }) {
-      game.enemySlowTimer = 5000;
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 5000);
       return true;
     }
   },
@@ -208,7 +208,7 @@ export const SKILLS = {
     name: '홀드 잠금',
     tier: 'bronze',
     cost: 30,
-    cooldown: 13000,
+    cooldown: 22000,
     desc: '20초 동안 적의 홀드 슬롯을 잠급니다.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;

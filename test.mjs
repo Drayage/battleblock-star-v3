@@ -972,4 +972,19 @@ for (let c = 0; c < noSancBoard.cols; c++) noSancBoard.grid[19][c] = { type: TYP
 const noSancRes = noSancBoard.applyOnPlace(CARD_LIBRARY[TYPES.AID_O]);
 assert.equal(noSancRes.attack, 0, 'no sanctuary -> purge grants no bonus attack');
 
+// 5줄 이상 클리어(사슬 보너스 행 포함)도 피드백 레이블이 있어야 한다.
+const labelBoard = new Board({ rows: 20, deck: new Deck() });
+assert.equal(labelBoard.clearLabel({ cleared: 4 }), 'QUAD');
+assert.ok(labelBoard.clearLabel({ cleared: 5 }).includes('OVERKILL'), '5+ line clear has a label');
+assert.ok(labelBoard.clearLabel({ cleared: 6 }).includes('6'), 'overkill label shows the line count');
+assert.equal(labelBoard.clearLabel({ cleared: 5, tSpin: true }), 'T-SPIN OVERKILL x5');
+
+// 시한폭탄: 방금 놓은 턴에는 좌표가 아닌 표식으로 스킵되어 추가 카운트되지 않는다.
+const tbBoard = new Board({ rows: 20, deck: new Deck() });
+tbBoard.grid[10][3] = { type: TYPES.TIMEBOMB, fuse: 5, traits: ['timeBomb'], placedSerial: 7 };
+tbBoard.tickTimeBombs(7);
+assert.equal(tbBoard.grid[10][3].fuse, 5, 'just-placed timebomb is skipped this turn (by serial, survives row shifts)');
+tbBoard.tickTimeBombs(8);
+assert.equal(tbBoard.grid[10][3].fuse, 4, 'timebomb ticks down on later turns');
+
 console.log('All Battle Block Star v3.0 checks passed.');
