@@ -1,16 +1,17 @@
-import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko30';
+import { CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260521-ko31';
 
 // 블록 셀에 표시할 글자: 능력 기준이라 신규 블록도 자동 커버된다.
+// 작은 셀에서도 또렷하도록 컬러 이모지 대신 단색 유니코드 기호를 쓴다.
 const ABILITY_GLYPH = {
-  highPower: 'P', oddPower: 'P', overdrive: 'P',
-  bomb: 'B', timeBomb: '0',
-  manaBonus: 'M', instantMana: 'M',
-  purgeGarbage: 'C', instantPurge: 'C', megaCleanse: 'C', aidCleanse: 'C',
-  instantAttack: 'A', flashStrike: 'A',
-  instantGuard: 'G', panicWall: 'G',
-  coolant: 'S', comboCharge: 'X', bounty: '$', leadPower: 'H',
-  unstable: '?', chain: '&', glass: 'V', crush: 'W', dispel: 'D',
-  curse: '!', wideCurse: '!'
+  highPower: '✦', oddPower: '✦', overdrive: '✦',
+  bomb: '✸', timeBomb: '◷',
+  manaBonus: '◆', instantMana: '◆',
+  purgeGarbage: '✚', instantPurge: '✚', megaCleanse: '✚', aidCleanse: '✚',
+  instantAttack: '➤', flashStrike: '➤',
+  instantGuard: '▣', panicWall: '▣',
+  coolant: '✻', comboCharge: '✖', bounty: '$', leadPower: '▼',
+  unstable: '?', chain: '∞', glass: '◈', crush: '▽', dispel: '✺',
+  curse: '⊘', wideCurse: '⊘'
 };
 
 export class Renderer {
@@ -347,7 +348,7 @@ export class Renderer {
         ctx.fillStyle = '#7a8ca0';
       }
       ctx.font = '9px Courier New';
-      ctx.fillText(`${i + 1}. ${skill.name}`, ox + 5, slotY + 9);
+      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${skill.name}`, ox + 5, slotY + 9);
       ctx.fillText(`${skill.cost}MP`, ox + 5, slotY + 17);
       ctx.globalAlpha = 1;
     });
@@ -359,7 +360,7 @@ export class Renderer {
       ctx.strokeStyle = '#534875';
       ctx.strokeRect(ox, oy + 276 + i * 22, width, 18);
       ctx.fillStyle = '#ded4ff';
-      ctx.fillText(`${i + 4}. ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
+      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}. ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
     });
   }
 
@@ -424,7 +425,8 @@ export class Renderer {
       ctx.strokeRect(x, oy + 116, w, 18);
       ctx.fillStyle = '#ded4ff';
       ctx.font = '9px Courier New';
-      ctx.fillText(`${i + 4}.${window.BBS_CONSUMABLES[id]?.short || id}`, x + 4, oy + 129);
+      const cinfo = window.BBS_CONSUMABLES[id];
+      ctx.fillText(`${i + 4}.${cinfo?.icon || cinfo?.short || id}`, x + 4, oy + 129);
     });
   }
 

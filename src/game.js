@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko30';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko30';
-import { Deck } from './deck.js?v=20260521-ko30';
-import { AI } from './ai.js?v=20260521-ko30';
-import { Renderer } from './renderer.js?v=20260521-ko30';
-import { InputController } from './input.js?v=20260521-ko30';
-import { SKILLS } from './skills.js?v=20260521-ko30';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko30';
+import { Board } from './board.js?v=20260521-ko31';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko31';
+import { Deck } from './deck.js?v=20260521-ko31';
+import { AI } from './ai.js?v=20260521-ko31';
+import { Renderer } from './renderer.js?v=20260521-ko31';
+import { InputController } from './input.js?v=20260521-ko31';
+import { SKILLS } from './skills.js?v=20260521-ko31';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko31';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko30';
+} from './progression.js?v=20260521-ko31';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -216,7 +216,7 @@ class Game {
         ? `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond}<br>　└ 보상 ${enemy.challenge.reward.label}${enemy.challenge.reward.detail ? ` — ${enemy.challenge.reward.detail}` : ''}</small>`
         : '';
       btn.innerHTML = `
-        <strong>${enemy.name}</strong>
+        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${enemy.name}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
@@ -254,7 +254,7 @@ class Game {
     for (const choice of choices) {
       const btn = document.createElement('button');
       btn.className = `choice event ${this.tierClass(choice.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${this.kindIcon(choice)}${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
       try {
         this.attachEventPreview(btn, choice);
       } catch {
@@ -308,6 +308,15 @@ class Game {
     return map[kind] ? `<em class="kind-tag">[${map[kind]}]</em> ` : '';
   }
 
+  kindIcon(choice) {
+    if (!choice) return '';
+    const k = choice.kind;
+    if (k === 'skill' || k === 'starterSkill') return SKILLS[choice.id]?.icon ? `${SKILLS[choice.id].icon} ` : '';
+    if (k === 'consumable') return CONSUMABLES[choice.id]?.icon ? `${CONSUMABLES[choice.id].icon} ` : '';
+    if (k === 'relic' || k === 'relicDig' || k === 'setRelic') return RELICS[choice.id]?.icon ? `${RELICS[choice.id].icon} ` : '';
+    return '';
+  }
+
   setTag(cardId) {
     const ab = abilityOf(cardId);
     if (!ab) return '';
@@ -343,13 +352,13 @@ class Game {
     if (choice.kind === 'consumable') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
-      chip.textContent = CONSUMABLES[choice.id].short;
+      chip.textContent = CONSUMABLES[choice.id].icon || CONSUMABLES[choice.id].short;
       node.appendChild(chip);
     }
     if (choice.kind === 'skill') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
-      chip.textContent = 'S';
+      chip.textContent = SKILLS[choice.id]?.icon || 'S';
       node.appendChild(chip);
     }
   }
@@ -482,7 +491,7 @@ class Game {
       slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
@@ -610,7 +619,7 @@ class Game {
         if (!skill) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(skill.tier)}`;
-        item.innerHTML = `<span class="item-chip">${index + 1}</span><span><strong>${skill.name}</strong><small>${skill.desc}</small><small class="cost">${skill.cost} MP</small></span>`;
+        item.innerHTML = `<span class="item-chip">${skill.icon || index + 1}</span><span><strong>${index + 1}. ${skill.name}</strong><small>${skill.desc}</small><small class="cost">${skill.cost} MP</small></span>`;
         skillWrap.appendChild(item);
       });
     }
@@ -623,7 +632,7 @@ class Game {
         if (!itemDef) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(itemDef.tier)}`;
-        item.innerHTML = `<span class="item-chip">${itemDef.short}</span><span><strong>${index + 4}. ${itemDef.name}</strong><small>${itemDef.desc}</small></span>`;
+        item.innerHTML = `<span class="item-chip">${itemDef.icon || itemDef.short}</span><span><strong>${index + 4}. ${itemDef.name}</strong><small>${itemDef.desc}</small></span>`;
         consumableWrap.appendChild(item);
       });
     }
@@ -636,7 +645,7 @@ class Game {
         if (!relic) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(relic.tier)}`;
-        item.innerHTML = `<span class="item-chip">R</span><span><strong>${relic.name}</strong><small>${relic.desc}</small></span>`;
+        item.innerHTML = `<span class="item-chip">${relic.icon || 'R'}</span><span><strong>${relic.name}</strong><small>${relic.desc}</small></span>`;
         relicWrap.appendChild(item);
       });
     }
@@ -659,13 +668,13 @@ class Game {
     if (item.kind === 'consumable') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
-      chip.textContent = CONSUMABLES[item.id].short;
+      chip.textContent = CONSUMABLES[item.id].icon || CONSUMABLES[item.id].short;
       node.appendChild(chip);
     }
     if (item.kind === 'relic') {
       const chip = document.createElement('div');
       chip.className = 'item-chip';
-      chip.textContent = 'R';
+      chip.textContent = RELICS[item.id]?.icon || 'R';
       node.appendChild(chip);
     }
     if (item.kind === 'removeChoice') {
@@ -900,7 +909,7 @@ class Game {
       const btn = document.createElement('button');
       btn.dataset.skillId = id;
       btn.dataset.skillIdx = i;
-      btn.innerHTML = `<span>${i + 1}. ${skill.name}</span><small>${skill.cost}MP</small>`;
+      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${skill.name}</span><small>${skill.cost}MP</small>`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useSkill(i);
@@ -911,7 +920,7 @@ class Game {
     consWrap.innerHTML = '';
     this.run.consumables.forEach((id, i) => {
       const btn = document.createElement('button');
-      btn.textContent = `${i + 4}. ${CONSUMABLES[id].short}`;
+      btn.textContent = `${i + 4}. ${CONSUMABLES[id].icon || CONSUMABLES[id].short}`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useConsumable(i);
@@ -1892,6 +1901,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko30').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko31').catch(() => {});
   });
 }
