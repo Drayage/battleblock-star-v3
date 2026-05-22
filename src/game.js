@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko45';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko45';
-import { Deck } from './deck.js?v=20260521-ko45';
-import { AI } from './ai.js?v=20260521-ko45';
-import { Renderer } from './renderer.js?v=20260521-ko45';
-import { InputController } from './input.js?v=20260521-ko45';
-import { SKILLS } from './skills.js?v=20260521-ko45';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko45';
+import { Board } from './board.js?v=20260521-ko46';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko46';
+import { Deck } from './deck.js?v=20260521-ko46';
+import { AI } from './ai.js?v=20260521-ko46';
+import { Renderer } from './renderer.js?v=20260521-ko46';
+import { InputController } from './input.js?v=20260521-ko46';
+import { SKILLS } from './skills.js?v=20260521-ko46';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko46';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko45';
+} from './progression.js?v=20260521-ko46';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1600,13 +1600,13 @@ class Game {
   }
 
   currentEnemyDelay() {
-    // 거울 적: 둔화 면역 — 어떤 둔화에도 영향받지 않고 내 낙하 속도(pps)를 그대로 따라간다.
+    // Mirror enemies follow player piece pace, but AI needs several actions to place one piece.
     if (this.enemyCard.mirror) {
       if (this.battlePlayerPieces >= 3 && this.battleElapsedSec > 0) {
         const pieceMs = (this.battleElapsedSec * 1000) / this.battlePlayerPieces;
-        return Math.round(Math.max(150, Math.min(1100, pieceMs)));
+        return Math.round(Math.max(90, Math.min(320, pieceMs * 0.2)));
       }
-      return this.enemyCard.speed;
+      return Math.min(this.enemyCard.speed, 260);
     }
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
     return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
@@ -1949,6 +1949,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko45').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko46').catch(() => {});
   });
 }
