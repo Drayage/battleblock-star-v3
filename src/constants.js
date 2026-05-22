@@ -469,7 +469,7 @@ export const ABILITY_LIBRARY = {
   comboCharge: { id: 'comboCharge', name: '콤보 차지', cellAttack: 0.1, traits: ['comboCharge'], desc: '클리어 시 다음 클리어의 공격력이 누적 증가합니다.' },
   bounty: { id: 'bounty', name: '현상금', cellAttack: 0.1, traits: ['bounty'], desc: '라인 클리어 시 골드를 획득합니다.' },
   unstable: { id: 'unstable', name: '불안정', cellAttack: 0.1, traits: ['unstable'], onPlace: { selfGarbage: 1, enemyGarbage: 1 }, penalty: true, desc: '배치 시 내 필드와 적 필드에 각각 쓰레기 1줄이 추가됩니다.' },
-  leadPower: { id: 'leadPower', name: '중량', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' },
+  leadPower: { id: 'leadPower', name: '납', cellAttack: 0.5, traits: ['heavy'], penalty: true, desc: '셀당 0.5 공격력. 착지 즉시 고정되며 홀드할 수 없습니다.' },
   wardBlock: { id: 'wardBlock', name: '차단', cellAttack: 0, traits: ['wardBlock'], onPlace: { cancelGarbage: 2 }, desc: '배치 즉시 게이지에 쌓인 적 공격 2줄을 차단(제거)합니다. 줄로 지워도 공격력은 0입니다.' },
   glass: { id: 'glass', name: '유리', cellAttack: 0.5, traits: ['glass'], penalty: true, desc: '셀당 0.5 공격력. 이 블록을 하드드롭하거나 다른 블록이 이 블록 바로 위로 하드드롭되면 깨져 빈칸이 됩니다. 소프트드롭으로 내리면 유지됩니다.' },
   timeBomb: { id: 'timeBomb', name: '시한폭탄', cellAttack: 0.1, traits: ['timeBomb'], fuse: 5, penalty: true, desc: '배치 후 매 턴 카운트다운. 0이 되면 그 칸만 사라지고, 줄로 제거하면 5×5 대폭발.' },
@@ -478,7 +478,7 @@ export const ABILITY_LIBRARY = {
   panicWall: { id: 'panicWall', name: '패닉 월', cellAttack: 0.1, traits: [], onPlace: { cancelGarbage: 8 }, desc: '배치 즉시 들어오는 공격 게이지를 최대 8 차단합니다.' },
   flashStrike: { id: 'flashStrike', name: '섬광', cellAttack: 0.1, traits: [], onPlace: { attack: 2 }, desc: '배치 즉시 2.0 공격력을 발사합니다.' },
   aidCleanse: { id: 'aidCleanse', name: '응급 클렌즈', cellAttack: 0.1, traits: [], onPlace: { purgeGarbageRows: 2 }, desc: '배치 즉시 쓰레기 행 2줄을 제거합니다.' },
-  crush: { id: 'crush', name: '중량', cellAttack: 0.3, traits: ['heavyCrush'], desc: '놓는 순간 점유한 각 열의 빈칸을 모두 눌러 없앱니다(아래로 압착).' },
+  crush: { id: 'crush', name: '압착', cellAttack: 0.3, traits: ['heavyCrush'], desc: '놓는 순간 점유한 각 열의 빈칸을 모두 눌러 없앱니다(아래로 압착).' },
   dispel: { id: 'dispel', name: '해제', cellAttack: 0.1, traits: [], onPlace: { dispelEnemy: true }, desc: '배치 즉시 적의 현재 특수능력을 일시 제거하고 게이지를 비웁니다.' }
 };
 

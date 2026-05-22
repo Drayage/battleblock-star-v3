@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Deck } from './src/deck.js';
-import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND, GAME_TIMING, COLORS, ABILITY_GLYPH } from './src/constants.js';
+import { CARD_LIBRARY, BASE_TYPES, TIERS, TYPES, SET_DEFINITIONS, SET_RELICS, MAX_ROUND, GAME_TIMING, COLORS, ABILITY_GLYPH, ABILITY_LIBRARY } from './src/constants.js';
 import { Board, Mino, SPAWN_Y } from './src/board.js';
 import { AI, canReachCandidate } from './src/ai.js';
 import { CONSUMABLES } from './src/consumables.js';
@@ -464,6 +464,7 @@ assert.equal(CARD_LIBRARY[TYPES.POWER_PENTA].shape.every(rot => rot.flat().filte
 assert.equal(CARD_LIBRARY[TYPES.LEAD].cellAttack, 0.5);
 assert.equal(CARD_LIBRARY[TYPES.LEAD].traits.includes('heavy'), true);
 assert.equal(CARD_LIBRARY[TYPES.LEAD].penalty, true);
+assert.equal(ABILITY_LIBRARY[CARD_LIBRARY[TYPES.LEAD].abilityId].name, '납');
 assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].penalty, true);
 assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.selfGarbage, 1);
 assert.equal(CARD_LIBRARY[TYPES.UNSTABLE].onPlace.enemyGarbage, 1);
@@ -618,6 +619,7 @@ assert.equal(RELICS.set_bulwark != null && RELICS.ward_delay != null, true, 'new
 assert.equal(SKILLS.gauge_stall != null && SKILLS.ward_pulse != null, true, 'new skills exist');
 assert.equal(CARD_LIBRARY[TYPES.WARD_T] != null && SET_DEFINITIONS.chain == null, true, 'chain set removed');
 assert.equal(ABILITY_GLYPH.wardBlock, '▣', 'wardBlock glyph uses a supported guard icon');
+assert.equal(ABILITY_LIBRARY[CARD_LIBRARY[TYPES.CRUSHER].abilityId].name, '압착');
 
 // 유리 — 하드드롭한 그 블록만 깨지고, 옆에 있던 다른 블록의 하드드롭에는 영향 없음
 const glassBoard = new Board({ rows: 20 });
