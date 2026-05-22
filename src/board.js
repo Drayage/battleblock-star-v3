@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko40';
-import { Deck } from './deck.js?v=20260521-ko40';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko41';
+import { Deck } from './deck.js?v=20260521-ko41';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -479,11 +479,13 @@ export class Board {
     const bombCells = [];
     const timeBombCells = [];
     let purge = false;
+    let powerCells = 0;
 
     const rows = [...fullRows];
     for (const r of rows) {
       const row = this.grid[r];
       const factor = 1;
+      powerCells += row.filter(c => c?.traits.includes('highPower')).length;
       attack += row.reduce((sum, c) => sum + (c ? c.attack : 0), 0) * factor;
       mana += (row.reduce((sum, c) => sum + (c ? (c.traits.includes('garbage') ? 0.4 : 0.5) : 0), 0)
               + row.filter(c => c && c.traits.includes('manaBonus')).length * 4) * factor;
@@ -533,6 +535,7 @@ export class Board {
       slow: coolantCells * GAME_TIMING.COOLANT_SLOW,
       gold,
       chargeGained,
+      powerCells,
       tetris: false,
       tSpin: false
     };

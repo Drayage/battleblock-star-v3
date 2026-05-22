@@ -112,11 +112,11 @@ export const SKILLS = {
     tier: 'gold',
     cost: 55,
     cooldown: 12000,
-    desc: '4초 동안 적의 블록을 즉시 강제 낙하시켜 배치를 망칩니다.',
+    desc: '1.5초 동안 적의 블록을 즉시 강제 낙하시켜 배치를 망칩니다.',
     activate({ game, enemy }) {
       if (!enemy || enemy.defeated) return false;
-      game.enemyForceDropTimer = 4000;
-      game.applyEnemyDebuff?.('hyper', 4000);
+      game.enemyForceDropTimer = 1500;
+      game.applyEnemyDebuff?.('hyper', 1500);
       return true;
     }
   },

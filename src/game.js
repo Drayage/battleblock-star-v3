@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko40';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko40';
-import { Deck } from './deck.js?v=20260521-ko40';
-import { AI } from './ai.js?v=20260521-ko40';
-import { Renderer } from './renderer.js?v=20260521-ko40';
-import { InputController } from './input.js?v=20260521-ko40';
-import { SKILLS } from './skills.js?v=20260521-ko40';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko40';
+import { Board } from './board.js?v=20260521-ko41';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko41';
+import { Deck } from './deck.js?v=20260521-ko41';
+import { AI } from './ai.js?v=20260521-ko41';
+import { Renderer } from './renderer.js?v=20260521-ko41';
+import { InputController } from './input.js?v=20260521-ko41';
+import { SKILLS } from './skills.js?v=20260521-ko41';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko41';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko40';
+} from './progression.js?v=20260521-ko41';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -715,14 +715,6 @@ class Game {
         preview.appendChild(cell);
       }
     }
-    const glyph = ABILITY_GLYPH[card.abilityId];
-    if (glyph) {
-      const g = document.createElement('span');
-      g.className = 'block-glyph';
-      g.textContent = glyph;
-      g.style.fontSize = `${Math.round(size * 1.7)}px`;
-      preview.appendChild(g);
-    }
     return preview;
   }
 
@@ -1081,7 +1073,9 @@ class Game {
       this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
     }
     if (result.attack > 0) {
-      let attack = (result.attack + this.battleHeatAttackBonus()) * mult;
+      // 10줄당 0.1 기본 가열 보너스 + 클리어 줄의 공격블록당 (사라진 10줄당 0.01) 미세 보너스.
+      const powerBonus = (result.powerCells || 0) * 0.01 * Math.floor(this.battleClearedLines / 10);
+      let attack = (result.attack + this.battleHeatAttackBonus() + powerBonus) * mult;
       if (attacker === this.player) {
         if (this.run.relics.includes('set_overload') && attack >= 2) attack += 1;
         if (this.run.relics.includes('set_abszero') && this.enemySlowTimer > 0) attack += 1;
@@ -1604,11 +1598,13 @@ class Game {
   }
 
   currentEnemyDelay() {
-    // 거울 적: 내 낙하 속도(pps)를 그대로 따라간다.
-    if (this.enemyCard.mirror && this.battlePlayerPieces >= 3 && this.battleElapsedSec > 0) {
-      const pieceMs = (this.battleElapsedSec * 1000) / this.battlePlayerPieces;
-      const slow = this.enemySlowTimer > 0 ? GAME_TIMING.ENEMY_SLOW_FACTOR : 1;
-      return Math.round(Math.max(150, Math.min(1100, pieceMs)) * slow);
+    // 거울 적: 둔화 면역 — 어떤 둔화에도 영향받지 않고 내 낙하 속도(pps)를 그대로 따라간다.
+    if (this.enemyCard.mirror) {
+      if (this.battlePlayerPieces >= 3 && this.battleElapsedSec > 0) {
+        const pieceMs = (this.battleElapsedSec * 1000) / this.battlePlayerPieces;
+        return Math.round(Math.max(150, Math.min(1100, pieceMs)));
+      }
+      return this.enemyCard.speed;
     }
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
     return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
@@ -1951,6 +1947,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko40').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko41').catch(() => {});
   });
 }
