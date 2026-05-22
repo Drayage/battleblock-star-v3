@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko32';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko32';
-import { Deck } from './deck.js?v=20260521-ko32';
-import { AI } from './ai.js?v=20260521-ko32';
-import { Renderer } from './renderer.js?v=20260521-ko32';
-import { InputController } from './input.js?v=20260521-ko32';
-import { SKILLS } from './skills.js?v=20260521-ko32';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko32';
+import { Board } from './board.js?v=20260521-ko33';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko33';
+import { Deck } from './deck.js?v=20260521-ko33';
+import { AI } from './ai.js?v=20260521-ko33';
+import { Renderer } from './renderer.js?v=20260521-ko33';
+import { InputController } from './input.js?v=20260521-ko33';
+import { SKILLS } from './skills.js?v=20260521-ko33';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko33';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko32';
+} from './progression.js?v=20260521-ko33';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -314,8 +314,12 @@ class Game {
     if (k === 'skill' || k === 'starterSkill') return SKILLS[choice.id]?.icon ? `${SKILLS[choice.id].icon} ` : '';
     if (k === 'consumable') return CONSUMABLES[choice.id]?.icon ? `${CONSUMABLES[choice.id].icon} ` : '';
     if (k === 'relic' || k === 'relicDig' || k === 'setRelic') return RELICS[choice.id]?.icon ? `${RELICS[choice.id].icon} ` : '';
+    if (k === 'card' || k === 'grantCard' || k === 'contract' || k === 'upgradeCard') {
+      const cardId = k === 'upgradeCard' ? choice.to : choice.id;
+      const glyph = ABILITY_GLYPH[CARD_LIBRARY[cardId]?.abilityId];
+      return `${glyph || '🧩'} `;
+    }
     const fallback = {
-      card: '🧩', grantCard: '🧩', contract: '📜', upgradeCard: '⬆️',
       hp: '❤️', hpForCurse: '❤️',
       removeCard: '✂️', removeChoice: '✂️', gamble: '🎰', cleanup: '🧽', gold: '💰'
     };
@@ -1906,6 +1910,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko32').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko33').catch(() => {});
   });
 }

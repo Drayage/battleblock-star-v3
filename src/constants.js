@@ -438,6 +438,19 @@ export const SHAPES = Object.fromEntries(Object.entries({
   [TYPES.DISPEL_I]: 'I'
 }).map(([id, shapeId]) => [id, SHAPE_LIBRARY[shapeId].shape]));
 
+// 능력별 표시 글리프(블록 셀·DOM 공용). 작은 셀에서도 또렷하도록 단색 유니코드 기호를 쓴다.
+export const ABILITY_GLYPH = {
+  highPower: '✦', oddPower: '✦', overdrive: '✦',
+  bomb: '✸', timeBomb: '◷',
+  manaBonus: '◆', instantMana: '◆',
+  purgeGarbage: '✚', instantPurge: '✚', megaCleanse: '✚', aidCleanse: '✚',
+  instantAttack: '➤', flashStrike: '➤',
+  instantGuard: '▣', panicWall: '▣',
+  coolant: '✻', comboCharge: '✖', bounty: '$', leadPower: '▼',
+  unstable: '?', chain: '∞', glass: '◈', crush: '▽', dispel: '✺',
+  curse: '⊘', wideCurse: '⊘'
+};
+
 export const ABILITY_LIBRARY = {
   none: { id: 'none', name: '일반', cellAttack: 0.1, traits: [], desc: '기본 테트로미노 셀.' },
   highPower: { id: 'highPower', name: '고출력', cellAttack: 0.3, traits: ['highPower'], desc: '클리어된 셀당 0.3 공격력.' },
