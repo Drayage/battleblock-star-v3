@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko25';
-import { Deck } from './deck.js?v=20260521-ko25';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260521-ko26';
+import { Deck } from './deck.js?v=20260521-ko26';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -299,6 +299,7 @@ export class Board {
     for (const pos of cells) {
       const made = cell(this.current.card);
       if (made.traits.includes('chain')) made.pieceId = this.pieceSerial;
+      made.placedSerial = this.pieceSerial;
       this.grid[pos.y][pos.x] = made;
       placed.push({ ...pos, card: this.current.card });
     }
@@ -380,7 +381,7 @@ export class Board {
         this.clearTextFlash = GAME_TIMING.CLEAR_FEEDBACK_FLASH;
       }
     }
-    this.tickTimeBombs(new Set(placed.map(pos => `${pos.x},${pos.y}`)));
+    this.tickTimeBombs(this.pieceSerial);
     // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 1초 미룬다(파란색 표시).
     if (result.cleared > 0) {
       for (const entry of this.garbageEntries) {
@@ -574,12 +575,13 @@ export class Board {
     return comps;
   }
 
-  tickTimeBombs(skip = new Set()) {
+  tickTimeBombs(skipSerial = null) {
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
         const target = this.grid[r][c];
-        if (skip.has(`${c},${r}`)) continue;
         if (!target || !(target.fuse > 0)) continue;
+        // 방금 놓은 조각의 셀은 클리어로 행이 밀려도 좌표가 아닌 표식으로 스킵한다.
+        if (skipSerial != null && target.placedSerial === skipSerial) continue;
         target.fuse -= 1;
         if (target.fuse <= 0) {
           this.grid[r][c] = null;

@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260521-ko25';
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko25';
-import { Deck } from './deck.js?v=20260521-ko25';
-import { AI } from './ai.js?v=20260521-ko25';
-import { Renderer } from './renderer.js?v=20260521-ko25';
-import { InputController } from './input.js?v=20260521-ko25';
-import { SKILLS } from './skills.js?v=20260521-ko25';
-import { CONSUMABLES } from './consumables.js?v=20260521-ko25';
+import { Board } from './board.js?v=20260521-ko26';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260521-ko26';
+import { Deck } from './deck.js?v=20260521-ko26';
+import { AI } from './ai.js?v=20260521-ko26';
+import { Renderer } from './renderer.js?v=20260521-ko26';
+import { InputController } from './input.js?v=20260521-ko26';
+import { SKILLS } from './skills.js?v=20260521-ko26';
+import { CONSUMABLES } from './consumables.js?v=20260521-ko26';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260521-ko25';
+} from './progression.js?v=20260521-ko26';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -414,7 +414,7 @@ class Game {
         if (tier !== 'bronze') this.run.gambleClosed = true;
         this.run.gambleNext = null;
       }
-      return this.playGambleEffect(won, choice.bet, done);
+      return this.playGambleEffect(won, choice.bet, done, choice.reward ?? 60);
     }
     if (choice.kind === 'contract') this.run.deck.addCard(choice.id);
     done();
@@ -430,7 +430,7 @@ class Game {
     this.run.deck.refill();
   }
 
-  playGambleEffect(won, bet, done = () => {}) {
+  playGambleEffect(won, bet, done = () => {}, reward = 60) {
     const host = document.getElementById('app') || document.body;
     const overlay = document.createElement('div');
     overlay.className = 'gamble-overlay';
@@ -448,7 +448,7 @@ class Game {
       if (finished) return;
       finished = true;
       card.classList.add('reveal', won ? 'win' : 'lose');
-      card.textContent = won ? '+60G' : `-${bet}G`;
+      card.textContent = won ? `+${reward}G` : `-${bet}G`;
       label.textContent = won ? '대박! 베팅 성공' : '꽝… 베팅 실패';
       label.classList.add(won ? 'win' : 'lose');
       setTimeout(() => { overlay.remove(); done(); }, 1150);
@@ -1824,6 +1824,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260521-ko25').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260521-ko26').catch(() => {});
   });
 }

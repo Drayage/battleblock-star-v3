@@ -143,7 +143,7 @@ export const SKILLS = {
     cooldown: 12000,
     desc: '5초 동안 적의 행동 속도를 늦춥니다.',
     activate({ game }) {
-      game.enemySlowTimer = 5000;
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 5000);
       return true;
     }
   },
@@ -209,13 +209,13 @@ export const SKILLS = {
     tier: 'bronze',
     cost: 30,
     cooldown: 13000,
-    desc: '20초 동안 적의 홀드 슬롯을 잠급니다.',
+    desc: '10초 동안 적의 홀드 슬롯을 잠급니다.',
     activate({ game, enemy }) {
       enemy.holdLocked = true;
-      game.applyEnemyDebuff?.('hold', 20000);
+      game.applyEnemyDebuff?.('hold', 10000);
       game.scheduleBattleTimeout(() => {
         if (game.enemy === enemy) enemy.holdLocked = false;
-      }, 20000);
+      }, 10000);
       return true;
     }
   }
