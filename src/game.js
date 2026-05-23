@@ -313,7 +313,7 @@ class Game {
     if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}${this.setTag(choice.to)}`;
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
-    if (choice.kind === 'skill') return SKILLS[choice.id].name;
+    if (choice.kind === 'skill') return `${SKILLS[choice.id].name} (MP ${SKILLS[choice.id].cost})`;
     if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
     if (choice.kind === 'gold') return `${choice.amount}G 획득`;
     if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
@@ -1243,7 +1243,7 @@ class Game {
 
   rewardName(reward) {
     if (reward.kind === 'card') return CARD_LIBRARY[reward.id].name;
-    if (reward.kind === 'skill') return SKILLS[reward.id].name;
+    if (reward.kind === 'skill') return `${SKILLS[reward.id].name} (MP ${SKILLS[reward.id].cost})`;
     if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
     if (reward.kind === 'relic') return RELICS[reward.id].name;
     return `HP +${reward.amount}줄`;

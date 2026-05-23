@@ -365,7 +365,7 @@ export class Board {
         this.overchargeShots--;
       }
       if (this.resonanceShots > 0) {
-        result.attack = Number((result.attack * 1.7).toFixed(2));
+        result.attack = Number((result.attack * 1.5).toFixed(2));
         this.resonanceShots--;
       }
       if (this.attackChargeStacks > 0) {

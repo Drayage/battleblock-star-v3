@@ -486,7 +486,7 @@ function rollChallengeReward(round, ownedRelics = []) {
     return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
   }
   const s = pickByTier(SKILLS, tier);
-  if (s) return { kind: 'skill', id: s.id, label: `스킬 「${s.name}」`, detail: s.desc || '' };
+  if (s) return { kind: 'skill', id: s.id, label: `스킬 「${s.name}」 (MP ${s.cost})`, detail: s.desc || '' };
   return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
 }
 
@@ -611,7 +611,7 @@ export function makeShopItems(run) {
     ...cardItems.map(id => ({ kind: 'card', id, tier: CARD_LIBRARY[id].tier, title: `Buy ${CARD_LIBRARY[id].name}`, price: shopPrice('card', CARD_LIBRARY[id].tier) })),
     makeHpShopItem(hpTier),
     ...(removable.length ? [{ kind: 'removeChoice', tier: TIERS.GOLD, title: '정밀 덱 수술', price: 56 }] : []),
-    ...(skill ? [{ kind: 'skill', id: skill.id, tier: skill.tier, title: `Skill: ${SKILLS[skill.id].name}`, price: shopPrice('skill', skill.tier) }] : []),
+    ...(skill ? [{ kind: 'skill', id: skill.id, tier: skill.tier, title: `Skill: ${SKILLS[skill.id].name} (MP ${SKILLS[skill.id].cost})`, price: shopPrice('skill', skill.tier) }] : []),
     ...(relic ? [{ kind: 'relic', id: relic.id, tier: relic.tier, title: `Relic: ${RELICS[relic.id].name}`, price: shopPrice('relic', relic.tier) }] : []),
     { kind: 'consumable', id: consumable.id, tier: consumable.tier, title: `Consumable: ${CONSUMABLES[consumable.id].name}`, price: shopPrice('consumable', consumable.tier) }
   ];
@@ -633,7 +633,7 @@ export function restockShopItem(run, item) {
   }
   if (item.kind === 'skill') {
     const s = pickByTier(SKILLS, tier, { exclude: run.ownedSkills });
-    return s ? { kind: 'skill', id: s.id, tier: s.tier, title: `Skill: ${SKILLS[s.id].name}`, price: shopPrice('skill', s.tier) } : null;
+    return s ? { kind: 'skill', id: s.id, tier: s.tier, title: `Skill: ${SKILLS[s.id].name} (MP ${SKILLS[s.id].cost})`, price: shopPrice('skill', s.tier) } : null;
   }
   if (item.kind === 'relic') {
     const r = pickByTier(RELICS, tier, { exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
@@ -729,7 +729,7 @@ export function makeEventChoices(run, eventKey) {
       id: skill.id,
       tier: skill.tier,
       title: '스킬 교관',
-      desc: `${skill.name}: ${SKILLS[skill.id].desc} 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
+      desc: `${skill.name} (MP ${SKILLS[skill.id].cost}): ${SKILLS[skill.id].desc} 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
     });
   }
   sideChoices.push({
