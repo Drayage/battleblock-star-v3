@@ -199,6 +199,20 @@ export const RELICS = {
     name: '예지의 눈',
     tier: TIERS.SILVER,
     desc: '다음 블록 미리보기가 3개에서 5개로 늘어납니다.'
+  },
+  frost_lock: {
+    id: 'frost_lock',
+    icon: '🥶',
+    name: '성에 자물쇠',
+    tier: TIERS.GOLD,
+    desc: '적이 이미 둔화 중일 때 새로 적용되는 둔화 시간의 50%만큼 적이 행동을 멈춥니다(스턴).'
+  },
+  charge_capacitor: {
+    id: 'charge_capacitor',
+    icon: '⚡',
+    name: '전하 축전기',
+    tier: TIERS.GOLD,
+    desc: '콤보 차지 최대 누적이 3에서 5로 증가하고, 소모 후 절반(내림)이 잔류합니다.'
   }
 };
 
@@ -440,6 +454,7 @@ export const CHALLENGES = {
   noSkill: { id: 'noSkill', label: '스킬 금지', desc: () => '스킬을 한 번도 쓰지 않고 승리' },
   noHardDrop: { id: 'noHardDrop', label: '하드드랍 금지', desc: () => '하드드랍을 쓰지 않고 승리' },
   cwOnly: { id: 'cwOnly', label: '시계회전만', desc: () => '반시계 회전 없이 시계방향 회전만 써서 승리' },
+  ccwOnly: { id: 'ccwOnly', label: '반시계회전만', desc: () => '시계 회전 없이 반시계 회전만 써서 승리' },
   timeAttack: { id: 'timeAttack', label: '타임어택', desc: p => `${p.limit}초 안에 승리` },
   clearLines: { id: 'clearLines', label: '라인 러시', desc: p => `이 전투에서 ${p.target}라인 이상 지우고 승리` }
 };
@@ -467,7 +482,7 @@ function rollChallengeReward(round) {
 }
 
 export function makeChallenge(round, exclude = []) {
-  const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'].filter(id => !exclude.includes(id));
+  const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'ccwOnly', 'timeAttack', 'clearLines'].filter(id => !exclude.includes(id));
   if (!ids.length) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
   const params = id === 'timeAttack' ? { limit: 40 + round * 2 }

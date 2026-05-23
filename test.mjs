@@ -318,7 +318,7 @@ assert.equal(isShopRound(19), false);
 assert.equal(isShopRound(20), true);
 assert.equal(Object.values(SKILLS).every(skill => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(skill.tier)), true);
 assert.equal(Object.values(CONSUMABLES).every(item => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(item.tier)), true);
-assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD].includes(relic.tier)), true);
+assert.equal(Object.values(RELICS).every(relic => [TIERS.BRONZE, TIERS.SILVER, TIERS.GOLD, TIERS.DIAMOND].includes(relic.tier)), true);
 
 const shopRun = new RunState();
 shopRun.round = 12;
@@ -1051,7 +1051,7 @@ assert.ok(previewBoard.nextQueue.length >= 5, 'next queue holds at least 5 piece
 // 도전과제 구조: 유효한 id/조건/보상
 for (let i = 0; i < 20; i++) {
   const ch = makeChallenge(10);
-  assert.ok(['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'timeAttack', 'clearLines'].includes(ch.id), 'challenge id valid');
+  assert.ok(['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'ccwOnly', 'timeAttack', 'clearLines'].includes(ch.id), 'challenge id valid');
   assert.equal(typeof ch.cond, 'string', 'challenge has a condition string');
   assert.ok(ch.reward && ch.reward.kind && ch.reward.label, 'challenge has a concrete reward');
   assert.equal(typeof ch.reward.detail, 'string', 'challenge reward has a description');

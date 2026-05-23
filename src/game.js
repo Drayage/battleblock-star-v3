@@ -133,6 +133,7 @@ class Game {
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
+    this.enemyStunTimer = 0;
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
     this.battlePlayerClearedLines = 0;
@@ -892,6 +893,10 @@ class Game {
     if (this.run.relics.includes('set_blastcap')) this.player.explodeRadiusBonus = 1;
     if (this.run.relics.includes('set_sanctuary')) this.player.sanctuaryActive = true;
     if (this.run.relics.includes('set_comboengine')) this.player.comboEngine = true;
+    if (this.run.relics.includes('charge_capacitor')) {
+      this.player.chargeCapBonus = true;
+      this.player.chargeCarryOver = true;
+    }
     // 클리어 지연(파란색)은 플레이어만, AI는 미적용 → 포커스 중에도 정상 착탄.
     this.player.delaysGarbageOnClear = true;
     this.enemy.delaysGarbageOnClear = false;
@@ -907,6 +912,7 @@ class Game {
     this.lockResets = 0;
     this.groundTouched = false;
     this.enemyTimer = 0;
+    this.enemyStunTimer = 0;
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
@@ -932,6 +938,7 @@ class Game {
     this.battleUsedSkill = false;
     this.battleUsedHardDrop = false;
     this.battleUsedCcw = false;
+    this.battleUsedCw = false;
     this.activeChallenge = enemyCard.challenge || null;
     this.challengeRewarded = false;
     this.paused = false;
@@ -992,7 +999,7 @@ class Game {
       if (this.player.move(0, 1)) this.resetLockDelay();
       else this.message = 'Grounded';
     }
-    if (action === 'rotate') this.groundAdjust(() => this.player.rotate(1));
+    if (action === 'rotate') { this.groundAdjust(() => this.player.rotate(1)); this.battleUsedCw = true; }
     if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCcw = true; }
     if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
     if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.resolve(this.player.hardDrop(), this.player); }
@@ -1077,7 +1084,14 @@ class Game {
       mult *= 1 + Math.min(1, this.run.gold / 200);
     }
     if (attacker === this.player) {
-      if (result.slow) this.enemySlowTimer += this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
+      if (result.slow) {
+        const wasSlowed = this.enemySlowTimer > 0;
+        const slowAdd = this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
+        this.enemySlowTimer += slowAdd;
+        if (wasSlowed && this.run.relics.includes('frost_lock')) {
+          this.enemyStunTimer += Math.floor(slowAdd * 0.5);
+        }
+      }
       if (result.gold) {
         const bountyRate = this.run.relics.includes('bounty_market') ? 1.0 : 0.5;
         this.bountyBank = (this.bountyBank || 0) + result.gold * bountyRate;
@@ -1365,6 +1379,7 @@ class Game {
         gaugeStallTimer: this.gaugeStallTimer || 0,
         playerGaugeRushTimer: this.playerGaugeRushTimer || 0,
         enemySlowTimer: this.enemySlowTimer,
+        enemyStunTimer: this.enemyStunTimer,
         playerSlowTimer: this.playerSlowTimer,
         battleClearedLines: this.battleClearedLines,
         battlePlayerClearedLines: this.battlePlayerClearedLines,
@@ -1372,6 +1387,7 @@ class Game {
         battleUsedSkill: this.battleUsedSkill,
         battleUsedHardDrop: this.battleUsedHardDrop,
         battleUsedCcw: this.battleUsedCcw,
+        battleUsedCw: this.battleUsedCw,
         activeChallenge: this.activeChallenge,
         challengeRewarded: this.challengeRewarded,
         battlePlayerPieces: this.battlePlayerPieces,
@@ -1427,6 +1443,7 @@ class Game {
         this.gaugeStallTimer = state.battle.gaugeStallTimer || 0;
         this.playerGaugeRushTimer = state.battle.playerGaugeRushTimer || 0;
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
+        this.enemyStunTimer = state.battle.enemyStunTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
         this.battleClearedLines = state.battle.battleClearedLines || 0;
         this.battlePlayerClearedLines = state.battle.battlePlayerClearedLines || 0;
@@ -1434,6 +1451,7 @@ class Game {
         this.battleUsedSkill = !!state.battle.battleUsedSkill;
         this.battleUsedHardDrop = !!state.battle.battleUsedHardDrop;
         this.battleUsedCcw = !!state.battle.battleUsedCcw;
+        this.battleUsedCw = !!state.battle.battleUsedCw;
         this.activeChallenge = state.battle.activeChallenge || null;
         this.challengeRewarded = !!state.battle.challengeRewarded;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
@@ -1573,6 +1591,7 @@ class Game {
     this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
+    this.enemyStunTimer = Math.max(0, this.enemyStunTimer - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
     this.gaugeStallTimer = Math.max(0, (this.gaugeStallTimer || 0) - dt);
     this.playerGaugeRushTimer = Math.max(0, (this.playerGaugeRushTimer || 0) - dt);
@@ -1589,9 +1608,9 @@ class Game {
     });
     this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * GAME_TIMING.PLAYER_SLOW_FACTOR : dt);
     this.ai.setPressure(this.currentAiPressure());
-    this.enemyTimer += dt;
+    if (this.enemyStunTimer <= 0) this.enemyTimer += dt;
     const enemyDelay = this.currentEnemyDelay();
-    if (this.enemyTimer >= enemyDelay) {
+    if (this.enemyStunTimer <= 0 && this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
       this.resolve(this.resolveEnemyStep(), this.enemy);
     }
@@ -1674,6 +1693,15 @@ class Game {
     const enemy = [];
     if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
     if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
+    if (this.enemyStunTimer > 0) enemy.push(`STUN ${fmt(this.enemyStunTimer)}`);
+    if (this.player?.attackChargeStacks > 0) {
+      const s = this.player.attackChargeStacks;
+      player.push(`CHARGE x${s} (+${s * 20}%)`);
+    }
+    if (this.enemy?.attackChargeStacks > 0) {
+      const s = this.enemy.attackChargeStacks;
+      enemy.push(`CHARGE x${s} (+${s * 20}%)`);
+    }
     if (this.playerFreezeTimer > 0) player.push(`FREEZE ${fmt(this.playerFreezeTimer)}`);
     if (this.playerFogTimer > 0) player.push(`FOG ${fmt(this.playerFogTimer)}`);
     if (this.playerHyperTimer > 0) player.push(`HYPER ${fmt(this.playerHyperTimer)}`);
@@ -1709,6 +1737,7 @@ class Game {
     if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
     if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
     if (c.id === 'cwOnly') return { ok: !this.battleUsedCcw, text: `${c.label}(${this.battleUsedCcw ? '실패' : '유지'})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedCw, text: `${c.label}(${this.battleUsedCw ? '실패' : '유지'})` };
     if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
     if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
     return null;

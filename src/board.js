@@ -94,6 +94,8 @@ export class Board {
     this.explodeRadiusBonus = 0;
     this.sanctuaryActive = false;
     this.comboEngine = false;
+    this.chargeCapBonus = false;
+    this.chargeCarryOver = false;
     this.armDelayBonus = 0;
     this.clearDelayBonus = 0;
     this.delaysGarbageOnClear = true;
@@ -140,6 +142,8 @@ export class Board {
     board.explodeRadiusBonus = state.explodeRadiusBonus || 0;
     board.sanctuaryActive = !!state.sanctuaryActive;
     board.comboEngine = !!state.comboEngine;
+    board.chargeCapBonus = !!state.chargeCapBonus;
+    board.chargeCarryOver = !!state.chargeCarryOver;
     board.armDelayBonus = 0;
     board.clearDelayBonus = 0;
     board.delaysGarbageOnClear = true;
@@ -358,9 +362,10 @@ export class Board {
       }
       if (this.attackChargeStacks > 0) {
         result.attack = Number((result.attack * (1 + 0.2 * this.attackChargeStacks)).toFixed(2));
-        this.attackChargeStacks = 0;
+        this.attackChargeStacks = this.chargeCarryOver ? Math.floor(this.attackChargeStacks / 2) : 0;
       }
-      this.attackChargeStacks = Math.min(3, this.attackChargeStacks + (result.chargeGained || 0));
+      const chargeCap = this.chargeCapBonus ? 5 : 3;
+      this.attackChargeStacks = Math.min(chargeCap, this.attackChargeStacks + (result.chargeGained || 0));
       this.attackPool += result.attack;
       const cancel = Math.min(this.garbageQueue, Math.floor(this.attackPool));
       this.cancelGarbage(cancel);
@@ -894,6 +899,8 @@ export class Board {
       explodeRadiusBonus: this.explodeRadiusBonus,
       sanctuaryActive: this.sanctuaryActive,
       comboEngine: this.comboEngine,
+      chargeCapBonus: this.chargeCapBonus,
+      chargeCarryOver: this.chargeCarryOver,
       pendingDrops: this.pendingDrops.map(d => ({ ...d })),
       pendingDropTimer: this.pendingDropTimer
     };
