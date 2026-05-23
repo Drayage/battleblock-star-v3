@@ -83,12 +83,12 @@ const ENEMY_ABILITIES = {
   },
   hyperBurst: {
     label: '하이퍼 낙하',
-    desc: '2.5초 동안 블록이 극도로 빠르게 낙하합니다.',
+    desc: '5초 동안 블록이 극도로 빠르게 낙하합니다.',
     cost: 65,
     cooldown: 24000,
     cast(g) {
-      g.playerHyperTimer = 2500;
-      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (2.5초)`);
+      g.playerHyperTimer = 5000;
+      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (5초)`);
     }
   },
   polluteDeck: {
@@ -949,6 +949,9 @@ class Game {
     this.playerInvertTimer = 0;
     this.enemyForceDropTimer = 0;
     this.bossOverloadCharge = 0;
+    this.bossBurstCount = 0;
+    this.bossBurstTimer = 0;
+    this.bossRestTimer = 0;
     this.enemyDebuffs = {};
     this.playerDebuffs = {};
     this.battleUsedHold = false;
@@ -1441,6 +1444,9 @@ class Game {
         playerInvertTimer: this.playerInvertTimer || 0,
         enemyForceDropTimer: this.enemyForceDropTimer || 0,
         bossOverloadCharge: this.bossOverloadCharge || 0,
+        bossBurstCount: this.bossBurstCount || 0,
+        bossBurstTimer: this.bossBurstTimer || 0,
+        bossRestTimer: this.bossRestTimer || 0,
         playerDebuffs: { ...(this.playerDebuffs || {}) },
         enemyDebuffs: { ...(this.enemyDebuffs || {}) },
         paused: this.paused,
@@ -1506,6 +1512,9 @@ class Game {
         this.playerInvertTimer = state.battle.playerInvertTimer || 0;
         this.enemyForceDropTimer = state.battle.enemyForceDropTimer || 0;
         this.bossOverloadCharge = state.battle.bossOverloadCharge || 0;
+        this.bossBurstCount = state.battle.bossBurstCount || 0;
+        this.bossBurstTimer = state.battle.bossBurstTimer || 0;
+        this.bossRestTimer = state.battle.bossRestTimer || 0;
         this.playerDebuffs = { ...(state.battle.playerDebuffs || {}) };
         this.enemyDebuffs = { ...(state.battle.enemyDebuffs || {}) };
         this.syncTimedLocks();
@@ -1747,9 +1756,15 @@ class Game {
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
     if (this.enemy?.rotateLocked) enemy.push('ROT-LOCK');
     if (this.enemyCard?.ability === 'overload') {
-      const chargeTime = Math.max(14000, 20000 - this.battleElapsedSec * 70);
-      const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
-      enemy.push(`OVERLOAD ${pct}%`);
+      if (this.bossRestTimer > 0) {
+        enemy.push(`REST ${fmt(this.bossRestTimer)}`);
+      } else if (this.bossBurstCount > 0) {
+        enemy.push(`BURST ×${this.bossBurstCount}`);
+      } else {
+        const chargeTime = Math.max(12000, 20000 - this.battleElapsedSec * 70);
+        const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
+        enemy.push(`OVERLOAD ${pct}%`);
+      }
     }
     // 'rotate'는 ROT-LOCK 배지로 이미 표시되므로 중복 표기를 막는다.
     for (const [k, ms] of Object.entries(this.playerDebuffs || {})) if (k !== 'rotate') player.push(`${k.toUpperCase()} ${fmt(ms)}`);
@@ -1998,13 +2013,36 @@ class Game {
   }
 
   updateBossOverload(dt) {
+    // Phase: rest — wait silently then resume charging
+    if (this.bossRestTimer > 0) {
+      this.bossRestTimer = Math.max(0, this.bossRestTimer - dt);
+      return;
+    }
+    // Phase: burst — fire attacks at 1.8s intervals
+    if (this.bossBurstCount > 0) {
+      this.bossBurstTimer = Math.max(0, this.bossBurstTimer - dt);
+      if (this.bossBurstTimer > 0) return;
+      if ((this.enemy?.mp || 0) >= 25) {
+        this.enemy.mp = Math.max(0, this.enemy.mp - 25);
+        this.castBossDebuff();
+      }
+      this.bossBurstCount--;
+      if (this.bossBurstCount > 0) {
+        this.bossBurstTimer = 1800;
+      } else {
+        // Burst done — enter rest phase
+        this.bossRestTimer = 9000;
+        this.bossOverloadCharge = 0;
+      }
+      return;
+    }
+    // Phase: charging
     this.bossOverloadCharge += dt;
-    const chargeTime = Math.max(14000, 20000 - this.battleElapsedSec * 70);
+    const chargeTime = Math.max(12000, 20000 - this.battleElapsedSec * 70);
     if (this.bossOverloadCharge < chargeTime) return;
-    if ((this.enemy?.mp || 0) < 50) return;
-    this.bossOverloadCharge = 0;
-    this.enemy.mp = Math.max(0, this.enemy.mp - 50);
-    this.castBossDebuff();
+    // Trigger burst: 3 attacks, first fires immediately
+    this.bossBurstCount = 3;
+    this.bossBurstTimer = 0;
   }
 
   castBossDebuff() {
@@ -2024,8 +2062,8 @@ class Game {
       this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
       this.flashAlert(`${name} OVERLOAD: 회전 봉인 (3초)`);
     } else if (kind === 'hyper') {
-      this.playerHyperTimer = 2500;
-      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (2.5초)`);
+      this.playerHyperTimer = 5000;
+      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (5초)`);
     } else if (kind === 'slow') {
       this.playerSlowTimer = 3500;
       this.flashAlert(`${name} OVERLOAD: 중력 둔화 (3.5초)`);
