@@ -921,7 +921,7 @@ class Game {
     const enemyDeck = enemyCard.mirror ? new Deck([...this.run.deck.extraCards]) : new Deck(enemyCard.deckExtras || []);
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: enemyDeck });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
-    for (const entry of this.enemy.garbageEntries) entry.timer = 0;
+    for (const entry of this.enemy.garbageEntries) { entry.timer = 0; entry.instant = true; }
     if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
     if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
     if (this.run.relics.includes('combo_keeper')) this.player.comboGuard = true;
@@ -977,8 +977,8 @@ class Game {
     this.battleUsedHold = false;
     this.battleUsedSkill = false;
     this.battleUsedHardDrop = false;
-    this.battleUsedCcw = false;
-    this.battleUsedCw = false;
+    this.battleUsedCounterClockwise = false;
+    this.battleUsedClockwise = false;
     this.activeChallenge = enemyCard.challenge || null;
     this.challengeRewarded = false;
     this.paused = false;
@@ -1039,8 +1039,8 @@ class Game {
       if (this.player.move(0, 1)) this.resetLockDelay();
       else this.message = 'Grounded';
     }
-    if (action === 'rotate') { this.groundAdjust(() => this.player.rotate(1)); this.battleUsedCw = true; }
-    if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCcw = true; }
+    if (action === 'rotate') { this.groundAdjust(() => this.player.rotate(1)); this.battleUsedClockwise = true; }
+    if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCounterClockwise = true; }
     if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
     if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.input.vibrate('harddrop'); this.resolve(this.player.hardDrop(), this.player); }
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
@@ -1167,9 +1167,8 @@ class Game {
       if (defender === this.player && this.run.relics.includes('set_abszero') && this.enemySlowTimer > 0) {
         attack = Math.max(0, attack - 1);
       }
-      if (attacker === this.player) {
-        this.battlePlayerAttacks += attack;
-      } else if (attacker === this.enemy) {
+      if (attacker === this.player) this.battlePlayerAttacks += attack;
+      else if (attacker === this.enemy) {
         this.battleEnemyAttacks += attack;
         if (this.enemyCard?.ability === 'overload' && this.bossRhythmRestTimer <= 0) {
           this.bossRhythmSent = (this.bossRhythmSent || 0) + attack;
@@ -1463,8 +1462,8 @@ class Game {
         battleUsedHold: this.battleUsedHold,
         battleUsedSkill: this.battleUsedSkill,
         battleUsedHardDrop: this.battleUsedHardDrop,
-        battleUsedCcw: this.battleUsedCcw,
-        battleUsedCw: this.battleUsedCw,
+        battleUsedCounterClockwise: this.battleUsedCounterClockwise,
+        battleUsedClockwise: this.battleUsedClockwise,
         activeChallenge: this.activeChallenge,
         challengeRewarded: this.challengeRewarded,
         battlePlayerPieces: this.battlePlayerPieces,
@@ -1529,8 +1528,8 @@ class Game {
         this.battleUsedHold = !!state.battle.battleUsedHold;
         this.battleUsedSkill = !!state.battle.battleUsedSkill;
         this.battleUsedHardDrop = !!state.battle.battleUsedHardDrop;
-        this.battleUsedCcw = !!state.battle.battleUsedCcw;
-        this.battleUsedCw = !!state.battle.battleUsedCw;
+        this.battleUsedCounterClockwise = !!(state.battle.battleUsedCounterClockwise ?? state.battle.battleUsedCcw);
+        this.battleUsedClockwise = !!(state.battle.battleUsedClockwise ?? state.battle.battleUsedCw);
         this.activeChallenge = state.battle.activeChallenge || null;
         this.challengeRewarded = !!state.battle.challengeRewarded;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
@@ -1672,7 +1671,7 @@ class Game {
     this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
-    this.enemyStunTimer = Math.max(0, this.enemyStunTimer - dt);
+    this.enemyStunTimer = Math.max(0, (this.enemyStunTimer ?? 0) - dt);
     this.bossRhythmRestTimer = Math.max(0, (this.bossRhythmRestTimer || 0) - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
     this.gaugeStallTimer = Math.max(0, (this.gaugeStallTimer || 0) - dt);
@@ -1823,8 +1822,8 @@ class Game {
     if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: `${c.label}(${this.battleUsedHold ? '실패' : '유지'})` };
     if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
     if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
-    if (c.id === 'cwOnly') return { ok: !this.battleUsedCcw, text: `${c.label}(${this.battleUsedCcw ? '실패' : '유지'})` };
-    if (c.id === 'ccwOnly') return { ok: !this.battleUsedCw, text: `${c.label}(${this.battleUsedCw ? '실패' : '유지'})` };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, text: `${c.label}(${this.battleUsedCounterClockwise ? '실패' : '유지'})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, text: `${c.label}(${this.battleUsedClockwise ? '실패' : '유지'})` };
     if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
     if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
     return null;
