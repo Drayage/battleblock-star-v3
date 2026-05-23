@@ -949,9 +949,8 @@ class Game {
     this.playerInvertTimer = 0;
     this.enemyForceDropTimer = 0;
     this.bossOverloadCharge = 0;
-    this.bossBurstCount = 0;
-    this.bossBurstTimer = 0;
-    this.bossRestTimer = 0;
+    this.bossRhythmSent = 0;
+    this.bossRhythmRestTimer = 0;
     this.enemyDebuffs = {};
     this.playerDebuffs = {};
     this.battleUsedHold = false;
@@ -1145,7 +1144,16 @@ class Game {
         attack = Math.max(0, attack - 1);
       }
       if (attacker === this.player) this.battlePlayerAttacks += attack;
-      else if (attacker === this.enemy) this.battleEnemyAttacks += attack;
+      else if (attacker === this.enemy) {
+        this.battleEnemyAttacks += attack;
+        if (this.enemyCard?.ability === 'overload' && this.bossRhythmRestTimer <= 0) {
+          this.bossRhythmSent = (this.bossRhythmSent || 0) + attack;
+          if (this.bossRhythmSent >= 20) {
+            this.bossRhythmSent = 0;
+            this.bossRhythmRestTimer = 4500;
+          }
+        }
+      }
       const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
@@ -1444,9 +1452,8 @@ class Game {
         playerInvertTimer: this.playerInvertTimer || 0,
         enemyForceDropTimer: this.enemyForceDropTimer || 0,
         bossOverloadCharge: this.bossOverloadCharge || 0,
-        bossBurstCount: this.bossBurstCount || 0,
-        bossBurstTimer: this.bossBurstTimer || 0,
-        bossRestTimer: this.bossRestTimer || 0,
+        bossRhythmSent: this.bossRhythmSent || 0,
+        bossRhythmRestTimer: this.bossRhythmRestTimer || 0,
         playerDebuffs: { ...(this.playerDebuffs || {}) },
         enemyDebuffs: { ...(this.enemyDebuffs || {}) },
         paused: this.paused,
@@ -1512,9 +1519,8 @@ class Game {
         this.playerInvertTimer = state.battle.playerInvertTimer || 0;
         this.enemyForceDropTimer = state.battle.enemyForceDropTimer || 0;
         this.bossOverloadCharge = state.battle.bossOverloadCharge || 0;
-        this.bossBurstCount = state.battle.bossBurstCount || 0;
-        this.bossBurstTimer = state.battle.bossBurstTimer || 0;
-        this.bossRestTimer = state.battle.bossRestTimer || 0;
+        this.bossRhythmSent = state.battle.bossRhythmSent || 0;
+        this.bossRhythmRestTimer = state.battle.bossRhythmRestTimer || 0;
         this.playerDebuffs = { ...(state.battle.playerDebuffs || {}) };
         this.enemyDebuffs = { ...(state.battle.enemyDebuffs || {}) };
         this.syncTimedLocks();
@@ -1636,6 +1642,7 @@ class Game {
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
     this.enemyStunTimer = Math.max(0, this.enemyStunTimer - dt);
+    this.bossRhythmRestTimer = Math.max(0, (this.bossRhythmRestTimer || 0) - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
     this.gaugeStallTimer = Math.max(0, (this.gaugeStallTimer || 0) - dt);
     this.playerGaugeRushTimer = Math.max(0, (this.playerGaugeRushTimer || 0) - dt);
@@ -1699,7 +1706,8 @@ class Game {
       return Math.min(this.enemyCard.speed, 260);
     }
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
-    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
+    const rhythmFactor = (this.enemyCard?.ability === 'overload' && this.bossRhythmRestTimer > 0) ? 3.5 : 1;
+    return Math.round(base * rhythmFactor * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
   }
 
   applyPlayerDebuff(key, ms) {
@@ -1756,12 +1764,10 @@ class Game {
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
     if (this.enemy?.rotateLocked) enemy.push('ROT-LOCK');
     if (this.enemyCard?.ability === 'overload') {
-      if (this.bossRestTimer > 0) {
-        enemy.push(`REST ${fmt(this.bossRestTimer)}`);
-      } else if (this.bossBurstCount > 0) {
-        enemy.push(`BURST ×${this.bossBurstCount}`);
+      if (this.bossRhythmRestTimer > 0) {
+        enemy.push(`BREATHER ${fmt(this.bossRhythmRestTimer)}`);
       } else {
-        const chargeTime = Math.max(12000, 20000 - this.battleElapsedSec * 70);
+        const chargeTime = Math.max(14000, 20000 - this.battleElapsedSec * 70);
         const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
         enemy.push(`OVERLOAD ${pct}%`);
       }
@@ -2013,36 +2019,13 @@ class Game {
   }
 
   updateBossOverload(dt) {
-    // Phase: rest — wait silently then resume charging
-    if (this.bossRestTimer > 0) {
-      this.bossRestTimer = Math.max(0, this.bossRestTimer - dt);
-      return;
-    }
-    // Phase: burst — fire attacks at 1.8s intervals
-    if (this.bossBurstCount > 0) {
-      this.bossBurstTimer = Math.max(0, this.bossBurstTimer - dt);
-      if (this.bossBurstTimer > 0) return;
-      if ((this.enemy?.mp || 0) >= 25) {
-        this.enemy.mp = Math.max(0, this.enemy.mp - 25);
-        this.castBossDebuff();
-      }
-      this.bossBurstCount--;
-      if (this.bossBurstCount > 0) {
-        this.bossBurstTimer = 1800;
-      } else {
-        // Burst done — enter rest phase
-        this.bossRestTimer = 9000;
-        this.bossOverloadCharge = 0;
-      }
-      return;
-    }
-    // Phase: charging
     this.bossOverloadCharge += dt;
-    const chargeTime = Math.max(12000, 20000 - this.battleElapsedSec * 70);
+    const chargeTime = Math.max(14000, 20000 - this.battleElapsedSec * 70);
     if (this.bossOverloadCharge < chargeTime) return;
-    // Trigger burst: 3 attacks, first fires immediately
-    this.bossBurstCount = 3;
-    this.bossBurstTimer = 0;
+    if ((this.enemy?.mp || 0) < 50) return;
+    this.bossOverloadCharge = 0;
+    this.enemy.mp = Math.max(0, this.enemy.mp - 50);
+    this.castBossDebuff();
   }
 
   castBossDebuff() {
