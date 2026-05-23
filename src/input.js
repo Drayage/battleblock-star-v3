@@ -1,4 +1,30 @@
-import { GAME_TIMING } from './constants.js?v=20260521-ko50';
+import { GAME_TIMING } from './constants.js?v=20260523-ko51';
+
+// Standard gamepad button mapping (Xbox / PS layout)
+const BTN_ONE_SHOT = {
+  0:  'hard',        // A / Cross
+  1:  'rotate',      // B / Circle
+  2:  'ccw',         // X / Square
+  3:  'hold',        // Y / Triangle
+  4:  'skill0',      // LB / L1
+  5:  'skill1',      // RB / R1
+  6:  'skill2',      // LT / L2
+  7:  'consumable0', // RT / R2
+  9:  'pause',       // Start / Options
+  12: 'rotate',      // D-up (rotate alternate)
+  // 13 D-down, 14 D-left, 15 D-right handled via directional repeat
+};
+
+const VIBRATE_PATTERNS = {
+  harddrop: { duration: 80,  strongMagnitude: 0.5,  weakMagnitude: 0.2 },
+  clear1:   { duration: 150, strongMagnitude: 0.55, weakMagnitude: 0.25 },
+  clear2:   { duration: 220, strongMagnitude: 0.7,  weakMagnitude: 0.35 },
+  clear3:   { duration: 300, strongMagnitude: 0.85, weakMagnitude: 0.5  },
+  clear4:   { duration: 420, strongMagnitude: 1.0,  weakMagnitude: 0.7  },
+  garbage:  { duration: 120, strongMagnitude: 0.35, weakMagnitude: 0.15 },
+  hurt:     { duration: 320, strongMagnitude: 0.9,  weakMagnitude: 0.4  },
+  win:      { duration: 600, strongMagnitude: 0.4,  weakMagnitude: 0.9  },
+};
 
 // Standard gamepad button mapping (Xbox / PS layout)
 const BTN_ONE_SHOT = {
@@ -63,18 +89,26 @@ export class InputController {
     this.cleanups.push(() => window.removeEventListener('keyup', up));
   }
 
+  _setGpStatus(text) {
+    const el = document.getElementById('gpStatus');
+    if (el) el.textContent = text;
+  }
+
   bindGamepad() {
     const onconnect = e => {
       this.gamepadIndex = e.gamepad.index;
       this.gpPrev = {};
       this.gpRepeat.clear();
-      this.game.message = `컨트롤러 연결: ${e.gamepad.id.slice(0, 32)}`;
+      const name = e.gamepad.id.slice(0, 40);
+      this._setGpStatus(`연결됨: ${name}`);
+      this.game.message = `컨트롤러 연결: ${name}`;
     };
     const ondisconnect = e => {
       if (this.gamepadIndex === e.gamepad.index) {
         this.gamepadIndex = -1;
         this.gpRepeat.clear();
         this.gpPrev = {};
+        this._setGpStatus('연결 안됨 — 연결 후 아무 버튼 누르세요');
         this.game.message = '컨트롤러 연결 해제';
       }
     };
@@ -82,13 +116,6 @@ export class InputController {
     window.addEventListener('gamepaddisconnected', ondisconnect);
     this.cleanups.push(() => window.removeEventListener('gamepadconnected', onconnect));
     this.cleanups.push(() => window.removeEventListener('gamepaddisconnected', ondisconnect));
-
-    // Scan for already-connected gamepads (e.g. page reload while connected)
-    const already = [...(navigator.getGamepads?.() || [])].find(g => g?.connected);
-    if (already) {
-      this.gamepadIndex = already.index;
-      this.game.message = `컨트롤러 감지: ${already.id.slice(0, 32)}`;
-    }
   }
 
   update(now) {
