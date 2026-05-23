@@ -262,5 +262,50 @@ export const SKILLS = {
       }, 20000);
       return true;
     }
+  },
+  mana_burn: {
+    id: 'mana_burn',
+    icon: '🔥',
+    name: '마나 연소',
+    tier: 'gold',
+    cost: 100,
+    cooldown: 25000,
+    desc: '내 필드의 쓰레기 행 전체를 제거하고, 제거한 줄 수 × 0.5만큼 즉시 공격합니다.',
+    activate({ player, resolve }) {
+      if (player.defeated) return false;
+      const purged = player.purgeGarbageRows(99);
+      if (purged === 0) return false;
+      resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      return true;
+    }
+  },
+  mana_barrage: {
+    id: 'mana_barrage',
+    icon: '💥',
+    name: '마나 포격',
+    tier: 'gold',
+    cost: 90,
+    cooldown: 22000,
+    desc: '적에게 쓰레기 5줄을 즉시 전송하고 3초 동안 둔화시킵니다.',
+    activate({ enemy, game }) {
+      if (!enemy || enemy.defeated) return false;
+      enemy.receiveGarbage(5);
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 3000);
+      return true;
+    }
+  },
+  resonance: {
+    id: 'resonance',
+    icon: '🌊',
+    name: '공명',
+    tier: 'gold',
+    cost: 90,
+    cooldown: 25000,
+    desc: '다음 6회 라인 클리어의 공격력이 50% 증가합니다.',
+    activate({ player }) {
+      if (player.defeated) return false;
+      player.resonanceShots = (player.resonanceShots || 0) + 6;
+      return true;
+    }
   }
 };

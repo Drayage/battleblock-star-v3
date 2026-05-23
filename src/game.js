@@ -83,12 +83,12 @@ const ENEMY_ABILITIES = {
   },
   hyperBurst: {
     label: '하이퍼 낙하',
-    desc: '2.5초 동안 블록이 극도로 빠르게 낙하합니다.',
+    desc: '5초 동안 블록이 극도로 빠르게 낙하합니다.',
     cost: 65,
     cooldown: 24000,
     cast(g) {
-      g.playerHyperTimer = 2500;
-      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (2.5초)`);
+      g.playerHyperTimer = 5000;
+      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (5초)`);
     }
   },
   polluteDeck: {
@@ -133,6 +133,7 @@ class Game {
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.enemySlowTimer = 0;
+    this.enemyStunTimer = 0;
     this.playerSlowTimer = 0;
     this.battleClearedLines = 0;
     this.battlePlayerClearedLines = 0;
@@ -232,7 +233,7 @@ class Game {
     const wrap = document.getElementById('enemyChoices');
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
-    for (const enemy of makeEnemyChoices(this.run.round)) {
+    for (const enemy of makeEnemyChoices(this.run.round, this.run.relics)) {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
@@ -312,7 +313,7 @@ class Game {
     if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}${this.setTag(choice.to)}`;
     if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
     if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
-    if (choice.kind === 'skill') return SKILLS[choice.id].name;
+    if (choice.kind === 'skill') return `${SKILLS[choice.id].name} (MP ${SKILLS[choice.id].cost})`;
     if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
     if (choice.kind === 'gold') return `${choice.amount}G 획득`;
     if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
@@ -630,6 +631,21 @@ class Game {
       for (const id of this.run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
       for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
       deck.innerHTML = '';
+      // 모양별 요약 (모든 shapeId 표시)
+      const SHAPE_LABEL = { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'십자', HEAVY5:'중량', WIDE6:'6칸', HOOK5:'훅', PENTA_T:'펜T' };
+      const SHAPE_ORDER = ['I','J','L','O','S','T','Z','CROSS5','HEAVY5','WIDE6','HOOK5','PENTA_T'];
+      const shapeCounts = new Map();
+      for (const [id, cnt] of counts) {
+        const sid = CARD_LIBRARY[id]?.shapeId;
+        if (sid) shapeCounts.set(sid, (shapeCounts.get(sid) || 0) + cnt);
+      }
+      const parts = SHAPE_ORDER.filter(s => shapeCounts.has(s)).map(s => `${SHAPE_LABEL[s] ?? s}×${shapeCounts.get(s)}`);
+      if (parts.length) {
+        const summary = document.createElement('div');
+        summary.className = 'deck-shape-summary';
+        summary.textContent = parts.join('  ');
+        deck.appendChild(summary);
+      }
       [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
         const card = CARD_LIBRARY[id];
         const item = document.createElement('div');
@@ -885,6 +901,7 @@ class Game {
     const enemyDeck = enemyCard.mirror ? new Deck([...this.run.deck.extraCards]) : new Deck(enemyCard.deckExtras || []);
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: enemyDeck });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
+    for (const entry of this.enemy.garbageEntries) entry.timer = 0;
     if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
     if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
     if (this.run.relics.includes('combo_keeper')) this.player.comboGuard = true;
@@ -892,6 +909,11 @@ class Game {
     if (this.run.relics.includes('set_blastcap')) this.player.explodeRadiusBonus = 1;
     if (this.run.relics.includes('set_sanctuary')) this.player.sanctuaryActive = true;
     if (this.run.relics.includes('set_comboengine')) this.player.comboEngine = true;
+    if (this.run.relics.includes('charge_capacitor')) {
+      this.player.chargeCapBonus = true;
+      this.player.chargeCarryOver = true;
+    }
+    if (this.run.relics.includes('instant_gauge')) this.player.instantGarbage = true;
     // 클리어 지연(파란색)은 플레이어만, AI는 미적용 → 포커스 중에도 정상 착탄.
     this.player.delaysGarbageOnClear = true;
     this.enemy.delaysGarbageOnClear = false;
@@ -907,6 +929,7 @@ class Game {
     this.lockResets = 0;
     this.groundTouched = false;
     this.enemyTimer = 0;
+    this.enemyStunTimer = 0;
     this.enemyActionStall = 0;
     this.enemyAbilityTimer = 0;
     this.battleClearedLines = 0;
@@ -926,12 +949,15 @@ class Game {
     this.playerInvertTimer = 0;
     this.enemyForceDropTimer = 0;
     this.bossOverloadCharge = 0;
+    this.bossRhythmSent = 0;
+    this.bossRhythmRestTimer = 0;
     this.enemyDebuffs = {};
     this.playerDebuffs = {};
     this.battleUsedHold = false;
     this.battleUsedSkill = false;
     this.battleUsedHardDrop = false;
     this.battleUsedCcw = false;
+    this.battleUsedCw = false;
     this.activeChallenge = enemyCard.challenge || null;
     this.challengeRewarded = false;
     this.paused = false;
@@ -992,7 +1018,7 @@ class Game {
       if (this.player.move(0, 1)) this.resetLockDelay();
       else this.message = 'Grounded';
     }
-    if (action === 'rotate') this.groundAdjust(() => this.player.rotate(1));
+    if (action === 'rotate') { this.groundAdjust(() => this.player.rotate(1)); this.battleUsedCw = true; }
     if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCcw = true; }
     if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
     if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.resolve(this.player.hardDrop(), this.player); }
@@ -1053,6 +1079,7 @@ class Game {
     if (!item) return;
     this.run.consumables.splice(index, 1);
     this.message = item.use({ game: this, player: this.player, enemy: this.enemy });
+    if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
     this.renderTouchSlots();
   }
 
@@ -1077,7 +1104,14 @@ class Game {
       mult *= 1 + Math.min(1, this.run.gold / 200);
     }
     if (attacker === this.player) {
-      if (result.slow) this.enemySlowTimer += this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
+      if (result.slow) {
+        const wasSlowed = this.enemySlowTimer > 0;
+        const slowAdd = this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
+        this.enemySlowTimer += slowAdd;
+        if (wasSlowed && this.run.relics.includes('frost_lock')) {
+          this.enemyStunTimer += Math.floor(slowAdd * 0.5);
+        }
+      }
       if (result.gold) {
         const bountyRate = this.run.relics.includes('bounty_market') ? 1.0 : 0.5;
         this.bountyBank = (this.bountyBank || 0) + result.gold * bountyRate;
@@ -1110,7 +1144,16 @@ class Game {
         attack = Math.max(0, attack - 1);
       }
       if (attacker === this.player) this.battlePlayerAttacks += attack;
-      else if (attacker === this.enemy) this.battleEnemyAttacks += attack;
+      else if (attacker === this.enemy) {
+        this.battleEnemyAttacks += attack;
+        if (this.enemyCard?.ability === 'overload' && this.bossRhythmRestTimer <= 0) {
+          this.bossRhythmSent = (this.bossRhythmSent || 0) + attack;
+          if (this.bossRhythmSent >= 20) {
+            this.bossRhythmSent = 0;
+            this.bossRhythmRestTimer = 4500;
+          }
+        }
+      }
       const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
@@ -1128,6 +1171,16 @@ class Game {
     this.alertText = text;
     this.alertTimer = ms;
     this.message = text;
+  }
+
+  showToast(text, kind = 'elite', ms = 2800) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind}`;
+    el.textContent = text;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), ms);
   }
 
   dispelEnemyAbilities() {
@@ -1183,14 +1236,21 @@ class Game {
       const st = this.challengeStatus();
       if (st && st.ok) {
         this.challengeRewarded = true;
-        this.pendingChallengeText = ` · 도전 성공! ${this.grantChallengeReward(this.activeChallenge.reward)}`;
+        const rewardDesc = this.grantChallengeReward(this.activeChallenge.reward);
+        this.pendingChallengeText = ` · 도전 성공! ${rewardDesc}`;
+        this.showToast(`🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
       } else {
         this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
+        this.showToast('❌ 도전 실패 — 보너스 없음', 'challenge-fail');
       }
     }
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
+    if (relicId) {
+      const r = RELICS[relicId];
+      this.showToast(`⚔️ 엘리트 격파!  ${r.icon ?? ''}${r.name} 유물 획득`, 'elite');
+    }
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
@@ -1227,7 +1287,7 @@ class Game {
 
   rewardName(reward) {
     if (reward.kind === 'card') return CARD_LIBRARY[reward.id].name;
-    if (reward.kind === 'skill') return SKILLS[reward.id].name;
+    if (reward.kind === 'skill') return `${SKILLS[reward.id].name} (MP ${SKILLS[reward.id].cost})`;
     if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
     if (reward.kind === 'relic') return RELICS[reward.id].name;
     return `HP +${reward.amount}줄`;
@@ -1365,6 +1425,7 @@ class Game {
         gaugeStallTimer: this.gaugeStallTimer || 0,
         playerGaugeRushTimer: this.playerGaugeRushTimer || 0,
         enemySlowTimer: this.enemySlowTimer,
+        enemyStunTimer: this.enemyStunTimer,
         playerSlowTimer: this.playerSlowTimer,
         battleClearedLines: this.battleClearedLines,
         battlePlayerClearedLines: this.battlePlayerClearedLines,
@@ -1372,6 +1433,7 @@ class Game {
         battleUsedSkill: this.battleUsedSkill,
         battleUsedHardDrop: this.battleUsedHardDrop,
         battleUsedCcw: this.battleUsedCcw,
+        battleUsedCw: this.battleUsedCw,
         activeChallenge: this.activeChallenge,
         challengeRewarded: this.challengeRewarded,
         battlePlayerPieces: this.battlePlayerPieces,
@@ -1390,6 +1452,8 @@ class Game {
         playerInvertTimer: this.playerInvertTimer || 0,
         enemyForceDropTimer: this.enemyForceDropTimer || 0,
         bossOverloadCharge: this.bossOverloadCharge || 0,
+        bossRhythmSent: this.bossRhythmSent || 0,
+        bossRhythmRestTimer: this.bossRhythmRestTimer || 0,
         playerDebuffs: { ...(this.playerDebuffs || {}) },
         enemyDebuffs: { ...(this.enemyDebuffs || {}) },
         paused: this.paused,
@@ -1427,6 +1491,7 @@ class Game {
         this.gaugeStallTimer = state.battle.gaugeStallTimer || 0;
         this.playerGaugeRushTimer = state.battle.playerGaugeRushTimer || 0;
         this.enemySlowTimer = state.battle.enemySlowTimer || 0;
+        this.enemyStunTimer = state.battle.enemyStunTimer || 0;
         this.playerSlowTimer = state.battle.playerSlowTimer || 0;
         this.battleClearedLines = state.battle.battleClearedLines || 0;
         this.battlePlayerClearedLines = state.battle.battlePlayerClearedLines || 0;
@@ -1434,6 +1499,7 @@ class Game {
         this.battleUsedSkill = !!state.battle.battleUsedSkill;
         this.battleUsedHardDrop = !!state.battle.battleUsedHardDrop;
         this.battleUsedCcw = !!state.battle.battleUsedCcw;
+        this.battleUsedCw = !!state.battle.battleUsedCw;
         this.activeChallenge = state.battle.activeChallenge || null;
         this.challengeRewarded = !!state.battle.challengeRewarded;
         this.battlePlayerPieces = state.battle.battlePlayerPieces || 0;
@@ -1453,6 +1519,8 @@ class Game {
         this.playerInvertTimer = state.battle.playerInvertTimer || 0;
         this.enemyForceDropTimer = state.battle.enemyForceDropTimer || 0;
         this.bossOverloadCharge = state.battle.bossOverloadCharge || 0;
+        this.bossRhythmSent = state.battle.bossRhythmSent || 0;
+        this.bossRhythmRestTimer = state.battle.bossRhythmRestTimer || 0;
         this.playerDebuffs = { ...(state.battle.playerDebuffs || {}) };
         this.enemyDebuffs = { ...(state.battle.enemyDebuffs || {}) };
         this.syncTimedLocks();
@@ -1573,6 +1641,8 @@ class Game {
     this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
     this.enemy.clearTextFlash = Math.max(0, this.enemy.clearTextFlash - dt);
     this.enemySlowTimer = Math.max(0, this.enemySlowTimer - dt);
+    this.enemyStunTimer = Math.max(0, this.enemyStunTimer - dt);
+    this.bossRhythmRestTimer = Math.max(0, (this.bossRhythmRestTimer || 0) - dt);
     this.playerSlowTimer = Math.max(0, this.playerSlowTimer - dt);
     this.gaugeStallTimer = Math.max(0, (this.gaugeStallTimer || 0) - dt);
     this.playerGaugeRushTimer = Math.max(0, (this.playerGaugeRushTimer || 0) - dt);
@@ -1589,9 +1659,9 @@ class Game {
     });
     this.updatePlayerGravity(this.playerSlowTimer > 0 ? dt * GAME_TIMING.PLAYER_SLOW_FACTOR : dt);
     this.ai.setPressure(this.currentAiPressure());
-    this.enemyTimer += dt;
+    if (this.enemyStunTimer <= 0) this.enemyTimer += dt;
     const enemyDelay = this.currentEnemyDelay();
-    if (this.enemyTimer >= enemyDelay) {
+    if (this.enemyStunTimer <= 0 && this.enemyTimer >= enemyDelay) {
       this.enemyTimer = 0;
       this.resolve(this.resolveEnemyStep(), this.enemy);
     }
@@ -1636,7 +1706,8 @@ class Game {
       return Math.min(this.enemyCard.speed, 260);
     }
     const base = this.enemySlowTimer > 0 ? this.enemyCard.speed * GAME_TIMING.ENEMY_SLOW_FACTOR : this.enemyCard.speed;
-    return Math.round(base * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
+    const rhythmFactor = (this.enemyCard?.ability === 'overload' && this.bossRhythmRestTimer > 0) ? 3.5 : 1;
+    return Math.round(base * rhythmFactor * this.playerPressureRelief() * this.enemyActionStallFactor() * this.aiFocusSlowFactor() * this.playerPpsCatchup() * this.playerMercyFactor());
   }
 
   applyPlayerDebuff(key, ms) {
@@ -1674,6 +1745,15 @@ class Game {
     const enemy = [];
     if (this.playerSlowTimer > 0) player.push(`SLOW ${fmt(this.playerSlowTimer)}`);
     if (this.enemySlowTimer > 0) enemy.push(`SLOW ${fmt(this.enemySlowTimer)}`);
+    if (this.enemyStunTimer > 0) enemy.push(`STUN ${fmt(this.enemyStunTimer)}`);
+    if (this.player?.attackChargeStacks > 0) {
+      const s = this.player.attackChargeStacks;
+      player.push(`CHARGE x${s} (+${s * 20}%)`);
+    }
+    if (this.enemy?.attackChargeStacks > 0) {
+      const s = this.enemy.attackChargeStacks;
+      enemy.push(`CHARGE x${s} (+${s * 20}%)`);
+    }
     if (this.playerFreezeTimer > 0) player.push(`FREEZE ${fmt(this.playerFreezeTimer)}`);
     if (this.playerFogTimer > 0) player.push(`FOG ${fmt(this.playerFogTimer)}`);
     if (this.playerHyperTimer > 0) player.push(`HYPER ${fmt(this.playerHyperTimer)}`);
@@ -1684,9 +1764,13 @@ class Game {
     if (this.enemy?.holdLocked) enemy.push('HOLD LOCK');
     if (this.enemy?.rotateLocked) enemy.push('ROT-LOCK');
     if (this.enemyCard?.ability === 'overload') {
-      const chargeTime = Math.max(14000, 20000 - this.battleElapsedSec * 70);
-      const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
-      enemy.push(`OVERLOAD ${pct}%`);
+      if (this.bossRhythmRestTimer > 0) {
+        enemy.push(`BREATHER ${fmt(this.bossRhythmRestTimer)}`);
+      } else {
+        const chargeTime = Math.max(14000, 20000 - this.battleElapsedSec * 70);
+        const pct = Math.min(100, Math.floor((this.bossOverloadCharge / chargeTime) * 100));
+        enemy.push(`OVERLOAD ${pct}%`);
+      }
     }
     // 'rotate'는 ROT-LOCK 배지로 이미 표시되므로 중복 표기를 막는다.
     for (const [k, ms] of Object.entries(this.playerDebuffs || {})) if (k !== 'rotate') player.push(`${k.toUpperCase()} ${fmt(ms)}`);
@@ -1709,6 +1793,7 @@ class Game {
     if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
     if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
     if (c.id === 'cwOnly') return { ok: !this.battleUsedCcw, text: `${c.label}(${this.battleUsedCcw ? '실패' : '유지'})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedCw, text: `${c.label}(${this.battleUsedCw ? '실패' : '유지'})` };
     if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
     if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
     return null;
@@ -1960,8 +2045,8 @@ class Game {
       this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
       this.flashAlert(`${name} OVERLOAD: 회전 봉인 (3초)`);
     } else if (kind === 'hyper') {
-      this.playerHyperTimer = 2500;
-      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (2.5초)`);
+      this.playerHyperTimer = 5000;
+      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (5초)`);
     } else if (kind === 'slow') {
       this.playerSlowTimer = 3500;
       this.flashAlert(`${name} OVERLOAD: 중력 둔화 (3.5초)`);

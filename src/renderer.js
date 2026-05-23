@@ -9,6 +9,20 @@ function blockTag(card) {
   return glyph ? { glyph, name: card.name } : null;
 }
 
+// Returns the effective next cards, substituting forced pieces (iPieceForce / forceCrushNext)
+// to match the actual spawn order in board.js spawn().
+function effectiveNextQueue(board, count) {
+  const queue = board.nextQueue.slice(0, count);
+  let iForce = board.iPieceForce || 0;
+  let crushForce = board.forceCrushNext || 0;
+  return queue.map(card => {
+    let effective = card;
+    if (iForce > 0) { effective = CARD_LIBRARY[TYPES.I]; iForce--; }
+    if (crushForce > 0) { effective = CARD_LIBRARY[TYPES.CRUSHER]; crushForce--; }
+    return effective;
+  });
+}
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -25,12 +39,14 @@ export class Renderer {
     const heightCell = Math.floor((viewportH - 228) / playerRows);
     const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
     const mobileBoardBottom = mobileY + playerRows * cell;
+    // mobileInfo 패널: 18px 갭 + 158px 패널 = 176px. 여유 4px 추가.
+    const mobileInfoH = 180;
     this.layout = {
       mobile,
       cell,
       rows,
       w: mobile ? mobileWidth : 940,
-      h: mobile ? mobileBoardBottom + 160 : Math.max(590, rows * cell + 150),
+      h: mobile ? mobileBoardBottom + mobileInfoH : Math.max(590, rows * cell + 150),
       pX: mobile ? Math.floor((mobileWidth - COLS * cell) / 2) : 150,
       eX: mobile ? 272 : 600,
       y: mobile ? mobileY : 72
@@ -313,8 +329,13 @@ export class Renderer {
     const nextCount = run?.relics?.includes('foresight') ? 5 : 3;
     const nextStep = nextCount > 3 ? 16 : 23;
     const nextSize = nextCount > 3 ? Math.max(5, cs * 0.32) : Math.max(6, cs * 0.38);
-    ctx.fillText('NEXT', ox + 8, oy + 78);
-    board.nextQueue.slice(0, nextCount).forEach((card, i) => {
+    const iForceActive = (board.iPieceForce || 0) > 0;
+    const crushForceActive = (board.forceCrushNext || 0) > 0;
+    const nextLabel = iForceActive ? `NEXT [I×${board.iPieceForce}]` : crushForceActive ? 'NEXT [↓]' : 'NEXT';
+    ctx.fillStyle = (iForceActive || crushForceActive) ? '#ffe27a' : '#9fb2dc';
+    ctx.fillText(nextLabel, ox + 8, oy + 78);
+    ctx.fillStyle = '#9fb2dc';
+    effectiveNextQueue(board, nextCount).forEach((card, i) => {
       const rowY = oy + 88 + i * nextStep;
       this.preview(card, ox + 14, rowY, nextSize);
       const tag = blockTag(card); // 데스크탑: NEXT의 모든 특수블록 이름 표기
@@ -402,7 +423,8 @@ export class Renderer {
   mobileInfo(player, enemy, run, ox, oy, cs, enemyEffects = []) {
     const ctx = this.ctx;
     const panelW = COLS * cs;
-    const enemyCs = Math.max(2, Math.min(4, Math.floor(88 / Math.max(1, enemy.rows))));
+    // 가용 높이 93px(패널 y+27~y+120) 기준으로 셀 크기 계산. 최소 2px(가시성 확보).
+    const enemyCs = Math.max(2, Math.min(4, Math.floor(93 / Math.max(1, enemy.rows))));
     const enemyX = ox + Math.floor(panelW * 0.73);
     const leftW = Math.max(150, enemyX - ox - 12);
     ctx.fillStyle = '#0f1424';
@@ -412,13 +434,17 @@ export class Renderer {
     ctx.fillStyle = '#9fb2dc';
     ctx.font = 'bold 10px Courier New';
     ctx.fillText('HOLD', ox + 8, oy + 17);
-    ctx.fillText('NEXT', ox + Math.floor(panelW * 0.38), oy + 17);
+    const mNextX = ox + Math.floor(panelW * 0.38);
+    const mIForce = (player.iPieceForce || 0) > 0;
+    const mCrushForce = (player.forceCrushNext || 0) > 0;
+    ctx.fillStyle = (mIForce || mCrushForce) ? '#ffe27a' : '#9fb2dc';
+    ctx.fillText(mIForce ? `NEXT[I×${player.iPieceForce}]` : mCrushForce ? 'NEXT[↓]' : 'NEXT', mNextX, oy + 17);
+    ctx.fillStyle = '#9fb2dc';
     ctx.fillText('ENEMY', enemyX, oy + 17);
     if (player.held) this.preview(player.held, ox + 10, oy + 28, 8);
     const nextCount = run?.relics?.includes('foresight') ? 5 : 3;
-    const nextX = ox + Math.floor(panelW * 0.38);
-    const step = Math.min(28, Math.max(14, Math.floor((enemyX - nextX - 6) / nextCount)));
-    player.nextQueue.slice(0, nextCount).forEach((card, i) => this.preview(card, nextX + i * step, oy + 28, step >= 18 ? 7 : 5));
+    const step = Math.min(28, Math.max(14, Math.floor((enemyX - mNextX - 6) / nextCount)));
+    effectiveNextQueue(player, nextCount).forEach((card, i) => this.preview(card, mNextX + i * step, oy + 28, step >= 18 ? 7 : 5));
     this.board(enemy, enemyX, oy + 27, enemyCs, '');
     this.garbageMeter(enemy, ox + panelW - 12, oy + 27, enemy.rows * enemyCs);
     this.effectBadges(enemyEffects, enemyX, oy + 120, enemyCs + 10);

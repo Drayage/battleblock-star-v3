@@ -90,13 +90,17 @@ export class Board {
     this.comboGuardCharged = false;
     this.chainReactor = false;
     this.overchargeShots = 0;
+    this.resonanceShots = 0;
     this.forceCrushNext = 0;
     this.explodeRadiusBonus = 0;
     this.sanctuaryActive = false;
     this.comboEngine = false;
+    this.chargeCapBonus = false;
+    this.chargeCarryOver = false;
     this.armDelayBonus = 0;
     this.clearDelayBonus = 0;
     this.delaysGarbageOnClear = true;
+    this.instantGarbage = false;
     this.pendingDrops = [];
     this.pendingDropTimer = 0;
     this.fillQueue();
@@ -136,13 +140,17 @@ export class Board {
     board.comboGuardCharged = !!state.comboGuardCharged;
     board.chainReactor = !!state.chainReactor;
     board.overchargeShots = state.overchargeShots || 0;
+    board.resonanceShots = state.resonanceShots || 0;
     board.forceCrushNext = state.forceCrushNext || 0;
     board.explodeRadiusBonus = state.explodeRadiusBonus || 0;
     board.sanctuaryActive = !!state.sanctuaryActive;
     board.comboEngine = !!state.comboEngine;
+    board.chargeCapBonus = !!state.chargeCapBonus;
+    board.chargeCarryOver = !!state.chargeCarryOver;
     board.armDelayBonus = 0;
     board.clearDelayBonus = 0;
     board.delaysGarbageOnClear = true;
+    board.instantGarbage = false;
     board.pendingDrops = (state.pendingDrops || []).map(d => ({ ...d }));
     board.pendingDropTimer = state.pendingDropTimer || 0;
     board.fillQueue();
@@ -158,7 +166,7 @@ export class Board {
   static garbageEntriesFromState(state = {}) {
     if (Array.isArray(state.garbageEntries)) {
       return state.garbageEntries
-        .map(entry => ({ amount: Math.max(0, Math.ceil(entry.amount || 0)), timer: Math.max(0, entry.timer || 0), delayed: !!entry.delayed }))
+        .map(entry => ({ amount: Math.max(0, Math.ceil(entry.amount || 0)), timer: Math.max(0, entry.timer || 0), delayed: !!entry.delayed, instant: !!entry.instant }))
         .filter(entry => entry.amount > 0);
     }
     const amount = Math.max(0, Math.ceil(state.garbageQueue || 0));
@@ -264,6 +272,9 @@ export class Board {
 
   emergencyShard() {
     if (!this.current || this.defeated) return null;
+    // 원래 피스 가로 중심 열로 파편 위치 보정 (왼쪽 끝이 아닌 중심에서 낙하)
+    const origW = this.current.card.shape[this.current.rot][0].length;
+    const centerX = this.current.x + Math.floor(origW / 2);
     this.current.card = {
       ...CARD_LIBRARY[TYPES.O],
       id: 'SHARD',
@@ -272,6 +283,8 @@ export class Board {
       traits: ['shard'],
       shape: [[[1]], [[1]], [[1]], [[1]]]
     };
+    this.current.x = centerX;
+    this.current.rot = 0;
     while (this.move(0, 1)) {}
     return this.lock();
   }
@@ -356,11 +369,16 @@ export class Board {
         result.attack = Number((result.attack * 1.5).toFixed(2));
         this.overchargeShots--;
       }
+      if (this.resonanceShots > 0) {
+        result.attack = Number((result.attack * 1.5).toFixed(2));
+        this.resonanceShots--;
+      }
       if (this.attackChargeStacks > 0) {
         result.attack = Number((result.attack * (1 + 0.2 * this.attackChargeStacks)).toFixed(2));
-        this.attackChargeStacks = 0;
+        this.attackChargeStacks = this.chargeCarryOver ? Math.floor(this.attackChargeStacks / 2) : 0;
       }
-      this.attackChargeStacks = Math.min(3, this.attackChargeStacks + (result.chargeGained || 0));
+      const chargeCap = this.chargeCapBonus ? 5 : 3;
+      this.attackChargeStacks = Math.min(chargeCap, this.attackChargeStacks + (result.chargeGained || 0));
       this.attackPool += result.attack;
       const cancel = Math.min(this.garbageQueue, Math.floor(this.attackPool));
       this.cancelGarbage(cancel);
@@ -388,10 +406,11 @@ export class Board {
     this.tickTimeBombs(this.pieceSerial);
     // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 미룬다(파란색 표시).
     // delaysGarbageOnClear가 false면(=AI) 이 지연을 적용하지 않아 정상 착탄한다.
+    // instant:true 엔트리(즉각 경보 유물로 즉시 빨간색이 된 것)는 클리어로 재지연 불가.
     if (result.cleared > 0 && this.delaysGarbageOnClear) {
       const delay = Math.max(300, GAME_TIMING.GARBAGE_DELAY_ON_CLEAR + (this.clearDelayBonus || 0));
       for (const entry of this.garbageEntries) {
-        if (entry.timer <= 0) {
+        if (entry.timer <= 0 && !entry.instant) {
           entry.timer = delay;
           entry.delayed = true;
         }
@@ -678,8 +697,19 @@ export class Board {
 
   receiveGarbage(amount) {
     const n = Math.max(0, Math.ceil(amount));
-    const timer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
-    if (n > 0) this.garbageEntries.push({ amount: n, timer });
+    if (n === 0) return;
+    if (this.instantGarbage) {
+      // 한 번에 빨간색으로 전환되는 줄은 최대 3줄 — 초과분은 정상 타이머로 분리
+      const instant = Math.min(n, 3);
+      this.garbageEntries.push({ amount: instant, timer: 0, instant: true });
+      if (n > 3) {
+        const restTimer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
+        this.garbageEntries.push({ amount: n - 3, timer: restTimer });
+      }
+    } else {
+      const timer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
+      this.garbageEntries.push({ amount: n, timer });
+    }
   }
 
   addDurableGarbage(lines, hp = 2) {
@@ -890,10 +920,13 @@ export class Board {
       comboGuardCharged: this.comboGuardCharged,
       chainReactor: this.chainReactor,
       overchargeShots: this.overchargeShots,
+      resonanceShots: this.resonanceShots,
       forceCrushNext: this.forceCrushNext,
       explodeRadiusBonus: this.explodeRadiusBonus,
       sanctuaryActive: this.sanctuaryActive,
       comboEngine: this.comboEngine,
+      chargeCapBonus: this.chargeCapBonus,
+      chargeCarryOver: this.chargeCarryOver,
       pendingDrops: this.pendingDrops.map(d => ({ ...d })),
       pendingDropTimer: this.pendingDropTimer
     };
