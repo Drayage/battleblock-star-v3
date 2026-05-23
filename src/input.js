@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260521-ko50';
+import { GAME_TIMING } from './constants.js?v=20260523-ko51';
 
 // Standard gamepad button mapping (Xbox / PS layout)
 const BTN_ONE_SHOT = {
@@ -63,18 +63,26 @@ export class InputController {
     this.cleanups.push(() => window.removeEventListener('keyup', up));
   }
 
+  _setGpStatus(text) {
+    const el = document.getElementById('gpStatus');
+    if (el) el.textContent = text;
+  }
+
   bindGamepad() {
     const onconnect = e => {
       this.gamepadIndex = e.gamepad.index;
       this.gpPrev = {};
       this.gpRepeat.clear();
-      this.game.message = `컨트롤러 연결: ${e.gamepad.id.slice(0, 32)}`;
+      const name = e.gamepad.id.slice(0, 40);
+      this._setGpStatus(`연결됨: ${name}`);
+      this.game.message = `컨트롤러 연결: ${name}`;
     };
     const ondisconnect = e => {
       if (this.gamepadIndex === e.gamepad.index) {
         this.gamepadIndex = -1;
         this.gpRepeat.clear();
         this.gpPrev = {};
+        this._setGpStatus('연결 안됨 — 연결 후 아무 버튼 누르세요');
         this.game.message = '컨트롤러 연결 해제';
       }
     };
@@ -82,13 +90,6 @@ export class InputController {
     window.addEventListener('gamepaddisconnected', ondisconnect);
     this.cleanups.push(() => window.removeEventListener('gamepadconnected', onconnect));
     this.cleanups.push(() => window.removeEventListener('gamepaddisconnected', ondisconnect));
-
-    // Scan for already-connected gamepads (e.g. page reload while connected)
-    const already = [...(navigator.getGamepads?.() || [])].find(g => g?.connected);
-    if (already) {
-      this.gamepadIndex = already.index;
-      this.game.message = `컨트롤러 감지: ${already.id.slice(0, 32)}`;
-    }
   }
 
   update(now) {
