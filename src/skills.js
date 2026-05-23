@@ -290,6 +290,7 @@ export const SKILLS = {
     activate({ enemy, game }) {
       if (!enemy || enemy.defeated) return false;
       enemy.receiveGarbage(5);
+      game.battlePlayerAttacks = (game.battlePlayerAttacks || 0) + 5;
       game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 3000);
       return true;
     }
