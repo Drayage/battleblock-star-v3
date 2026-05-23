@@ -101,6 +101,7 @@ export class Board {
     this.clearDelayBonus = 0;
     this.delaysGarbageOnClear = true;
     this.instantGarbage = false;
+    this.practiceMode = false;
     this.pendingDrops = [];
     this.pendingDropTimer = 0;
     this.fillQueue();
@@ -696,6 +697,7 @@ export class Board {
   }
 
   receiveGarbage(amount) {
+    if (this.practiceMode) return;
     const n = Math.max(0, Math.ceil(amount));
     if (n === 0) return;
     if (this.instantGarbage) {
@@ -713,6 +715,7 @@ export class Board {
   }
 
   addDurableGarbage(lines, hp = 2) {
+    if (this.practiceMode) return;
     const hole = Math.floor(Math.random() * this.cols);
     for (let i = 0; i < lines; i++) {
       if (this.grid[0].some(Boolean)) {
