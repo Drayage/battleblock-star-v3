@@ -631,17 +631,15 @@ class Game {
       for (const id of this.run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
       for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
       deck.innerHTML = '';
-      // 모양별 요약 (기본 7종 + 기타)
-      const BASE_SHAPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+      // 모양별 요약 (모든 shapeId 표시)
+      const SHAPE_LABEL = { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'십자', HEAVY5:'중량', WIDE6:'6칸', HOOK5:'훅', PENTA_T:'펜T' };
+      const SHAPE_ORDER = ['I','J','L','O','S','T','Z','CROSS5','HEAVY5','WIDE6','HOOK5','PENTA_T'];
       const shapeCounts = new Map();
-      let otherCount = 0;
       for (const [id, cnt] of counts) {
         const sid = CARD_LIBRARY[id]?.shapeId;
-        if (BASE_SHAPES.includes(sid)) shapeCounts.set(sid, (shapeCounts.get(sid) || 0) + cnt);
-        else otherCount += cnt;
+        if (sid) shapeCounts.set(sid, (shapeCounts.get(sid) || 0) + cnt);
       }
-      const parts = BASE_SHAPES.filter(s => shapeCounts.has(s)).map(s => `${s}×${shapeCounts.get(s)}`);
-      if (otherCount > 0) parts.push(`기타×${otherCount}`);
+      const parts = SHAPE_ORDER.filter(s => shapeCounts.has(s)).map(s => `${SHAPE_LABEL[s] ?? s}×${shapeCounts.get(s)}`);
       if (parts.length) {
         const summary = document.createElement('div');
         summary.className = 'deck-shape-summary';
