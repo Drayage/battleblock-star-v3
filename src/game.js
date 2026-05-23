@@ -233,7 +233,7 @@ class Game {
     const wrap = document.getElementById('enemyChoices');
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
-    for (const enemy of makeEnemyChoices(this.run.round)) {
+    for (const enemy of makeEnemyChoices(this.run.round, this.run.relics)) {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge

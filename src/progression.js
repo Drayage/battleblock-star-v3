@@ -459,7 +459,7 @@ export const CHALLENGES = {
   clearLines: { id: 'clearLines', label: '라인 러시', desc: p => `이 전투에서 ${p.target}라인 이상 지우고 승리` }
 };
 
-function rollChallengeReward(round) {
+function rollChallengeReward(round, ownedRelics = []) {
   const tier = roundTier(round);
   const roll = Math.random();
   if (roll < 0.4) {
@@ -472,7 +472,7 @@ function rollChallengeReward(round) {
     return { kind: 'gold', amount: 40, label: '골드 +40', detail: '전투 보상으로 40골드를 받습니다.' };
   }
   if (roll < 0.85) {
-    const r = pickByTier(RELICS, tier, { exclude: EARNED_ONLY_RELICS });
+    const r = pickByTier(RELICS, tier, { exclude: [...ownedRelics, ...EARNED_ONLY_RELICS] });
     if (r) return { kind: 'relic', id: r.id, label: `유물 「${RELICS[r.id].name}」`, detail: RELICS[r.id].desc || '' };
     return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
   }
@@ -481,7 +481,7 @@ function rollChallengeReward(round) {
   return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
 }
 
-export function makeChallenge(round, exclude = []) {
+export function makeChallenge(round, exclude = [], ownedRelics = []) {
   const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'ccwOnly', 'timeAttack', 'clearLines'].filter(id => !exclude.includes(id));
   if (!ids.length) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
@@ -489,10 +489,10 @@ export function makeChallenge(round, exclude = []) {
     : id === 'clearLines' ? { target: Math.min(40, 14 + round) }
       : {};
   const tpl = CHALLENGES[id];
-  return { id, label: tpl.label, cond: tpl.desc(params), params, reward: rollChallengeReward(round) };
+  return { id, label: tpl.label, cond: tpl.desc(params), params, reward: rollChallengeReward(round, ownedRelics) };
 }
 
-export function makeEnemyChoices(round) {
+export function makeEnemyChoices(round, ownedRelics = []) {
   if (round === MAX_ROUND) return [makeBoss(round)];
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
@@ -506,14 +506,14 @@ export function makeEnemyChoices(round) {
   for (let i = 0; i < count; i++) {
     const elite = eliteSlot && i === count - 1;
     const base = elite ? elitePool.shift() : normalPool.shift();
-    const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round, usedChallengeIds) : null;
+    const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round, usedChallengeIds, ownedRelics) : null;
     if (challenge) usedChallengeIds.push(challenge.id);
-    choices.push(makeEnemy(round, elite, base, challenge));
+    choices.push(makeEnemy(round, elite, base, challenge, ownedRelics));
   }
   return choices;
 }
 
-export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined) {
+export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined, ownedRelics = []) {
   const pool = elite ? ELITES : ENEMIES;
   const base = selectedBase || pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
@@ -536,7 +536,7 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
   };
   const rewardTier = elite ? TIERS.GOLD : maxTier(base.tier || TIERS.BRONZE, roundTier(round));
   const mirror = !!base.mirror;
-  const challenge = preChallenge !== undefined ? preChallenge : ((!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round) : null);
+  const challenge = preChallenge !== undefined ? preChallenge : ((!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round, [], ownedRelics) : null);
   const goldMult = challenge ? 0.9 : 1; // 도전과제 적은 일반 보상 골드가 약간 적다.
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
