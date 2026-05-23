@@ -272,6 +272,9 @@ export class Board {
 
   emergencyShard() {
     if (!this.current || this.defeated) return null;
+    // 원래 피스 가로 중심 열로 파편 위치 보정 (왼쪽 끝이 아닌 중심에서 낙하)
+    const origW = this.current.card.shape[this.current.rot][0].length;
+    const centerX = this.current.x + Math.floor(origW / 2);
     this.current.card = {
       ...CARD_LIBRARY[TYPES.O],
       id: 'SHARD',
@@ -280,6 +283,8 @@ export class Board {
       traits: ['shard'],
       shape: [[[1]], [[1]], [[1]], [[1]]]
     };
+    this.current.x = centerX;
+    this.current.rot = 0;
     while (this.move(0, 1)) {}
     return this.lock();
   }

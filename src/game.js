@@ -1146,6 +1146,16 @@ class Game {
     this.message = text;
   }
 
+  showToast(text, kind = 'elite', ms = 2800) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind}`;
+    el.textContent = text;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), ms);
+  }
+
   dispelEnemyAbilities() {
     this.playerFogTimer = 0;
     this.playerInvertTimer = 0;
@@ -1199,14 +1209,21 @@ class Game {
       const st = this.challengeStatus();
       if (st && st.ok) {
         this.challengeRewarded = true;
-        this.pendingChallengeText = ` · 도전 성공! ${this.grantChallengeReward(this.activeChallenge.reward)}`;
+        const rewardDesc = this.grantChallengeReward(this.activeChallenge.reward);
+        this.pendingChallengeText = ` · 도전 성공! ${rewardDesc}`;
+        this.showToast(`🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
       } else {
         this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
+        this.showToast('❌ 도전 실패 — 보너스 없음', 'challenge-fail');
       }
     }
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
+    if (relicId) {
+      const r = RELICS[relicId];
+      this.showToast(`⚔️ 엘리트 격파!  ${r.icon ?? ''}${r.name} 유물 획득`, 'elite');
+    }
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
