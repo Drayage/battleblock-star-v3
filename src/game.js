@@ -1061,6 +1061,7 @@ class Game {
     if (!item) return;
     this.run.consumables.splice(index, 1);
     this.message = item.use({ game: this, player: this.player, enemy: this.enemy });
+    if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
     this.renderTouchSlots();
   }
 

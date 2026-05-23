@@ -39,12 +39,14 @@ export class Renderer {
     const heightCell = Math.floor((viewportH - 228) / playerRows);
     const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
     const mobileBoardBottom = mobileY + playerRows * cell;
+    // mobileInfo 패널: 18px 갭 + 158px 패널 = 176px. 여유 4px 추가.
+    const mobileInfoH = 180;
     this.layout = {
       mobile,
       cell,
       rows,
       w: mobile ? mobileWidth : 940,
-      h: mobile ? mobileBoardBottom + 160 : Math.max(590, rows * cell + 150),
+      h: mobile ? mobileBoardBottom + mobileInfoH : Math.max(590, rows * cell + 150),
       pX: mobile ? Math.floor((mobileWidth - COLS * cell) / 2) : 150,
       eX: mobile ? 272 : 600,
       y: mobile ? mobileY : 72
@@ -421,7 +423,8 @@ export class Renderer {
   mobileInfo(player, enemy, run, ox, oy, cs, enemyEffects = []) {
     const ctx = this.ctx;
     const panelW = COLS * cs;
-    const enemyCs = Math.max(2, Math.min(4, Math.floor(88 / Math.max(1, enemy.rows))));
+    // 가용 높이 93px(패널 y+27~y+120) 기준으로 셀 크기 계산. 최소 2px(가시성 확보).
+    const enemyCs = Math.max(2, Math.min(4, Math.floor(93 / Math.max(1, enemy.rows))));
     const enemyX = ox + Math.floor(panelW * 0.73);
     const leftW = Math.max(150, enemyX - ox - 12);
     ctx.fillStyle = '#0f1424';
