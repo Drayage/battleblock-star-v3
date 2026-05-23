@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260523-ko53';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko53';
-import { Deck } from './deck.js?v=20260523-ko53';
-import { AI } from './ai.js?v=20260523-ko53';
-import { Renderer } from './renderer.js?v=20260523-ko53';
-import { InputController } from './input.js?v=20260523-ko53';
-import { SKILLS } from './skills.js?v=20260523-ko53';
-import { CONSUMABLES } from './consumables.js?v=20260523-ko53';
+import { Board } from './board.js?v=20260523-ko54';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko54';
+import { Deck } from './deck.js?v=20260523-ko54';
+import { AI } from './ai.js?v=20260523-ko54';
+import { Renderer } from './renderer.js?v=20260523-ko54';
+import { InputController } from './input.js?v=20260523-ko54';
+import { SKILLS } from './skills.js?v=20260523-ko54';
+import { CONSUMABLES } from './consumables.js?v=20260523-ko54';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260523-ko53';
+} from './progression.js?v=20260523-ko54';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -1007,7 +1007,7 @@ class Game {
       const btn = document.createElement('button');
       btn.dataset.skillId = id;
       btn.dataset.skillIdx = i;
-      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${skill.name}</span><small>${skill.cost}MP</small>`;
+      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}<b class="key-label">${i + 1}.</b> ${skill.name}</span><small>${skill.cost}MP</small>`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useSkill(i);
@@ -1018,7 +1018,7 @@ class Game {
     consWrap.innerHTML = '';
     this.run.consumables.forEach((id, i) => {
       const btn = document.createElement('button');
-      btn.textContent = `${i + 4}. ${CONSUMABLES[id].icon || CONSUMABLES[id].short}`;
+      btn.innerHTML = `<b class="key-label">${i + 4}.</b> ${CONSUMABLES[id].icon || CONSUMABLES[id].short}`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useConsumable(i);
@@ -2097,6 +2097,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260523-ko53').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260523-ko54').catch(() => {});
   });
 }
