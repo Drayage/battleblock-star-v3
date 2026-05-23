@@ -631,6 +631,23 @@ class Game {
       for (const id of this.run.deck.discard) counts.set(id, (counts.get(id) || 0) + 1);
       for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
       deck.innerHTML = '';
+      // 모양별 요약 (기본 7종 + 기타)
+      const BASE_SHAPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+      const shapeCounts = new Map();
+      let otherCount = 0;
+      for (const [id, cnt] of counts) {
+        const sid = CARD_LIBRARY[id]?.shapeId;
+        if (BASE_SHAPES.includes(sid)) shapeCounts.set(sid, (shapeCounts.get(sid) || 0) + cnt);
+        else otherCount += cnt;
+      }
+      const parts = BASE_SHAPES.filter(s => shapeCounts.has(s)).map(s => `${s}×${shapeCounts.get(s)}`);
+      if (otherCount > 0) parts.push(`기타×${otherCount}`);
+      if (parts.length) {
+        const summary = document.createElement('div');
+        summary.className = 'deck-shape-summary';
+        summary.textContent = parts.join('  ');
+        deck.appendChild(summary);
+      }
       [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
         const card = CARD_LIBRARY[id];
         const item = document.createElement('div');
