@@ -213,6 +213,13 @@ export const RELICS = {
     name: '전하 축전기',
     tier: TIERS.GOLD,
     desc: '콤보 차지 최대 누적이 3에서 5로 증가하고, 소모 후 절반(내림)이 잔류합니다.'
+  },
+  instant_gauge: {
+    id: 'instant_gauge',
+    icon: '🔴',
+    name: '즉각 경보',
+    tier: TIERS.GOLD,
+    desc: '받는 공격 게이지가 즉시 빨간색이 됩니다(지연 없음). 라인 클리어로 파란색으로 되돌릴 수 없습니다. 대신 한 번에 받는 최대 쓰레기는 4줄로 제한됩니다.'
   }
 };
 
@@ -429,6 +436,8 @@ export function completedAbilitySets(run) {
 
 // 세트/연금술 유물은 전용 경로(세트 완성·도박 체인)로만 획득 → 무작위 유물 풀에서 제외.
 const EARNED_ONLY_RELICS = [...Object.values(SET_RELICS), 'alchemy_core'];
+// 상점 전용 유물 → 전투 보상·도전과제·발굴·엘리트 보상 풀에서 제외, 상점에서만 등장.
+const SHOP_ONLY_RELICS = ['instant_gauge'];
 
 const GAMBLE_TIERS = {
   bronze: { gtier: 'bronze', tier: TIERS.BRONZE, bet: 20, reward: 60, chance: 0.55, title: '도박', desc: '20골드를 겁니다. 55% 확률로 60골드를 받고, 실패하면 잃습니다. (성공 시 다음 이벤트에 실버 도박 등장)' },
@@ -472,7 +481,7 @@ function rollChallengeReward(round, ownedRelics = []) {
     return { kind: 'gold', amount: 40, label: '골드 +40', detail: '전투 보상으로 40골드를 받습니다.' };
   }
   if (roll < 0.85) {
-    const r = pickByTier(RELICS, tier, { exclude: [...ownedRelics, ...EARNED_ONLY_RELICS] });
+    const r = pickByTier(RELICS, tier, { exclude: [...ownedRelics, ...EARNED_ONLY_RELICS, ...SHOP_ONLY_RELICS] });
     if (r) return { kind: 'relic', id: r.id, label: `유물 「${RELICS[r.id].name}」`, detail: RELICS[r.id].desc || '' };
     return { kind: 'gold', amount: 50, label: '골드 +50', detail: '전투 보상으로 50골드를 받습니다.' };
   }
@@ -739,7 +748,7 @@ export function makeEventChoices(run, eventKey) {
     title: '보급 캐시',
     desc: `${supply.name}: ${supply.desc} 아이템 슬롯이 가득 찼으면 교체하거나 건너뜁니다.`
   });
-  const digRelic = pickByTier(RELICS, roundTier(run.round), { exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
+  const digRelic = pickByTier(RELICS, roundTier(run.round), { exclude: [...run.relics, ...EARNED_ONLY_RELICS, ...SHOP_ONLY_RELICS] });
   if (digRelic && eventKey !== 'start') {
     const digCost = { [TIERS.BRONZE]: 1, [TIERS.SILVER]: 2, [TIERS.GOLD]: 3 }[digRelic.tier] || 2;
     sideChoices.push({
@@ -849,7 +858,7 @@ export function addConsumable(run, id) {
 }
 
 export function grantEliteRelic(run) {
-  const relic = pickByTier(RELICS, TIERS.GOLD, { elite: true, minTier: TIERS.SILVER, exclude: [...run.relics, ...EARNED_ONLY_RELICS] });
+  const relic = pickByTier(RELICS, TIERS.GOLD, { elite: true, minTier: TIERS.SILVER, exclude: [...run.relics, ...EARNED_ONLY_RELICS, ...SHOP_ONLY_RELICS] });
   if (!relic) return null;
   if (!run.relics.includes(relic.id)) run.relics.push(relic.id);
   return relic.id;

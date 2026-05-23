@@ -897,6 +897,7 @@ class Game {
       this.player.chargeCapBonus = true;
       this.player.chargeCarryOver = true;
     }
+    if (this.run.relics.includes('instant_gauge')) this.player.instantGarbage = true;
     // 클리어 지연(파란색)은 플레이어만, AI는 미적용 → 포커스 중에도 정상 착탄.
     this.player.delaysGarbageOnClear = true;
     this.enemy.delaysGarbageOnClear = false;

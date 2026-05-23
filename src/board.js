@@ -99,6 +99,7 @@ export class Board {
     this.armDelayBonus = 0;
     this.clearDelayBonus = 0;
     this.delaysGarbageOnClear = true;
+    this.instantGarbage = false;
     this.pendingDrops = [];
     this.pendingDropTimer = 0;
     this.fillQueue();
@@ -147,6 +148,7 @@ export class Board {
     board.armDelayBonus = 0;
     board.clearDelayBonus = 0;
     board.delaysGarbageOnClear = true;
+    board.instantGarbage = false;
     board.pendingDrops = (state.pendingDrops || []).map(d => ({ ...d }));
     board.pendingDropTimer = state.pendingDropTimer || 0;
     board.fillQueue();
@@ -393,7 +395,8 @@ export class Board {
     this.tickTimeBombs(this.pieceSerial);
     // 줄을 지운 턴에는 이미 도착 대기(빨간) 중인 가비지를 즉시 떨구지 않고 미룬다(파란색 표시).
     // delaysGarbageOnClear가 false면(=AI) 이 지연을 적용하지 않아 정상 착탄한다.
-    if (result.cleared > 0 && this.delaysGarbageOnClear) {
+    // instantGarbage가 true면(=즉각 경보 유물) 클리어로도 재지연 불가.
+    if (result.cleared > 0 && this.delaysGarbageOnClear && !this.instantGarbage) {
       const delay = Math.max(300, GAME_TIMING.GARBAGE_DELAY_ON_CLEAR + (this.clearDelayBonus || 0));
       for (const entry of this.garbageEntries) {
         if (entry.timer <= 0) {
@@ -683,8 +686,10 @@ export class Board {
 
   receiveGarbage(amount) {
     const n = Math.max(0, Math.ceil(amount));
-    const timer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
-    if (n > 0) this.garbageEntries.push({ amount: n, timer });
+    if (n === 0) return;
+    const capped = this.instantGarbage ? Math.min(n, 4) : n;
+    const timer = this.instantGarbage ? 0 : Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
+    this.garbageEntries.push({ amount: capped, timer });
   }
 
   addDurableGarbage(lines, hp = 2) {
