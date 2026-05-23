@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260523-ko52';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko52';
-import { Deck } from './deck.js?v=20260523-ko52';
-import { AI } from './ai.js?v=20260523-ko52';
-import { Renderer } from './renderer.js?v=20260523-ko52';
-import { InputController } from './input.js?v=20260523-ko52';
-import { SKILLS } from './skills.js?v=20260523-ko52';
-import { CONSUMABLES } from './consumables.js?v=20260523-ko52';
+import { Board } from './board.js?v=20260523-ko53';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko53';
+import { Deck } from './deck.js?v=20260523-ko53';
+import { AI } from './ai.js?v=20260523-ko53';
+import { Renderer } from './renderer.js?v=20260523-ko53';
+import { InputController } from './input.js?v=20260523-ko53';
+import { SKILLS } from './skills.js?v=20260523-ko53';
+import { CONSUMABLES } from './consumables.js?v=20260523-ko53';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260523-ko52';
+} from './progression.js?v=20260523-ko53';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -899,6 +899,7 @@ class Game {
       }
       btn.addEventListener('click', () => {
         overlay.classList.remove('active');
+        this.input?.resetMenuFocus();
         onPick(index);
       });
       options.appendChild(btn);
@@ -906,9 +907,11 @@ class Game {
     overlay.querySelector('[data-skip]').textContent = '건너뛰기';
     overlay.querySelector('[data-skip]').onclick = () => {
       overlay.classList.remove('active');
+      this.input?.resetMenuFocus();
       onSkip();
     };
     overlay.classList.add('active');
+    this.input?.resetMenuFocus();
   }
 
   startBattle(enemyCard) {
@@ -1610,6 +1613,7 @@ class Game {
     const dt = Math.min(50, now - (this.last || now));
     this.last = now;
     if (this.inBattle()) this.updateBattle(dt, now);
+    else this.input?.update(now);
     requestAnimationFrame(t => this.loop(t));
   }
 
@@ -2093,6 +2097,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260523-ko52').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260523-ko53').catch(() => {});
   });
 }

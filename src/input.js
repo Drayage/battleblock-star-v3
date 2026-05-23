@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260523-ko52';
+import { GAME_TIMING } from './constants.js?v=20260523-ko53';
 
 // Standard gamepad button mapping (Xbox / PS layout)
 const BTN_ONE_SHOT = {
@@ -140,11 +140,14 @@ export class InputController {
     else this.updateGamepadMenu(now);
   }
 
-  // Returns all currently focusable buttons in the active screen (visible, not disabled)
+  // Returns all currently focusable buttons in the active screen (visible, not disabled).
+  // When a fixed overlay (#slotPicker, #deckModal) is open, navigate its buttons instead.
   _menuFocusables() {
-    const activeScreen = document.querySelector('.screen.active');
-    if (!activeScreen) return [];
-    return [...activeScreen.querySelectorAll('button:not([disabled])')].filter(el => {
+    const overlay = document.querySelector('#slotPicker.active, #deckModal.active');
+    const root = overlay || document.querySelector('.screen.active');
+    if (!root) return [];
+    return [...root.querySelectorAll('button:not([disabled])')].filter(el => {
+      if (!overlay && el.closest('details:not([open])')) return false;
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0;
     });
@@ -161,10 +164,12 @@ export class InputController {
     const gamepad = navigator.getGamepads()[this.gamepadIndex];
     if (!gamepad) return;
 
-    // Reset focus index when screen changes
+    // Reset focus index when screen or overlay changes
     const screenId = document.querySelector('.screen.active')?.id;
-    if (screenId !== this.gpLastScreen) {
-      this.gpLastScreen = screenId;
+    const overlayId = document.querySelector('#slotPicker.active, #deckModal.active')?.id || '';
+    const stateKey = `${screenId}|${overlayId}`;
+    if (stateKey !== this.gpLastScreen) {
+      this.gpLastScreen = stateKey;
       this.gpMenuIdx = 0;
       this.gpMenuRepeat = {};
     }
