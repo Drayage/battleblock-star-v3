@@ -119,6 +119,7 @@ class Game {
     this.renderer = new Renderer(this.canvas);
     this.input = new InputController(this);
     this.run = new RunState();
+    this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
     this.player = null;
     this.enemy = null;
@@ -157,6 +158,8 @@ class Game {
   }
 
   bindUi() {
+    document.getElementById('practiceToggleBtn').addEventListener('click', () => this.togglePracticeMode());
+    this.refreshPracticeToggle();
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
@@ -184,6 +187,9 @@ class Game {
     document.documentElement.classList.toggle('in-game', id === 'gameScreen');
     document.body.classList.toggle('in-game', id === 'gameScreen');
     this.screen = id;
+    // Clear gamepad focus highlights on every screen transition
+    document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
+    if (this.input) { this.input.gpMenuIdx = 0; this.input.gpMenuRepeat = {}; }
   }
 
   refreshMenu() {
@@ -209,9 +215,23 @@ class Game {
     ).join('');
   }
 
+  togglePracticeMode() {
+    this.practiceMode = !this.practiceMode;
+    localStorage.setItem('bbs_practice', this.practiceMode ? '1' : '0');
+    this.refreshPracticeToggle();
+  }
+
+  refreshPracticeToggle() {
+    const btn = document.getElementById('practiceToggleBtn');
+    if (!btn) return;
+    btn.textContent = this.practiceMode ? 'ON' : 'OFF';
+    btn.classList.toggle('practice-active', this.practiceMode);
+  }
+
   newRun() {
     document.getElementById('endScreen').classList.remove('run-clear');
     this.run = new RunState();
+    this.run.practiceMode = this.practiceMode;
     this.routeNextScreen();
     this.autoSave();
   }
@@ -914,6 +934,7 @@ class Game {
       this.player.chargeCarryOver = true;
     }
     if (this.run.relics.includes('instant_gauge')) this.player.instantGarbage = true;
+    if (this.run.practiceMode) this.player.practiceMode = true;
     // 클리어 지연(파란색)은 플레이어만, AI는 미적용 → 포커스 중에도 정상 착탄.
     this.player.delaysGarbageOnClear = true;
     this.enemy.delaysGarbageOnClear = false;
@@ -964,7 +985,7 @@ class Game {
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
     this.message = '전투 시작';
-    document.getElementById('battleTitle').textContent = `${this.run.round}라운드`;
+    document.getElementById('battleTitle').textContent = `${this.run.round}라운드${this.run.practiceMode ? ' [연습]' : ''}`;
     document.getElementById('battleMeta').textContent = enemyCard.name;
     this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
@@ -1383,7 +1404,8 @@ class Game {
       starterPicked: this.run.starterPicked,
       seenSets: [...this.run.seenSets],
       gambleNext: this.run.gambleNext,
-      gambleClosed: !!this.run.gambleClosed
+      gambleClosed: !!this.run.gambleClosed,
+      practiceMode: !!this.run.practiceMode
     };
   }
 
@@ -1405,6 +1427,7 @@ class Game {
     run.seenSets = new Set(state.seenSets || []);
     run.gambleNext = state.gambleNext || null;
     run.gambleClosed = !!state.gambleClosed;
+    run.practiceMode = !!state.practiceMode;
     return run;
   }
 

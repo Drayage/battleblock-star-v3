@@ -17,6 +17,8 @@ button{font:inherit}
 .primary,.ghost,.choice{border:1px solid #38568f;background:#15213c;color:#dce8ff;border-radius:8px;cursor:pointer;touch-action:manipulation}
 .primary{width:100%;padding:15px;font-size:18px;background:#1c3671}.primary:active,.choice:active,.ghost:active{transform:translateY(1px);filter:brightness(1.18)}
 .menu-actions,.hud-actions{display:flex;gap:8px}.menu-actions{margin-top:10px}.menu-actions .ghost{flex:1}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0}.setting-row small{color:#6a7b9a;font-size:10px;display:block;margin-top:2px}.practice-active{background:#0d2d1a;border-color:#2a7a4a;color:#5af09a}
+.gp-focused{outline:2px solid #6aadff !important;outline-offset:3px;box-shadow:0 0 8px rgba(100,173,255,.35) !important}
 .wide{width:100%;margin-top:10px}
 .topbar,.hud{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}.topbar strong,.hud strong{display:block;color:#e2ecff}.topbar span,.hud span{display:block;color:#7e8aa3;font-size:12px;margin-top:3px}
 .ghost{padding:9px 12px;background:#0d1324;color:#b7c8e8}.danger{border-color:#704052;color:#ffb8c4}

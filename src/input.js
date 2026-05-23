@@ -31,9 +31,12 @@ export class InputController {
     this.game = game;
     this.keys = new Set();
     this.repeat = new Map();    // keyboard DAS repeats
-    this.gpRepeat = new Map();  // gamepad directional repeats
+    this.gpRepeat = new Map();  // gamepad directional repeats (battle)
     this.gpPrev = {};           // prev button pressed states
     this.gamepadIndex = -1;
+    this.gpMenuIdx = 0;         // focused element index in current menu screen
+    this.gpMenuRepeat = {};     // { next: time, count } for directional menu nav
+    this.gpLastScreen = null;   // detect screen changes to reset menu focus
     this.cleanups = [];
     this.bindKeys();
     this.bindTouch();
@@ -95,7 +98,92 @@ export class InputController {
       rep.next = now + (rep.count < 4 ? GAME_TIMING.KEY_REPEAT_DELAY : GAME_TIMING.KEY_REPEAT_FAST_DELAY);
       this.handleKey(code, true);
     }
-    this.updateGamepad(now);
+    if (this.game.inBattle()) this.updateGamepad(now);
+    else this.updateGamepadMenu(now);
+  }
+
+  // Returns all currently focusable buttons in the active screen (visible, not disabled)
+  _menuFocusables() {
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return [];
+    return [...activeScreen.querySelectorAll('button:not([disabled])')].filter(el => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+  }
+
+  updateGamepadMenu(now) {
+    if (!navigator.getGamepads) return;
+    const gp = navigator.getGamepads()[this.gamepadIndex];
+    if (!gp?.connected) {
+      const found = [...(navigator.getGamepads() || [])].find(g => g?.connected);
+      if (!found) return;
+      this.gamepadIndex = found.index;
+    }
+    const gamepad = navigator.getGamepads()[this.gamepadIndex];
+    if (!gamepad) return;
+
+    // Reset focus index when screen changes
+    const screenId = document.querySelector('.screen.active')?.id;
+    if (screenId !== this.gpLastScreen) {
+      this.gpLastScreen = screenId;
+      this.gpMenuIdx = 0;
+      this.gpMenuRepeat = {};
+    }
+
+    const focusables = this._menuFocusables();
+    if (focusables.length === 0) { this._clearGpFocus(); return; }
+    this.gpMenuIdx = Math.max(0, Math.min(focusables.length - 1, this.gpMenuIdx));
+
+    // Apply visual focus
+    focusables.forEach((el, i) => el.classList.toggle('gp-focused', i === this.gpMenuIdx));
+
+    const DEAD = 0.4;
+    const lx = gamepad.axes[0] || 0;
+    const ly = gamepad.axes[1] || 0;
+    const navNext = ly > DEAD || lx > DEAD || !!(gamepad.buttons[13]?.pressed) || !!(gamepad.buttons[15]?.pressed);
+    const navPrev = ly < -DEAD || lx < -DEAD || !!(gamepad.buttons[12]?.pressed) || !!(gamepad.buttons[14]?.pressed);
+
+    const move = (dir) => {
+      const n = focusables.length;
+      this.gpMenuIdx = dir === 1 ? (this.gpMenuIdx + 1) % n : (this.gpMenuIdx - 1 + n) % n;
+      focusables[this.gpMenuIdx]?.scrollIntoView({ block: 'nearest' });
+    };
+
+    for (const [key, active, dir] of [['next', navNext, 1], ['prev', navPrev, -1]]) {
+      if (active) {
+        if (!this.gpMenuRepeat[key]) {
+          move(dir);
+          this.gpMenuRepeat[key] = { next: now + 380 };
+        } else if (now >= this.gpMenuRepeat[key].next) {
+          move(dir);
+          this.gpMenuRepeat[key].next = now + 160;
+        }
+      } else {
+        delete this.gpMenuRepeat[key];
+      }
+    }
+
+    // One-shot buttons: A=click, B=back (last ghost/cancel btn), Start=primary
+    gamepad.buttons.forEach((btn, i) => {
+      const pressed = btn.pressed || btn.value > 0.5;
+      const prev = this.gpPrev[i] || false;
+      if (pressed && !prev) {
+        if (i === 0 || i === 9) {
+          // A or Start: click focused element
+          focusables[this.gpMenuIdx]?.click();
+        } else if (i === 1) {
+          // B: click the last ghost/secondary button (cancel/back)
+          const backs = focusables.filter(el => el.classList.contains('ghost') || el.classList.contains('danger'));
+          if (backs.length) backs[backs.length - 1].click();
+        }
+      }
+      this.gpPrev[i] = pressed;
+    });
+  }
+
+  _clearGpFocus() {
+    document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
   }
 
   updateGamepad(now) {
@@ -224,6 +312,7 @@ export class InputController {
   }
 
   dispose() {
+    this._clearGpFocus();
     for (const cleanup of this.cleanups.splice(0)) cleanup();
     this.repeat.clear();
     this.gpRepeat.clear();

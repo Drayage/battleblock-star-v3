@@ -278,6 +278,7 @@ export class RunState {
     this.starterPicked = false;
     this.seenSets = new Set();
     this.gambleNext = null;
+    this.practiceMode = false;
   }
 
   deckCount() {
