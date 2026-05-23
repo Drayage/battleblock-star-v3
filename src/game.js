@@ -886,6 +886,7 @@ class Game {
     const enemyDeck = enemyCard.mirror ? new Deck([...this.run.deck.extraCards]) : new Deck(enemyCard.deckExtras || []);
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: enemyDeck });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
+    for (const entry of this.enemy.garbageEntries) entry.timer = 0;
     if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
     if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
     if (this.run.relics.includes('combo_keeper')) this.player.comboGuard = true;
