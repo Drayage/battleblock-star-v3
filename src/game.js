@@ -1021,7 +1021,7 @@ class Game {
     if (action === 'rotate') { this.groundAdjust(() => this.player.rotate(1)); this.battleUsedCw = true; }
     if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCcw = true; }
     if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
-    if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.resolve(this.player.hardDrop(), this.player); }
+    if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.input.vibrate('harddrop'); this.resolve(this.player.hardDrop(), this.player); }
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
   }
@@ -1087,7 +1087,10 @@ class Game {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
-    if (result.cleared > 0 && attacker === this.player) this.battlePlayerClearedLines += result.cleared;
+    if (result.cleared > 0 && attacker === this.player) {
+      this.battlePlayerClearedLines += result.cleared;
+      this.input.vibrate(`clear${Math.min(4, result.cleared)}`);
+    }
     if (attacker === this.player) this.battlePlayerPieces++;
     else if (attacker === this.enemy) this.battleEnemyPieces++;
     let mult = attacker === this.player && this.run.relics.includes('combo_amp') && this.player.combo >= 2 ? 1.25 : 1;
@@ -1143,8 +1146,9 @@ class Game {
       if (defender === this.player && this.run.relics.includes('set_abszero') && this.enemySlowTimer > 0) {
         attack = Math.max(0, attack - 1);
       }
-      if (attacker === this.player) this.battlePlayerAttacks += attack;
-      else if (attacker === this.enemy) {
+      if (attacker === this.player) {
+        this.battlePlayerAttacks += attack;
+      } else if (attacker === this.enemy) {
         this.battleEnemyAttacks += attack;
         if (this.enemyCard?.ability === 'overload' && this.bossRhythmRestTimer <= 0) {
           this.bossRhythmSent = (this.bossRhythmSent || 0) + attack;
@@ -1159,7 +1163,10 @@ class Game {
         attacker.attackPool += buffered;
         const toSend = Math.floor(attacker.attackPool);
         attacker.attackPool = Number((attacker.attackPool - toSend).toFixed(4));
-        if (toSend > 0) defender.receiveGarbage(toSend);
+        if (toSend > 0) {
+          defender.receiveGarbage(toSend);
+          if (defender === this.player) this.input.vibrate('garbage');
+        }
       }
     }
     if (this.player.defeated && !this.playerSurvivesLethal()) return this.queueBattleEnd('loss');
@@ -1213,6 +1220,7 @@ class Game {
     this.clearBattleTimeouts();
     this.battleEndDelay = result === 'win' ? GAME_TIMING.BATTLE_WIN_DELAY : GAME_TIMING.BATTLE_LOSS_DELAY;
     this.message = result === 'win' ? '적 처치' : '전투 패배';
+    this.input.vibrate(result === 'win' ? 'win' : 'hurt');
     this.autoSave();
   }
 
