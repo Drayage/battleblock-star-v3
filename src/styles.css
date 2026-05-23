@@ -19,7 +19,7 @@ button{font:inherit}
 .menu-actions,.hud-actions{display:flex;gap:8px}.menu-actions{margin-top:10px}.menu-actions .ghost{flex:1}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0}.setting-row small{color:#6a7b9a;font-size:10px;display:block;margin-top:2px}.practice-active{background:#0d2d1a;border-color:#2a7a4a;color:#5af09a}
 .gp-focused{outline:2px solid #6aadff !important;outline-offset:3px;box-shadow:0 0 8px rgba(100,173,255,.35) !important}
-.pad-skills button small.gp-key{position:absolute;top:2px;right:3px;font-size:8px;color:#9fc0e0;opacity:.85;z-index:2;font-weight:600}
+.pad-skills button .key-label{font-size:9px;font-weight:700;color:#8fb1ff;opacity:.9}
 .gp-hint{margin-top:8px;border-top:1px solid #1e2a3a;padding-top:8px}
 .wide{width:100%;margin-top:10px}
 .topbar,.hud{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}.topbar strong,.hud strong{display:block;color:#e2ecff}.topbar span,.hud span{display:block;color:#7e8aa3;font-size:12px;margin-top:3px}

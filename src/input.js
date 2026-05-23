@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260523-ko53';
+import { GAME_TIMING } from './constants.js?v=20260523-ko54';
 
 // Standard gamepad button mapping (Xbox / PS layout)
 const BTN_ONE_SHOT = {
@@ -106,21 +106,16 @@ export class InputController {
   }
 
   applyGamepadLabels(connected) {
-    const attach = (btn, action) => {
-      btn.querySelector('small.gp-key')?.remove();
-      if (!connected) return;
-      const label = GAMEPAD_LABELS[action];
-      if (!label) return;
-      const tag = document.createElement('small');
-      tag.className = 'gp-key';
-      tag.textContent = label;
-      btn.appendChild(tag);
-    };
     document.querySelectorAll('#touchSkills button[data-skill-idx]').forEach(btn => {
-      attach(btn, `skill${Number(btn.dataset.skillIdx)}`);
+      const lbl = btn.querySelector('.key-label');
+      if (!lbl) return;
+      const i = Number(btn.dataset.skillIdx);
+      lbl.textContent = connected ? (GAMEPAD_LABELS[`skill${i}`] ?? `${i + 1}.`) : `${i + 1}.`;
     });
-    document.querySelectorAll('#touchConsumables button').forEach((btn, idx) => {
-      attach(btn, `consumable${idx}`);
+    document.querySelectorAll('#touchConsumables button').forEach((btn, i) => {
+      const lbl = btn.querySelector('.key-label');
+      if (!lbl) return;
+      lbl.textContent = connected ? (GAMEPAD_LABELS[`consumable${i}`] ?? `${i + 4}.`) : `${i + 4}.`;
     });
   }
 
