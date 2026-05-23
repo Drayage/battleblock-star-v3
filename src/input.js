@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260523-ko51';
+import { GAME_TIMING } from './constants.js?v=20260523-ko52';
 
 // Standard gamepad button mapping (Xbox / PS layout)
 const BTN_ONE_SHOT = {
@@ -11,8 +11,17 @@ const BTN_ONE_SHOT = {
   6:  'skill2',      // LT / L2
   7:  'consumable0', // RT / R2
   9:  'pause',       // Start / Options
+  10: 'consumable1', // L3 (left stick click)
+  11: 'consumable2', // R3 (right stick click)
   12: 'rotate',      // D-up (rotate alternate)
   // 13 D-down, 14 D-left, 15 D-right handled via directional repeat
+};
+
+export const GAMEPAD_LABELS = {
+  hard: 'A', rotate: 'B / D↑', ccw: 'X', hold: 'Y',
+  skill0: 'LB', skill1: 'RB', skill2: 'LT',
+  consumable0: 'RT', consumable1: 'L3', consumable2: 'R3',
+  pause: 'Start',
 };
 
 const VIBRATE_PATTERNS = {
@@ -76,6 +85,8 @@ export class InputController {
       const name = e.gamepad.id.slice(0, 40);
       this._setGpStatus(`연결됨: ${name}`);
       this.game.message = `컨트롤러 연결: ${name}`;
+      document.getElementById('gpControlsHint')?.classList.remove('hidden');
+      this.applyGamepadLabels(true);
     };
     const ondisconnect = e => {
       if (this.gamepadIndex === e.gamepad.index) {
@@ -84,12 +95,38 @@ export class InputController {
         this.gpPrev = {};
         this._setGpStatus('연결 안됨 — 연결 후 아무 버튼 누르세요');
         this.game.message = '컨트롤러 연결 해제';
+        document.getElementById('gpControlsHint')?.classList.add('hidden');
+        this.applyGamepadLabels(false);
       }
     };
     window.addEventListener('gamepadconnected', onconnect);
     window.addEventListener('gamepaddisconnected', ondisconnect);
     this.cleanups.push(() => window.removeEventListener('gamepadconnected', onconnect));
     this.cleanups.push(() => window.removeEventListener('gamepaddisconnected', ondisconnect));
+  }
+
+  applyGamepadLabels(connected) {
+    const attach = (btn, action) => {
+      btn.querySelector('small.gp-key')?.remove();
+      if (!connected) return;
+      const label = GAMEPAD_LABELS[action];
+      if (!label) return;
+      const tag = document.createElement('small');
+      tag.className = 'gp-key';
+      tag.textContent = label;
+      btn.appendChild(tag);
+    };
+    document.querySelectorAll('#touchSkills button[data-skill-idx]').forEach(btn => {
+      attach(btn, `skill${Number(btn.dataset.skillIdx)}`);
+    });
+    document.querySelectorAll('#touchConsumables button').forEach((btn, idx) => {
+      attach(btn, `consumable${idx}`);
+    });
+  }
+
+  resetMenuFocus() {
+    this.gpMenuIdx = 0;
+    this.gpMenuRepeat = {};
   }
 
   update(now) {
