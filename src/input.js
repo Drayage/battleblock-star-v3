@@ -26,6 +26,32 @@ const VIBRATE_PATTERNS = {
   win:      { duration: 600, strongMagnitude: 0.4,  weakMagnitude: 0.9  },
 };
 
+// Standard gamepad button mapping (Xbox / PS layout)
+const BTN_ONE_SHOT = {
+  0:  'hard',        // A / Cross
+  1:  'rotate',      // B / Circle
+  2:  'ccw',         // X / Square
+  3:  'hold',        // Y / Triangle
+  4:  'skill0',      // LB / L1
+  5:  'skill1',      // RB / R1
+  6:  'skill2',      // LT / L2
+  7:  'consumable0', // RT / R2
+  9:  'pause',       // Start / Options
+  12: 'rotate',      // D-up (rotate alternate)
+  // 13 D-down, 14 D-left, 15 D-right handled via directional repeat
+};
+
+const VIBRATE_PATTERNS = {
+  harddrop: { duration: 80,  strongMagnitude: 0.5,  weakMagnitude: 0.2 },
+  clear1:   { duration: 150, strongMagnitude: 0.55, weakMagnitude: 0.25 },
+  clear2:   { duration: 220, strongMagnitude: 0.7,  weakMagnitude: 0.35 },
+  clear3:   { duration: 300, strongMagnitude: 0.85, weakMagnitude: 0.5  },
+  clear4:   { duration: 420, strongMagnitude: 1.0,  weakMagnitude: 0.7  },
+  garbage:  { duration: 120, strongMagnitude: 0.35, weakMagnitude: 0.15 },
+  hurt:     { duration: 320, strongMagnitude: 0.9,  weakMagnitude: 0.4  },
+  win:      { duration: 600, strongMagnitude: 0.4,  weakMagnitude: 0.9  },
+};
+
 export class InputController {
   constructor(game) {
     this.game = game;
