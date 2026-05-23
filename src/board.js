@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260523-ko51';
-import { Deck } from './deck.js?v=20260523-ko51';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260523-ko52';
+import { Deck } from './deck.js?v=20260523-ko52';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -70,6 +70,7 @@ export class Board {
     this.nextQueue = [];
     this.pieceSerial = 0;
     this.garbageEntries = [];
+    this.onGarbageLanded = null;
     this.mp = 0;
     this.combo = 0;
     this.comboBreakFlash = 0;
@@ -717,10 +718,11 @@ export class Board {
   addDurableGarbage(lines, hp = 2) {
     if (this.practiceMode) return;
     const hole = Math.floor(Math.random() * this.cols);
+    let added = 0;
     for (let i = 0; i < lines; i++) {
       if (this.grid[0].some(Boolean)) {
         this.defeated = true;
-        return;
+        break;
       }
       this.grid.shift();
       this.bombFx.forEach(fx => { fx.y -= 1; });
@@ -728,7 +730,9 @@ export class Board {
       this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole
         ? null
         : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage', 'durable'], hp }));
+      added++;
     }
+    if (added > 0) this.onGarbageLanded?.(added);
   }
 
   wouldOverflowGarbage(lines) {
@@ -779,16 +783,19 @@ export class Board {
   applyGarbage(lines) {
     this.flushPendingDrops();
     const hole = Math.floor(Math.random() * this.cols);
+    let added = 0;
     for (let i = 0; i < lines; i++) {
       if (this.grid[0].some(Boolean)) {
         this.defeated = true;
-        return;
+        break;
       }
       this.grid.shift();
       this.bombFx.forEach(fx => { fx.y -= 1; });
       this.bombFx = this.bombFx.filter(fx => fx.y >= 0);
       this.grid.push(Array.from({ length: this.cols }, (_, c) => c === hole ? null : { type: TYPES.GARBAGE, attack: 0.08, traits: ['garbage'], freshGarbage: true }));
+      added++;
     }
+    if (added > 0) this.onGarbageLanded?.(added);
   }
 
   purgeGarbageRows(count = 3) {

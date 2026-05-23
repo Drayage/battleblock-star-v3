@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260523-ko51';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko51';
-import { Deck } from './deck.js?v=20260523-ko51';
-import { AI } from './ai.js?v=20260523-ko51';
-import { Renderer } from './renderer.js?v=20260523-ko51';
-import { InputController } from './input.js?v=20260523-ko51';
-import { SKILLS } from './skills.js?v=20260523-ko51';
-import { CONSUMABLES } from './consumables.js?v=20260523-ko51';
+import { Board } from './board.js?v=20260523-ko52';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko52';
+import { Deck } from './deck.js?v=20260523-ko52';
+import { AI } from './ai.js?v=20260523-ko52';
+import { Renderer } from './renderer.js?v=20260523-ko52';
+import { InputController } from './input.js?v=20260523-ko52';
+import { SKILLS } from './skills.js?v=20260523-ko52';
+import { CONSUMABLES } from './consumables.js?v=20260523-ko52';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260523-ko51';
+} from './progression.js?v=20260523-ko52';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -325,6 +325,7 @@ class Game {
       });
       wrap.appendChild(btn);
     }
+    this.input?.resetMenuFocus();
   }
 
   eventName(choice) {
@@ -575,6 +576,7 @@ class Game {
       this.rerollShop();
     });
     wrap.appendChild(rerollBtn);
+    this.input?.resetMenuFocus();
   }
 
   effectivePrice(item, isDeal = false) {
@@ -935,6 +937,7 @@ class Game {
     }
     if (this.run.relics.includes('instant_gauge')) this.player.instantGarbage = true;
     if (this.run.practiceMode) this.player.practiceMode = true;
+    this.player.onGarbageLanded = () => this.input.vibrate('garbage');
     // 클리어 지연(파란색)은 플레이어만, AI는 미적용 → 포커스 중에도 정상 착탄.
     this.player.delaysGarbageOnClear = true;
     this.enemy.delaysGarbageOnClear = false;
@@ -1019,6 +1022,7 @@ class Game {
       });
       consWrap.appendChild(btn);
     });
+    this.input?.applyGamepadLabels(this.input?.gamepadIndex >= 0);
   }
 
   inBattle() {
@@ -1183,10 +1187,7 @@ class Game {
         attacker.attackPool += buffered;
         const toSend = Math.floor(attacker.attackPool);
         attacker.attackPool = Number((attacker.attackPool - toSend).toFixed(4));
-        if (toSend > 0) {
-          defender.receiveGarbage(toSend);
-          if (defender === this.player) this.input.vibrate('garbage');
-        }
+        if (toSend > 0) defender.receiveGarbage(toSend);
       }
     }
     if (this.player.defeated && !this.playerSurvivesLethal()) return this.queueBattleEnd('loss');
@@ -1311,6 +1312,7 @@ class Game {
       });
       wrap.appendChild(btn);
     });
+    this.input?.resetMenuFocus();
   }
 
   rewardName(reward) {
@@ -2091,6 +2093,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260523-ko51').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260523-ko52').catch(() => {});
   });
 }
