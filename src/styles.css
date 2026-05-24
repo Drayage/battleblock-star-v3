@@ -96,3 +96,14 @@ button{font:inherit}
 .toast.challenge-fail{background:linear-gradient(135deg,#3d1b1b,#7d2e2e);border:1px solid #f87171}
 @keyframes toastIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+
+/* 오디오 토글 / 일시정지 오버레이 */
+.audio-toggles{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.audio-toggles button{min-width:120px;font-size:13px}
+.audio-toggles button.off{opacity:.55;border-color:#5b3636;color:#c9a4a4}
+.pause-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,10,22,.78);z-index:30;backdrop-filter:blur(2px)}
+.pause-overlay.hidden{display:none}
+.pause-panel{background:linear-gradient(160deg,#19213e,#0e1226);border:1px solid #2a3458;border-radius:14px;padding:24px 28px;min-width:260px;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.pause-panel h2{margin:0 0 14px;font-size:20px;color:#e8ecf5}
+.pause-panel .subtitle{font-size:12px;color:#8590ac;margin-top:14px}
+#canvasWrap{position:relative}

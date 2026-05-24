@@ -68,6 +68,10 @@
         <button id="loadRunBtn" class="ghost">Load Save</button>
         <button id="deleteSaveBtn" class="ghost danger">Delete Save</button>
       </div>
+      <div class="audio-toggles">
+        <button id="bgmToggleBtn" class="ghost" data-label="음악">음악</button>
+        <button id="sfxToggleBtn" class="ghost" data-label="효과음">효과음</button>
+      </div>
     </section>
 
     <section id="mapScreen" class="screen">
@@ -136,7 +140,19 @@
           <button id="forfeitBtn" class="ghost danger">Forfeit</button>
         </div>
       </div>
-      <div id="canvasWrap"><canvas id="gameCanvas"></canvas></div>
+      <div id="canvasWrap">
+        <canvas id="gameCanvas"></canvas>
+        <div id="pauseOverlay" class="pause-overlay hidden">
+          <div class="pause-panel">
+            <h2>일시정지</h2>
+            <div class="audio-toggles">
+              <button id="bgmToggleBtnPause" class="ghost" data-label="음악">음악</button>
+              <button id="sfxToggleBtnPause" class="ghost" data-label="효과음">효과음</button>
+            </div>
+            <p class="subtitle">일시정지 버튼을 다시 누르면 재개됩니다.</p>
+          </div>
+        </div>
+      </div>
       <div id="mobilePad">
         <div class="pad-slots">
           <div class="pad-skills" id="touchSkills"></div>
@@ -166,6 +182,6 @@
     </section>
   </main>
 
-  <script type="module" src="./src/game.js?v=20260523-ko56"></script>
+  <script type="module" src="./src/game.js?v=20260524-audio"></script>
 </body>
 </html>
