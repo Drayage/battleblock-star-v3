@@ -45,13 +45,24 @@ const PRESETS = {
     noiseBurst(ctx, { dur: 0.06, vol: 0.14, cutoffStart: 2000, cutoffEnd: 400 });
   },
 
-  // === 콤보 — 라인 클리어 직후 살짝 지연 + 두꺼운 톤으로 묻히지 않게 ===
+  // === 콤보 — 라인 클리어 직후 살짝 지연 + 두꺼운 톤. 5콤보부터 웅장 모드. ===
   combo: (ctx, n = 1) => {
     const base = 660 * Math.pow(1.122, Math.min(10, n - 1));
     setTimeout(() => {
-      beep(ctx, { freqStart: base * 0.7, freqEnd: base, dur: 0.20, type: 'triangle', vol: 0.32 });
-      beep(ctx, { freqStart: base * 0.7 * 2, freqEnd: base * 2, dur: 0.20, type: 'square', vol: 0.16 });
-      beep(ctx, { freqStart: base * 0.7 * 0.5, freqEnd: base * 0.5, dur: 0.22, type: 'sawtooth', vol: 0.10 });
+      if (n >= 5) {
+        // 웅장 모드: 5도/옥타브 화음 + 긴 sustain + 노이즈 임팩트
+        const dur = 0.45 + Math.min(0.25, (n - 5) * 0.05);
+        beep(ctx, { freqStart: base * 0.6, freqEnd: base, dur, type: 'sawtooth', vol: 0.32 });
+        beep(ctx, { freqStart: base * 0.6 * 1.5, freqEnd: base * 1.5, dur, type: 'square', vol: 0.20 });
+        beep(ctx, { freqStart: base * 0.6 * 2, freqEnd: base * 2, dur, type: 'triangle', vol: 0.16 });
+        beep(ctx, { freqStart: base * 0.6 * 0.5, freqEnd: base * 0.5, dur: dur + 0.1, type: 'sawtooth', vol: 0.22 });
+        beep(ctx, { freqStart: base * 0.6 * 0.25, freqEnd: base * 0.25, dur: dur + 0.15, type: 'sine', vol: 0.30 });
+        noiseBurst(ctx, { dur: 0.10, vol: 0.12, cutoffStart: 6000, cutoffEnd: 800 });
+      } else {
+        beep(ctx, { freqStart: base * 0.7, freqEnd: base, dur: 0.20, type: 'triangle', vol: 0.32 });
+        beep(ctx, { freqStart: base * 0.7 * 2, freqEnd: base * 2, dur: 0.20, type: 'square', vol: 0.16 });
+        beep(ctx, { freqStart: base * 0.7 * 0.5, freqEnd: base * 0.5, dur: 0.22, type: 'sawtooth', vol: 0.10 });
+      }
     }, 220);
   },
 
@@ -84,6 +95,8 @@ const PRESETS = {
   select: ctx => arpeggio(ctx, [659, 988], 0.03, 0.06, 'square', 0.16),
   purchase: ctx => arpeggio(ctx, [880, 1175, 1568], 0.04, 0.10, 'square', 0.20),
   reroll: ctx => arpeggio(ctx, [523, 659, 784, 659, 523], 0.04, 0.08, 'triangle', 0.18),
+  pause: ctx => arpeggio(ctx, [880, 659], 0.06, 0.10, 'triangle', 0.18),
+  resume: ctx => arpeggio(ctx, [659, 880], 0.06, 0.10, 'triangle', 0.18),
   glassBreak: ctx => {
     // 고주파 노이즈 + 짧은 띵 톤
     noiseBurst(ctx, { dur: 0.22, vol: 0.22, cutoffStart: 8000, cutoffEnd: 2000 });
