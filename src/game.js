@@ -1,11 +1,11 @@
-import { Board } from './board.js?v=20260523-ko54';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko54';
-import { Deck } from './deck.js?v=20260523-ko54';
-import { AI } from './ai.js?v=20260523-ko54';
-import { Renderer } from './renderer.js?v=20260523-ko54';
-import { InputController } from './input.js?v=20260523-ko54';
-import { SKILLS } from './skills.js?v=20260523-ko54';
-import { CONSUMABLES } from './consumables.js?v=20260523-ko54';
+import { Board } from './board.js?v=20260523-ko55';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko55';
+import { Deck } from './deck.js?v=20260523-ko55';
+import { AI } from './ai.js?v=20260523-ko55';
+import { Renderer } from './renderer.js?v=20260523-ko55';
+import { InputController } from './input.js?v=20260523-ko55';
+import { SKILLS } from './skills.js?v=20260523-ko55';
+import { CONSUMABLES } from './consumables.js?v=20260523-ko55';
 import {
   RunState,
   RELICS,
@@ -26,7 +26,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260523-ko54';
+} from './progression.js?v=20260523-ko55';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -189,7 +189,7 @@ class Game {
     this.screen = id;
     // Clear gamepad focus highlights on every screen transition
     document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
-    if (this.input) { this.input.gpMenuIdx = 0; this.input.gpMenuRepeat = {}; }
+    if (this.input) { this.input.gpMenuIdx = 0; this.input.gpMenuRepeat = {}; this.input.gpPrev = {}; }
   }
 
   refreshMenu() {
@@ -2097,6 +2097,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260523-ko54').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260523-ko55').catch(() => {});
   });
 }
