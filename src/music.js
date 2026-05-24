@@ -225,7 +225,7 @@ export const PRESETS = {
   },
   battle: {
     label: '전투',
-    bpm: 142,
+    bpm: 164,
     tracks: [
       { notes: BATTLE_LEAD, type: 'square', vol: 0.17 },
       { notes: BATTLE_BASS, type: 'sawtooth', vol: 0.13 }
@@ -233,7 +233,7 @@ export const PRESETS = {
   },
   battleTense: {
     label: '전투 긴박',
-    bpm: 168,
+    bpm: 196,
     tracks: [
       { notes: TENSE_LEAD, type: 'square', vol: 0.16, detune: 4 },
       { notes: TENSE_LEAD, type: 'square', vol: 0.08, detune: -8 },
@@ -242,7 +242,7 @@ export const PRESETS = {
   },
   elite: {
     label: '엘리트',
-    bpm: 132,
+    bpm: 172,
     tracks: [
       { notes: ELITE_LEAD, type: 'square', vol: 0.17 },
       { notes: ELITE_BASS, type: 'triangle', vol: 0.16 }
