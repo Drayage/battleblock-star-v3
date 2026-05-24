@@ -1,5 +1,6 @@
 import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260524-audio4';
 import { GAMEPAD_LABELS } from './input.js?v=20260524-audio4';
+import { dataName, trCardName, trEnemyName, ui } from './i18n.js?v=20260524-audio4';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
 // 일부 글리프는 폰트상 작게 렌더돼 키워서 그린다.
@@ -7,7 +8,7 @@ const GLYPH_SCALE = { '✻': 1.2, '◷': 1.45, '⊘': 1.4, '▽': 1.3, '◈': 1.
 
 function blockTag(card) {
   const glyph = card && ABILITY_GLYPH[card.abilityId];
-  return glyph ? { glyph, name: card.name } : null;
+  return glyph ? { glyph, name: trCardName(card, card.name) } : null;
 }
 
 // Returns the effective next cards, substituting forced pieces (iPieceForce / forceCrushNext)
@@ -75,14 +76,14 @@ export class Renderer {
     ctx.fillStyle = '#d7e5ff';
     ctx.font = 'bold 18px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText(`Round ${run.round} / 20`, L.w / 2, 26);
+    ctx.fillText(`${ui('round', run.round)} / 20`, L.w / 2, 26);
     ctx.font = '12px Courier New';
     ctx.fillStyle = '#7f8ca8';
     let stackH = 0;
     for (let r = 0; r < player.rows; r++) {
       if (player.grid[r] && player.grid[r].some(c => c)) { stackH = player.rows - r; break; }
     }
-    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
+    ctx.fillText(`${trEnemyName(enemyCard, enemyCard.name)} - ${ui('gold')} ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     const curTag = blockTag(player.current?.card);
     const youLabel = L.mobile
@@ -389,7 +390,7 @@ export class Renderer {
       ctx.font = '9px Courier New';
       const gpKey = this.gpConnected ? GAMEPAD_LABELS[`skill${i}`] : null;
       const keyTag = gpKey ? ` (${gpKey})` : '';
-      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}.${keyTag} ${skill.name}`, ox + 5, slotY + 9);
+      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}.${keyTag} ${dataName('skill', skill, skill.name)}`, ox + 5, slotY + 9);
       ctx.fillText(`${skill.cost}MP`, ox + 5, slotY + 17);
       ctx.globalAlpha = 1;
     });
@@ -403,7 +404,7 @@ export class Renderer {
       ctx.fillStyle = '#ded4ff';
       const gpC = this.gpConnected ? GAMEPAD_LABELS[`consumable${i}`] : null;
       const ct = gpC ? ` (${gpC})` : '';
-      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}.${ct} ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
+      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}.${ct} ${dataName('consumable', item, item?.name || id)}`, ox + 5, oy + 289 + i * 22);
     });
   }
 

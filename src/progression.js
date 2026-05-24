@@ -332,6 +332,19 @@ const BOSS = {
   aiSkill: { mistakeRate: 0.001, noise: 0, hesitateRate: 0.08 }
 };
 
+[
+  'soft_starter', 'line_hunter', 'speed_drone', 'opener_script', 'stride_engine', 'plonk_gambler',
+  'infds_shell', 'bomb_adept', 'mana_thief', 'cleanse_warden', 'berserker', 'ward_mage',
+  'rush_drone', 'demolitionist', 'turtle_gatekeeper', 'glass_dancer', 'mirror_image'
+].forEach((key, i) => { if (ENEMIES[i]) ENEMIES[i].i18nKey = key; });
+
+[
+  'elite_ceiling', 'elite_power', 'elite_cross', 'elite_opener', 'elite_plonk', 'elite_aggro',
+  'elite_crusher', 'elite_polluter'
+].forEach((key, i) => { if (ELITES[i]) ELITES[i].i18nKey = key; });
+
+BOSS.i18nKey = 'boss_overload';
+
 export function tierLabel(tier) {
   return TIER_LABELS[tier] || TIER_LABELS[TIERS.BRONZE];
 }
@@ -551,6 +564,7 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
     type: elite ? 'elite' : 'normal',
+    i18nKey: base.i18nKey,
     name: base.name,
     tier: rewardTier,
     style: base.style,

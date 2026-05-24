@@ -5,7 +5,27 @@ import { AI } from './ai.js?v=20260524-audio4';
 import { Renderer } from './renderer.js?v=20260524-audio4';
 import { InputController } from './input.js?v=20260524-audio4';
 import { AudioManager } from './audio.js?v=20260524-audio4';
-import { t, getLang, setLang, onLangChange, applyDomTranslations, LANGS } from './i18n.js?v=20260524-audio4';
+import {
+  t,
+  getLang,
+  setLang,
+  onLangChange,
+  applyDomTranslations,
+  LANGS,
+  ui,
+  dataName,
+  dataDesc,
+  trCardName,
+  trCardDesc,
+  trEnemyName,
+  trEnemyStyle,
+  trAbilityName,
+  trAbilityDesc,
+  trChallengeLabel,
+  trChallengeCond,
+  trRewardLabel,
+  trRewardDetail
+} from './i18n.js?v=20260524-audio4';
 import { SKILLS } from './skills.js?v=20260524-audio4';
 import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
 import {
@@ -71,7 +91,7 @@ const ENEMY_ABILITIES = {
     cooldown: 18000,
     cast(g) {
       g.player.receiveGarbage(1);
-      g.flashAlert(`${g.enemyCard.name} 능력: 쓰레기 급증 +1`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('spike', '쓰레기 급증')} +1`);
     }
   },
   slowPlayer: {
@@ -81,7 +101,7 @@ const ENEMY_ABILITIES = {
     cooldown: 22000,
     cast(g) {
       g.playerSlowTimer = 3000;
-      g.flashAlert(`${g.enemyCard.name} 능력: 중력 둔화 (3초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('slowPlayer', '중력 둔화')} (3s)`);
     }
   },
   power: {
@@ -91,7 +111,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.player.receiveGarbage(2);
-      g.flashAlert(`${g.enemyCard.name} 능력: 파워 폭발 +2`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('power', '파워 폭발')} +2`);
     }
   },
   rotateLockPlayer: {
@@ -104,7 +124,7 @@ const ENEMY_ABILITIES = {
       g.applyPlayerDebuff?.('rotate', 2000);
       const target = g.player;
       g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
-      g.flashAlert(`${g.enemyCard.name} 능력: 회전 봉인 (2초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('rotateLockPlayer', '회전 봉인')} (2s)`);
     }
   },
   hyperBurst: {
@@ -114,7 +134,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.playerHyperTimer = 5000;
-      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (5초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('hyperBurst', '하이퍼 낙하')} (5s)`);
     }
   },
   polluteDeck: {
@@ -124,7 +144,7 @@ const ENEMY_ABILITIES = {
     cooldown: 26000,
     cast(g) {
       g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
-      g.flashAlert(`${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('polluteDeck', '덱 오염')}`);
     }
   },
   rushGauge: {
@@ -134,7 +154,7 @@ const ENEMY_ABILITIES = {
     cooldown: 20000,
     cast(g) {
       g.playerGaugeRushTimer = 5000;
-      g.flashAlert(`${g.enemyCard.name} 능력: 게이지 가속 (5초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('rushGauge', '게이지 가속')} (5s)`);
     }
   }
 };
@@ -188,9 +208,20 @@ class Game {
       // 동적 토글/메뉴 라벨도 갱신
       this.audio._emit?.();
       this.refreshMenu();
+      this.refreshCurrentScreenText();
     });
     this.refreshMenu();
     requestAnimationFrame(t => this.loop(t));
+  }
+
+  refreshCurrentScreenText() {
+    if (this.screen === 'mapScreen') this.showMap();
+    else if (this.screen === 'shopScreen') this.showShop();
+    else if (this.screen === 'gameScreen') {
+      document.getElementById('battleTitle').textContent = ui('round', this.run.round) + (this.run.practiceMode ? ' [Practice]' : '');
+      document.getElementById('battleMeta').textContent = trEnemyName(this.enemyCard, this.enemyCard?.name);
+      this.renderTouchSlots();
+    } else if (this.screen === 'menu') this.refreshMenu();
   }
 
   bindUi() {
@@ -203,7 +234,7 @@ class Game {
     // 페이지 진입 시 BGM이 막혀있다면 짧은 안내.
     setTimeout(() => {
       if (this.audio.isUninitialized() && this.audio.bgmEnabled) {
-        this.showToast?.('🔊 화면 클릭 시 음악 시작', 'elite');
+        this.showToast?.(t('screen.audioHint'), 'elite');
       }
     }, 800);
     // 음악·SFX 토글 버튼 (메뉴/일시정지 오버레이 공통)
@@ -309,11 +340,12 @@ class Game {
     const records = this.loadRecords();
     const best = records.reduce((top, r) => Math.max(top, r.round), 0);
     if (!records.length) {
-      el.innerHTML = '<span class="muted">기록 없음.</span>';
+      el.innerHTML = `<span class="muted">${getLang() === 'ja' ? '記録なし。' : getLang() === 'en' ? 'No records.' : '기록 없음.'}</span>`;
       return;
     }
-    el.innerHTML = `<strong>최고 기록 ${best}라운드</strong>` + records.slice(0, 5).map(r =>
-      `<span>${r.round}라운드 · ${r.gold}G · ${r.result === 'win' ? '승리' : '패배'}</span>`
+    const bestText = getLang() === 'ja' ? `最高記録 ${best}ラウンド` : getLang() === 'en' ? `Best Record: Round ${best}` : `최고 기록 ${best}라운드`;
+    el.innerHTML = `<strong>${bestText}</strong>` + records.slice(0, 5).map(r =>
+      `<span>${ui('round', r.round)} · ${r.gold}G · ${r.result === 'win' ? (getLang() === 'ja' ? '勝利' : getLang() === 'en' ? 'Win' : '승리') : (getLang() === 'ja' ? '敗北' : getLang() === 'en' ? 'Loss' : '패배')}</span>`
     ).join('');
   }
 
@@ -348,8 +380,8 @@ class Game {
     if (isRunComplete(this.run)) return this.endRun(true);
     if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
-    document.getElementById('mapTitle').textContent = `${this.run.round}라운드`;
-    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
+    document.getElementById('mapTitle').textContent = ui('round', this.run.round);
+    document.getElementById('mapMeta').textContent = `${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · ${ui('deck')} ${this.run.deckCount()}${ui('cardsUnit')}`;
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
@@ -359,16 +391,16 @@ class Game {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
-        ? `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond}<br>　└ 보상 ${enemy.challenge.reward.label}${enemy.challenge.reward.detail ? ` — ${enemy.challenge.reward.detail}` : ''}</small>`
+        ? `<small class="challenge-tag">🏆 ${ui('challenge')}: ${trChallengeCond(enemy.challenge, enemy.challenge.cond)}<br>　└ ${ui('reward')} ${trRewardLabel(enemy.challenge.reward, enemy.challenge.reward.label)}${enemy.challenge.reward.detail ? ` — ${trRewardDetail(enemy.challenge.reward, enemy.challenge.reward.detail)}` : ''}</small>`
         : '';
       const abilityDef = enemy.ability && enemy.ability !== 'overload' ? ENEMY_ABILITIES[enemy.ability] : null;
       const abilityHtml = abilityDef
-        ? `<small class="ability-tag">⚔️ 능력: [${abilityDef.label}] ${abilityDef.desc}</small>`
-        : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ 능력: [OVERLOAD] 게이지가 차면 무작위 디버프를 시전합니다.</small>` : '');
+        ? `<small class="ability-tag">⚔️ ${ui('ability')}: [${trAbilityName(enemy.ability, abilityDef.label)}] ${trAbilityDesc(enemy.ability, abilityDef.desc)}</small>`
+        : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ ${ui('ability')}: [${trAbilityName('overload', 'OVERLOAD')}] ${trAbilityDesc('overload', '게이지가 차면 무작위 디버프를 시전합니다.')}</small>` : '');
       btn.innerHTML = `
-        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${enemy.name}</strong>
+        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${trEnemyName(enemy, enemy.name)}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
-        <small>${enemy.style}</small>
+        <small>${trEnemyStyle(enemy, enemy.style)}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
         ${abilityHtml}
         ${challengeHtml}
@@ -382,11 +414,11 @@ class Game {
     this.show('eventScreen');
     const completed = this.run.round - 1;
     if (eventKey === 'starter') {
-      document.getElementById('eventTitle').textContent = '시작 스킬 선택';
-      document.getElementById('eventMeta').textContent = '런을 시작할 스킬을 선택하세요.';
+      document.getElementById('eventTitle').textContent = ui('starterTitle');
+      document.getElementById('eventMeta').textContent = ui('starterMeta');
     } else {
-      document.getElementById('eventTitle').textContent = eventKey === 'start' ? '시작 이벤트' : `${completed}라운드 이후`;
-      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 하나 선택`;
+      document.getElementById('eventTitle').textContent = eventKey === 'start' ? ui('startEvent') : ui('afterRound', completed);
+      document.getElementById('eventMeta').textContent = `${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · ${ui('oneChoice')}`;
     }
     const wrap = document.getElementById('eventChoices');
     wrap.innerHTML = '';
@@ -405,7 +437,7 @@ class Game {
     for (const choice of choices) {
       const btn = document.createElement('button');
       btn.className = `choice event ${this.tierClass(choice.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${this.kindIcon(choice)}${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${this.kindIcon(choice)}${this.eventTitle(choice)}</strong><span>${this.eventName(choice)}</span><small>${this.eventDesc(choice)}</small>`;
       try {
         this.attachEventPreview(btn, choice);
       } catch {
@@ -432,31 +464,82 @@ class Game {
   }
 
   eventName(choice) {
-    if (choice.kind === 'removeCard') return `${choice.price}G · ${CARD_LIBRARY[choice.id].name} 제거`;
-    if (choice.kind === 'removeChoice') return `${choice.price}G · 카드 선택 제거`;
-    if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}${this.setTag(choice.to)}`;
-    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
-    if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
-    if (choice.kind === 'skill') return `${SKILLS[choice.id].name} (MP ${SKILLS[choice.id].cost})`;
-    if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
-    if (choice.kind === 'gold') return `${choice.amount}G 획득`;
-    if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
-    if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${RELICS[choice.id].name}`;
-    if (choice.kind === 'gamble') return `${choice.bet}G 베팅`;
-    if (choice.kind === 'contract') return CARD_LIBRARY[choice.id].name;
-    if (choice.kind === 'setRelic') return RELICS[choice.id].name;
-    if (choice.kind === 'grantCard') return `${CARD_LIBRARY[choice.id].name} 획득`;
-    return '이벤트';
+    if (choice.kind === 'removeCard') return `${choice.price}G · ${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)} ${ui('remove')}`;
+    if (choice.kind === 'removeChoice') return `${choice.price}G · ${ui('cardPickRemove')}`;
+    if (choice.kind === 'upgradeCard') return `${trCardName(CARD_LIBRARY[choice.from], CARD_LIBRARY[choice.from]?.name)} → ${trCardName(CARD_LIBRARY[choice.to], CARD_LIBRARY[choice.to]?.name)}${this.setTag(choice.to)}`;
+    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${trCardName(CARD_LIBRARY[choice.card], CARD_LIBRARY[choice.card]?.name)} ${ui('added')}`;
+    if (choice.kind === 'consumable') return dataName('consumable', CONSUMABLES[choice.id], CONSUMABLES[choice.id]?.name);
+    if (choice.kind === 'skill') return `${dataName('skill', SKILLS[choice.id], SKILLS[choice.id]?.name)} (MP ${SKILLS[choice.id].cost})`;
+    if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost}`;
+    if (choice.kind === 'gold') return `${choice.amount}G ${ui('gain')}`;
+    if (choice.kind === 'cleanup') return ui('cleanup');
+    if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)}`;
+    if (choice.kind === 'gamble') return `${choice.bet}G ${ui('bet')}`;
+    if (choice.kind === 'contract') return trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name);
+    if (choice.kind === 'setRelic') return dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name);
+    if (choice.kind === 'grantCard') return `${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)} ${ui('obtained')}`;
+    return ui('event');
+  }
+
+  eventTitle(choice) {
+    if (choice.kind === 'starterSkill') return dataName('skill', SKILLS[choice.id], choice.title);
+    if (choice.kind === 'skill') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'スキル教官' : 'Skill Trainer');
+    if (choice.kind === 'consumable') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '補給キャッシュ' : 'Supply Cache');
+    if (choice.kind === 'relicDig') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '遺物発掘' : 'Relic Dig');
+    if (choice.kind === 'setRelic') return getLang() === 'ko' ? choice.title : `${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)} ${getLang() === 'ja' ? 'セット完成' : 'Set Complete'}`;
+    if (choice.kind === 'upgradeCard') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'ブロック注入' : 'Block Injection');
+    if (choice.kind === 'removeCard') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'デッキ手術' : 'Deck Surgery');
+    if (choice.kind === 'removeChoice') return ui('cardPickRemove');
+    if (choice.kind === 'hpForCurse') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '強化フィールド' : 'Reinforced Field');
+    if (choice.kind === 'cleanup') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'フィールド清掃' : 'Field Cleanup');
+    if (choice.kind === 'gold') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '余分なゴールド' : 'Extra Gold');
+    if (choice.kind === 'contract') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '契約' : 'Contract');
+    if (choice.kind === 'grantCard') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '捨てられた重量機' : 'Abandoned Crusher');
+    if (choice.kind === 'gamble') return getLang() === 'ko' ? choice.title : (choice.gtier === 'gold' ? (getLang() === 'ja' ? 'ゴールド賭博' : 'Gold Gamble') : choice.gtier === 'silver' ? (getLang() === 'ja' ? 'シルバー賭博' : 'Silver Gamble') : (getLang() === 'ja' ? '賭博' : 'Gamble'));
+    return choice.title;
+  }
+
+  eventDesc(choice) {
+    if (getLang() === 'ko') return choice.desc;
+    if (choice.kind === 'starterSkill') return dataDesc('skill', SKILLS[choice.id], choice.desc);
+    if (choice.kind === 'removeCard') return getLang() === 'ja'
+      ? `デッキから${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}を1枚除去します。`
+      : `Remove 1 ${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)} from your deck.`;
+    if (choice.kind === 'removeChoice') return getLang() === 'ja' ? 'デッキから好きなカードを1枚選んで除去します。' : 'Choose 1 card from your deck and remove it.';
+    if (choice.kind === 'upgradeCard') return `${trCardName(CARD_LIBRARY[choice.from], CARD_LIBRARY[choice.from]?.name)} → ${trCardName(CARD_LIBRARY[choice.to], CARD_LIBRARY[choice.to]?.name)} · ${ui('specialEffect')}: ${trCardDesc(CARD_LIBRARY[choice.to], choice.desc)}`;
+    if (choice.kind === 'skill') return `${dataName('skill', SKILLS[choice.id], SKILLS[choice.id]?.name)} (MP ${SKILLS[choice.id].cost}): ${dataDesc('skill', SKILLS[choice.id], SKILLS[choice.id]?.desc)} ${ui('skillFull')}`;
+    if (choice.kind === 'hpForCurse') return getLang() === 'ja'
+      ? `最大HP行が増えますが、${trCardName(CARD_LIBRARY[choice.card], CARD_LIBRARY[choice.card]?.name)}がデッキに追加されます。`
+      : `Max HP rows increase, but ${trCardName(CARD_LIBRARY[choice.card], CARD_LIBRARY[choice.card]?.name)} is added to your deck.`;
+    if (choice.kind === 'consumable') return `${dataName('consumable', CONSUMABLES[choice.id], CONSUMABLES[choice.id]?.name)}: ${dataDesc('consumable', CONSUMABLES[choice.id], CONSUMABLES[choice.id]?.desc)} ${ui('itemFull')}`;
+    if (choice.kind === 'relicDig') return `${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)}: ${dataDesc('relic', RELICS[choice.id], RELICS[choice.id]?.desc)} ${ui('spendRows', choice.amount)}`;
+    if (choice.kind === 'contract') return `${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}: ${trCardDesc(CARD_LIBRARY[choice.id], choice.desc)} ${getLang() === 'ja' ? 'デッキに永続追加されます。' : 'Permanently added to your deck.'}`;
+    if (choice.kind === 'grantCard') return `${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}: ${trCardDesc(CARD_LIBRARY[choice.id], choice.desc)}`;
+    if (choice.kind === 'cleanup') return getLang() === 'ja' ? '持ち越しフィールドのゴミ行を最大5行除去し、残りのゴミ行を下へ整列します。' : 'Remove up to 5 carried garbage rows and align the remaining garbage rows downward.';
+    if (choice.kind === 'gold') return getLang() === 'ja' ? '少量のゴールドを受け取ります。' : 'Take a small amount of gold.';
+    if (choice.kind === 'setRelic') return `${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)}: ${dataDesc('relic', RELICS[choice.id], RELICS[choice.id]?.desc)}`;
+    if (choice.kind === 'gamble') return getLang() === 'ja'
+      ? `${choice.bet}ゴールドを賭けます。成功率${Math.round(choice.chance * 100)}%で${choice.reward}ゴールドを受け取り、失敗すると失います。`
+      : `Bet ${choice.bet} gold. ${Math.round(choice.chance * 100)}% chance to win ${choice.reward} gold; lose it on failure.`;
+    return choice.desc;
   }
 
   kindLabel(kind) {
     const map = {
-      card: '블록', grantCard: '블록', contract: '블록', upgradeCard: '블록',
-      skill: '스킬', starterSkill: '스킬',
-      consumable: '소모품',
-      relic: '유물', relicDig: '유물', setRelic: '유물',
+      card: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      grantCard: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      contract: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      upgradeCard: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      skill: getLang() === 'ja' ? 'スキル' : getLang() === 'en' ? 'Skill' : '스킬',
+      starterSkill: getLang() === 'ja' ? 'スキル' : getLang() === 'en' ? 'Skill' : '스킬',
+      consumable: getLang() === 'ja' ? '消耗品' : getLang() === 'en' ? 'Item' : '소모품',
+      relic: getLang() === 'ja' ? '遺物' : getLang() === 'en' ? 'Relic' : '유물',
+      relicDig: getLang() === 'ja' ? '遺物' : getLang() === 'en' ? 'Relic' : '유물',
+      setRelic: getLang() === 'ja' ? '遺物' : getLang() === 'en' ? 'Relic' : '유물',
       hp: 'HP', hpForCurse: 'HP',
-      removeCard: '제거', removeChoice: '제거', gamble: '도박', cleanup: '정리', gold: '골드'
+      removeCard: ui('remove'), removeChoice: ui('remove'), gamble: getLang() === 'ja' ? '賭博' : getLang() === 'en' ? 'Gamble' : '도박',
+      cleanup: getLang() === 'ja' ? '整理' : getLang() === 'en' ? 'Clean' : '정리',
+      gold: ui('gold')
     };
     return map[kind] ? `<em class="kind-tag">[${map[kind]}]</em> ` : '';
   }
@@ -634,8 +717,8 @@ class Game {
 
   showShop() {
     this.show('shopScreen');
-    document.getElementById('leaveShopBtn').textContent = '다음 전투';
-    document.getElementById('shopGold').textContent = `골드 ${this.run.gold}`;
+    document.getElementById('leaveShopBtn').textContent = ui('nextBattle');
+    document.getElementById('shopGold').textContent = `${ui('gold')} ${this.run.gold}`;
     const wrap = document.getElementById('shopItems');
     wrap.innerHTML = '';
     const shopKey = String(this.run.round);
@@ -653,7 +736,7 @@ class Game {
       slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${this.shopItemTitle(item)}</strong><span>${soldOut ? ui('soldOut') : `${isDeal ? ui('deal') : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
@@ -663,7 +746,7 @@ class Game {
       });
       const lockBtn = document.createElement('button');
       lockBtn.className = 'shop-lock';
-      lockBtn.textContent = locked.has(key) ? '잠금됨' : '잠금';
+      lockBtn.textContent = locked.has(key) ? ui('locked') : ui('lock');
       lockBtn.disabled = soldOut;
       lockBtn.addEventListener('click', () => { this.audio.playSfx('click'); this.toggleShopLock(item); });
       slot.appendChild(btn);
@@ -673,7 +756,7 @@ class Game {
     const rerollCost = this.shopRerollCost();
     const rerollBtn = document.createElement('button');
     rerollBtn.className = 'choice shop';
-    rerollBtn.innerHTML = `<strong>리롤</strong><span>${rerollCost} Gold</span><small>상점 물건을 새로 뽑습니다. 리롤할 때마다 비용이 10G 증가합니다.</small>`;
+    rerollBtn.innerHTML = `<strong>${ui('reroll')}</strong><span>${rerollCost} Gold</span><small>${ui('rerollDesc')}</small>`;
     rerollBtn.disabled = this.run.gold < rerollCost;
     rerollBtn.addEventListener('click', () => {
       if (this.run.gold < rerollCost) return;
@@ -682,6 +765,17 @@ class Game {
     });
     wrap.appendChild(rerollBtn);
     this.input?.resetMenuFocus();
+  }
+
+  shopItemTitle(item) {
+    if (getLang() === 'ko') return item.title;
+    if (item.kind === 'card') return `${ui('buy')} ${trCardName(CARD_LIBRARY[item.id], CARD_LIBRARY[item.id]?.name)}`;
+    if (item.kind === 'skill') return `${ui('skills')}: ${dataName('skill', SKILLS[item.id], SKILLS[item.id]?.name)} (MP ${SKILLS[item.id].cost})`;
+    if (item.kind === 'relic') return `${ui('relics')}: ${dataName('relic', RELICS[item.id], RELICS[item.id]?.name)}`;
+    if (item.kind === 'consumable') return `${ui('consumables')}: ${dataName('consumable', CONSUMABLES[item.id], CONSUMABLES[item.id]?.name)}`;
+    if (item.kind === 'removeChoice') return ui('cardPickRemove');
+    if (item.kind === 'hp') return `Max HP +${item.amount}`;
+    return item.title;
   }
 
   effectivePrice(item, isDeal = false) {
@@ -733,15 +827,20 @@ class Game {
       ov = document.createElement('div');
       ov.id = 'deckModal';
       ov.innerHTML = '<div class="deck-modal-inner">'
-        + '<button class="ghost wide" data-close="1">닫기</button>'
-        + '<div class="deck-section"><h3>덱</h3><div id="mDeckList" class="deck-list"></div></div>'
-        + '<div class="deck-section"><h3>스킬</h3><div id="mSkillList" class="loadout-list"></div></div>'
-        + '<div class="deck-section"><h3>소모품</h3><div id="mConsumableList" class="loadout-list"></div></div>'
-        + '<div class="deck-section"><h3>유물</h3><div id="mRelicList" class="loadout-list"></div></div>'
+        + '<button class="ghost wide" data-close="1"></button>'
+        + '<div class="deck-section"><h3 data-section="deck"></h3><div id="mDeckList" class="deck-list"></div></div>'
+        + '<div class="deck-section"><h3 data-section="skills"></h3><div id="mSkillList" class="loadout-list"></div></div>'
+        + '<div class="deck-section"><h3 data-section="consumables"></h3><div id="mConsumableList" class="loadout-list"></div></div>'
+        + '<div class="deck-section"><h3 data-section="relics"></h3><div id="mRelicList" class="loadout-list"></div></div>'
         + '</div>';
       document.body.appendChild(ov);
       ov.addEventListener('click', e => { if (e.target === ov || e.target.dataset.close) ov.classList.remove('active'); });
     }
+    ov.querySelector('[data-close]').textContent = ui('close');
+    ov.querySelector('[data-section="deck"]').textContent = ui('deck');
+    ov.querySelector('[data-section="skills"]').textContent = ui('skills');
+    ov.querySelector('[data-section="consumables"]').textContent = ui('consumables');
+    ov.querySelector('[data-section="relics"]').textContent = ui('relics');
     this.renderDeckSections({
       deck: ov.querySelector('#mDeckList'),
       skill: ov.querySelector('#mSkillList'),
@@ -759,7 +858,11 @@ class Game {
       for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
       deck.innerHTML = '';
       // 모양별 요약 (모든 shapeId 표시)
-      const SHAPE_LABEL = { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'십자', HEAVY5:'중량', WIDE6:'6칸', HOOK5:'훅', PENTA_T:'펜T' };
+      const SHAPE_LABEL = getLang() === 'ja'
+        ? { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'クロス', HEAVY5:'重量', WIDE6:'6セル', HOOK5:'フック', PENTA_T:'ペンT' }
+        : getLang() === 'en'
+          ? { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'Cross', HEAVY5:'Heavy', WIDE6:'6-cell', HOOK5:'Hook', PENTA_T:'PenT' }
+          : { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'십자', HEAVY5:'중량', WIDE6:'6칸', HOOK5:'훅', PENTA_T:'펜T' };
       const SHAPE_ORDER = ['I','J','L','O','S','T','Z','CROSS5','HEAVY5','WIDE6','HOOK5','PENTA_T'];
       const shapeCounts = new Map();
       for (const [id, cnt] of counts) {
@@ -773,12 +876,12 @@ class Game {
         summary.textContent = parts.join('  ');
         deck.appendChild(summary);
       }
-      [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
+      [...counts.entries()].sort((a, b) => trCardName(CARD_LIBRARY[a[0]], CARD_LIBRARY[a[0]].name).localeCompare(trCardName(CARD_LIBRARY[b[0]], CARD_LIBRARY[b[0]].name))).forEach(([id, count]) => {
         const card = CARD_LIBRARY[id];
         const item = document.createElement('div');
         item.className = `deck-card ${this.tierClass(card.tier)}`;
         item.appendChild(this.blockPreview(card, 7));
-        item.insertAdjacentHTML('beforeend', `<span>${card.name}${this.setTag(id)}</span><strong>x${count}</strong>`);
+        item.insertAdjacentHTML('beforeend', `<span>${trCardName(card, card.name)}${this.setTag(id)}</span><strong>x${count}</strong>`);
         deck.appendChild(item);
       });
     }
@@ -792,40 +895,40 @@ class Game {
     relicWrap.innerHTML = '';
 
     if (!this.run.equippedSkills.length) {
-      skillWrap.innerHTML = '<span class="muted">장착된 스킬 없음.</span>';
+      skillWrap.innerHTML = `<span class="muted">${ui('noneSkills')}</span>`;
     } else {
       this.run.equippedSkills.forEach((id, index) => {
         const skill = SKILLS[id];
         if (!skill) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(skill.tier)}`;
-        item.innerHTML = `<span class="item-chip">${skill.icon || index + 1}</span><span><strong>${index + 1}. ${skill.name}</strong><small>${skill.desc}</small><small class="cost">${skill.cost} MP</small></span>`;
+        item.innerHTML = `<span class="item-chip">${skill.icon || index + 1}</span><span><strong>${index + 1}. ${dataName('skill', skill, skill.name)}</strong><small>${dataDesc('skill', skill, skill.desc)}</small><small class="cost">${skill.cost} MP</small></span>`;
         skillWrap.appendChild(item);
       });
     }
 
     if (!this.run.consumables.length) {
-      consumableWrap.innerHTML = '<span class="muted">보유 소모품 없음.</span>';
+      consumableWrap.innerHTML = `<span class="muted">${ui('noneConsumables')}</span>`;
     } else {
       this.run.consumables.forEach((id, index) => {
         const itemDef = CONSUMABLES[id];
         if (!itemDef) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(itemDef.tier)}`;
-        item.innerHTML = `<span class="item-chip">${itemDef.icon || itemDef.short}</span><span><strong>${index + 4}. ${itemDef.name}</strong><small>${itemDef.desc}</small></span>`;
+        item.innerHTML = `<span class="item-chip">${itemDef.icon || itemDef.short}</span><span><strong>${index + 4}. ${dataName('consumable', itemDef, itemDef.name)}</strong><small>${dataDesc('consumable', itemDef, itemDef.desc)}</small></span>`;
         consumableWrap.appendChild(item);
       });
     }
 
     if (!this.run.relics.length) {
-      relicWrap.innerHTML = '<span class="muted">보유 유물 없음.</span>';
+      relicWrap.innerHTML = `<span class="muted">${ui('noneRelics')}</span>`;
     } else {
       this.run.relics.forEach(id => {
         const relic = RELICS[id];
         if (!relic) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(relic.tier)}`;
-        item.innerHTML = `<span class="item-chip">${relic.icon || 'R'}</span><span><strong>${relic.name}</strong><small>${relic.desc}</small></span>`;
+        item.innerHTML = `<span class="item-chip">${relic.icon || 'R'}</span><span><strong>${dataName('relic', relic, relic.name)}</strong><small>${dataDesc('relic', relic, relic.desc)}</small></span>`;
         relicWrap.appendChild(item);
       });
     }
@@ -834,13 +937,13 @@ class Game {
   itemDesc(item) {
     if (item.kind === 'card') {
       const card = CARD_LIBRARY[item.id];
-      return `${card.name}${this.setTag(item.id)} (${card.cellCount}칸): ${CARD_DESCRIPTIONS[item.id] || '이 블록을 덱에 추가합니다.'}`;
+      return `${trCardName(card, card.name)}${this.setTag(item.id)} (${card.cellCount}${getLang() === 'ja' ? 'セル' : getLang() === 'en' ? ' cells' : '칸'}): ${trCardDesc(card, CARD_DESCRIPTIONS[item.id] || ui('fallbackCardDesc'))}`;
     }
-    if (item.kind === 'skill') return SKILLS[item.id].desc;
-    if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
-    if (item.kind === 'relic') return RELICS[item.id].desc;
-    if (item.kind === 'removeChoice') return '덱에서 원하는 카드 1장을 선택해 제거합니다.';
-    return `생존 공간 ${item.amount}줄 추가.`;
+    if (item.kind === 'skill') return dataDesc('skill', SKILLS[item.id], SKILLS[item.id].desc);
+    if (item.kind === 'consumable') return `${dataName('consumable', CONSUMABLES[item.id], CONSUMABLES[item.id].name)}: ${dataDesc('consumable', CONSUMABLES[item.id], CONSUMABLES[item.id].desc)}`;
+    if (item.kind === 'relic') return dataDesc('relic', RELICS[item.id], RELICS[item.id].desc);
+    if (item.kind === 'removeChoice') return getLang() === 'ja' ? 'デッキから好きなカードを1枚選んで除去します。' : getLang() === 'en' ? 'Choose 1 card from your deck and remove it.' : '덱에서 원하는 카드 1장을 선택해 제거합니다.';
+    return getLang() === 'ja' ? `生存空間を${item.amount}行追加。` : getLang() === 'en' ? `Add ${item.amount} rows of survival space.` : `생존 공간 ${item.amount}줄 추가.`;
   }
 
   attachItemPreview(node, item) {
@@ -929,12 +1032,12 @@ class Game {
     const counts = new Map();
     for (const id of allCards) counts.set(id, (counts.get(id) || 0) + 1);
     this.showSlotPicker({
-      title: '카드 제거',
-      desc: `${price}G를 지불하고 덱에서 카드 1장을 제거합니다.`,
+      title: ui('removeCardTitle'),
+      desc: ui('removeCardDesc', price),
       slots: cards,
-      labels: id => { const cnt = counts.get(id) || 1; const name = CARD_LIBRARY[id]?.name || id; return cnt > 1 ? `${name} x${cnt}` : name; },
+      labels: id => { const cnt = counts.get(id) || 1; const name = trCardName(CARD_LIBRARY[id], CARD_LIBRARY[id]?.name || id); return cnt > 1 ? `${name} x${cnt}` : name; },
       preview: id => this.blockPreview(CARD_LIBRARY[id], 8),
-      slotLabel: '카드',
+      slotLabel: getLang() === 'ja' ? 'カード' : getLang() === 'en' ? 'Card' : '카드',
       onPick: index => {
         const id = cards[index];
         if (!id || this.run.gold < price) return skipped(false);
@@ -957,10 +1060,10 @@ class Game {
     };
     if (this.run.equippedSkills.length < 3) return add(null);
     this.showSlotPicker({
-      title: `${SKILLS[id].name} 장착`,
-      desc: SKILLS[id].desc,
+      title: `${dataName('skill', SKILLS[id], SKILLS[id].name)} ${ui('equip')}`,
+      desc: dataDesc('skill', SKILLS[id], SKILLS[id].desc),
       slots: this.run.equippedSkills,
-      labels: slotId => SKILLS[slotId]?.name || '비어있음',
+      labels: slotId => dataName('skill', SKILLS[slotId], SKILLS[slotId]?.name) || ui('empty'),
       onPick: add,
       onSkip: () => skipped(false)
     });
@@ -974,16 +1077,16 @@ class Game {
     };
     if (this.run.consumables.length < 3) return add(null);
     this.showSlotPicker({
-      title: `${CONSUMABLES[id].name} 획득`,
-      desc: CONSUMABLES[id].desc,
+      title: `${dataName('consumable', CONSUMABLES[id], CONSUMABLES[id].name)} ${ui('acquire')}`,
+      desc: dataDesc('consumable', CONSUMABLES[id], CONSUMABLES[id].desc),
       slots: this.run.consumables,
-      labels: slotId => CONSUMABLES[slotId]?.name || '비어있음',
+      labels: slotId => dataName('consumable', CONSUMABLES[slotId], CONSUMABLES[slotId]?.name) || ui('empty'),
       onPick: add,
       onSkip: () => skipped(false)
     });
   }
 
-  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = '슬롯', preview = null }) {
+  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = ui('slot'), preview = null }) {
     let overlay = document.getElementById('slotPicker');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -1009,7 +1112,7 @@ class Game {
       });
       options.appendChild(btn);
     });
-    overlay.querySelector('[data-skip]').textContent = '건너뛰기';
+    overlay.querySelector('[data-skip]').textContent = ui('skip');
     overlay.querySelector('[data-skip]').onclick = () => {
       overlay.classList.remove('active');
       this.input?.resetMenuFocus();
@@ -1095,9 +1198,11 @@ class Game {
     this.paused = false;
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
-    this.message = '전투 시작';
-    document.getElementById('battleTitle').textContent = `${this.run.round}라운드${this.run.practiceMode ? ' [연습]' : ''}`;
-    document.getElementById('battleMeta').textContent = enemyCard.name;
+    this.message = getLang() === 'ja' ? '戦闘開始' : getLang() === 'en' ? 'Battle start' : '전투 시작';
+    document.getElementById('battleTitle').textContent = `${ui('round', this.run.round)}${this.run.practiceMode ? ' [Practice]' : ''}`;
+    document.getElementById('battleMeta').textContent = trEnemyName(enemyCard, enemyCard.name);
+    document.getElementById('pauseBtn').textContent = t('screen.pause');
+    document.getElementById('forfeitBtn').textContent = t('screen.forfeit');
     this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
     this.show('gameScreen');
@@ -1112,7 +1217,7 @@ class Game {
       const btn = document.createElement('button');
       btn.dataset.skillId = id;
       btn.dataset.skillIdx = i;
-      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${skill.name}<b class="key-label"></b></span><small>${skill.cost}MP</small>`;
+      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${dataName('skill', skill, skill.name)}<b class="key-label"></b></span><small>${skill.cost}MP</small>`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useSkill(i);
@@ -1190,19 +1295,19 @@ class Game {
     const skill = SKILLS[id];
     if (!skill || this.player.mp < skill.cost) return;
     if ((this.skillCooldowns[id] || 0) > 0) {
-      this.message = `${skill.name} 쿨타임`;
+      this.message = getLang() === 'ja' ? `${dataName('skill', skill, skill.name)} クールタイム` : getLang() === 'en' ? `${dataName('skill', skill, skill.name)} cooldown` : `${skill.name} 쿨타임`;
       return;
     }
     const ok = skill.activate({ game: this, player: this.player, enemy: this.enemy, resolve: (result, attacker) => this.resolve(result, attacker) }) !== false;
     if (!ok) {
-      this.message = `${skill.name} 실패`;
+      this.message = getLang() === 'ja' ? `${dataName('skill', skill, skill.name)} 失敗` : getLang() === 'en' ? `${dataName('skill', skill, skill.name)} failed` : `${skill.name} 실패`;
       return;
     }
     this.battleUsedSkill = true;
     this.player.mp -= skill.cost;
     const cdFactor = this.run.relics.includes('set_manawell') ? 0.5 : 1;
     this.skillCooldowns[id] = (skill.cooldown || 0) * cdFactor;
-    this.message = `${skill.name} 발동`;
+    this.message = getLang() === 'ja' ? `${dataName('skill', skill, skill.name)} 発動` : getLang() === 'en' ? `${dataName('skill', skill, skill.name)} activated` : `${skill.name} 발동`;
     this.audio.playSfx(SKILL_SFX[id] || 'strike');
   }
 
@@ -1233,7 +1338,7 @@ class Game {
     if (attacker === this.player && result.cleared > 0 && !this.battleFirstClearUsed && this.run.relics.includes('first_strike')) {
       mult *= 3;
       this.battleFirstClearUsed = true;
-      this.message = '첫수 보너스!';
+      this.message = getLang() === 'ja' ? '初手ボーナス!' : getLang() === 'en' ? 'First-move bonus!' : '첫수 보너스!';
     }
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('first_aid')) {
       const gRows = this.player.grid.filter(row => row.some(c => c?.traits?.includes('garbage'))).length;
@@ -1263,7 +1368,7 @@ class Game {
     }
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.instant?.dispelEnemy && attacker === this.player) this.dispelEnemyAbilities();
-    if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
+    if (result.comboBreak && attacker === this.player) this.message = getLang() === 'ja' ? `${result.comboBreak}コンボ終了` : getLang() === 'en' ? `${result.comboBreak} combo ended` : `${result.comboBreak}콤보 종료`;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35);
     }
@@ -1334,7 +1439,7 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.bossOverloadCharge = 0;
     this.enemyAbilitySuppressTimer = 8000;
-    this.flashAlert('적 특수능력 해제!');
+    this.flashAlert(getLang() === 'ja' ? '敵の特殊能力を解除!' : getLang() === 'en' ? 'Enemy special ability dispelled!' : '적 특수능력 해제!');
   }
 
   playerSurvivesLethal() {
@@ -1343,7 +1448,7 @@ class Game {
     this.player.defeated = false;
     if (!this.player.current) this.player.spawn();
     this.run.relics = this.run.relics.filter(r => r !== 'phoenix_feather');
-    this.message = '불사조 깃털 발동! 한 번 버팁니다';
+    this.message = getLang() === 'ja' ? '不死鳥の羽発動! 一度耐えます' : getLang() === 'en' ? 'Phoenix Feather activated! You survive once' : '불사조 깃털 발동! 한 번 버팁니다';
     return true;
   }
 
@@ -1352,7 +1457,9 @@ class Game {
     this.battleEndResult = result;
     this.clearBattleTimeouts();
     this.battleEndDelay = result === 'win' ? GAME_TIMING.BATTLE_WIN_DELAY : GAME_TIMING.BATTLE_LOSS_DELAY;
-    this.message = result === 'win' ? '적 처치' : '전투 패배';
+    this.message = result === 'win'
+      ? (getLang() === 'ja' ? '敵撃破' : getLang() === 'en' ? 'Enemy defeated' : '적 처치')
+      : (getLang() === 'ja' ? '戦闘敗北' : getLang() === 'en' ? 'Battle lost' : '전투 패배');
     this.input.vibrate(result === 'win' ? 'win' : 'hurt');
     this.audio.playSfx(result === 'win' ? 'victory' : 'defeat');
     this.autoSave();
@@ -1379,12 +1486,12 @@ class Game {
       if (st && st.ok) {
         this.challengeRewarded = true;
         const rewardDesc = this.grantChallengeReward(this.activeChallenge.reward);
-        this.pendingChallengeText = ` · 도전 성공! ${rewardDesc}`;
-        this.showToast(`🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
+        this.pendingChallengeText = getLang() === 'ja' ? ` · 挑戦成功! ${rewardDesc}` : getLang() === 'en' ? ` · Challenge complete! ${rewardDesc}` : ` · 도전 성공! ${rewardDesc}`;
+        this.showToast(getLang() === 'ja' ? `🏆 挑戦成功!  ${rewardDesc}` : getLang() === 'en' ? `🏆 Challenge complete!  ${rewardDesc}` : `🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
         this.audio.playSfx('challengeWin');
       } else {
-        this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
-        this.showToast('❌ 도전 실패 — 보너스 없음', 'challenge-fail');
+        this.pendingChallengeText = getLang() === 'ja' ? ' · 挑戦失敗(ボーナスなし)' : getLang() === 'en' ? ' · Challenge failed (no bonus)' : ' · 도전 실패(보너스 없음)';
+        this.showToast(getLang() === 'ja' ? '❌ 挑戦失敗 — ボーナスなし' : getLang() === 'en' ? '❌ Challenge failed — no bonus' : '❌ 도전 실패 — 보너스 없음', 'challenge-fail');
         this.audio.playSfx('challengeFail');
       }
     }
@@ -1393,7 +1500,11 @@ class Game {
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     if (relicId) {
       const r = RELICS[relicId];
-      this.showToast(`⚔️ 엘리트 격파!  ${r.icon ?? ''}${r.name} 유물 획득`, 'elite');
+      this.showToast(getLang() === 'ja'
+        ? `⚔️ エリート撃破!  ${r.icon ?? ''}${dataName('relic', r, r.name)} 遺物獲得`
+        : getLang() === 'en'
+          ? `⚔️ Elite defeated!  ${r.icon ?? ''}${dataName('relic', r, r.name)} relic obtained`
+          : `⚔️ 엘리트 격파!  ${r.icon ?? ''}${r.name} 유물 획득`, 'elite');
     }
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
@@ -1404,9 +1515,9 @@ class Game {
 
   showRewards(rewards, grantedRelic = null) {
     this.show('mapScreen');
-    document.getElementById('mapTitle').textContent = `${this.run.round}라운드 클리어`;
-    const relicText = grantedRelic ? ` · 유물 획득: ${RELICS[grantedRelic].name}` : '';
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText}${this.pendingChallengeText || ''} · 보상 선택`;
+    document.getElementById('mapTitle').textContent = ui('roundClear', this.run.round);
+    const relicText = grantedRelic ? ` · ${ui('relics')} ${ui('obtained')}: ${dataName('relic', RELICS[grantedRelic], RELICS[grantedRelic].name)}` : '';
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText}${this.pendingChallengeText || ''} · ${ui('reward')} ${ui('chooseOne')}`;
     document.getElementById('enemyChoices').innerHTML = '';
     this.renderDeckViewer();
     const panel = document.getElementById('rewardPanel');
@@ -1417,7 +1528,7 @@ class Game {
     rewards.forEach(reward => {
       const btn = document.createElement('button');
       btn.className = `choice reward ${this.tierClass(reward.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${this.rewardTitle(reward)}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         this.audio.playSfx('select');
@@ -1433,11 +1544,18 @@ class Game {
   }
 
   rewardName(reward) {
-    if (reward.kind === 'card') return CARD_LIBRARY[reward.id].name;
-    if (reward.kind === 'skill') return `${SKILLS[reward.id].name} (MP ${SKILLS[reward.id].cost})`;
-    if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
-    if (reward.kind === 'relic') return RELICS[reward.id].name;
-    return `HP +${reward.amount}줄`;
+    if (reward.kind === 'card') return trCardName(CARD_LIBRARY[reward.id], CARD_LIBRARY[reward.id].name);
+    if (reward.kind === 'skill') return `${dataName('skill', SKILLS[reward.id], SKILLS[reward.id].name)} (MP ${SKILLS[reward.id].cost})`;
+    if (reward.kind === 'consumable') return dataName('consumable', CONSUMABLES[reward.id], CONSUMABLES[reward.id].name);
+    if (reward.kind === 'relic') return dataName('relic', RELICS[reward.id], RELICS[reward.id].name);
+    return ui('hpRows', reward.amount);
+  }
+
+  rewardTitle(reward) {
+    if (getLang() === 'ko') return reward.title;
+    if (reward.kind === 'card') return ui('blockReward');
+    if (reward.kind === 'hp') return ui('hpRows', reward.amount);
+    return ui('reward');
   }
 
   normalizePersistentGrid() {
@@ -1483,7 +1601,7 @@ class Game {
     document.getElementById('endScreen').classList.toggle('run-clear', win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
-    document.getElementById('endSummary').textContent = `${Math.min(this.run.round, 20)}라운드 · 골드 ${this.run.gold} · HP ${this.run.hpRows}줄`;
+    document.getElementById('endSummary').textContent = `${ui('round', Math.min(this.run.round, 20))} · ${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' rows' : '줄'}`;
   }
 
   saveRecord(win) {
@@ -1674,9 +1792,9 @@ class Game {
         this.enemyDebuffs = { ...(state.battle.enemyDebuffs || {}) };
         this.syncTimedLocks();
         this.paused = state.battle.paused ?? true;
-        this.message = state.battle.message || '불러옴';
-        document.getElementById('battleTitle').textContent = `${this.run.round}라운드`;
-        document.getElementById('battleMeta').textContent = this.enemyCard?.name || 'Enemy';
+        this.message = state.battle.message || (getLang() === 'ja' ? '読み込み済み' : getLang() === 'en' ? 'Loaded' : '불러옴');
+        document.getElementById('battleTitle').textContent = ui('round', this.run.round);
+        document.getElementById('battleMeta').textContent = trEnemyName(this.enemyCard, this.enemyCard?.name || 'Enemy');
         this.renderTouchSlots();
         this.renderer.resize(this.player.rows, this.enemy.rows);
         this.show('gameScreen');
@@ -1718,9 +1836,9 @@ class Game {
   togglePause() {
     if (!this.inBattle() || this.battleEndResult) return;
     this.paused = !this.paused;
-    document.getElementById('pauseBtn').textContent = this.paused ? '재개' : '일시정지';
+    document.getElementById('pauseBtn').textContent = this.paused ? t('screen.resume') : t('screen.pause');
     document.getElementById('pauseOverlay')?.classList.toggle('hidden', !this.paused);
-    this.message = this.paused ? '일시정지' : '재개';
+    this.message = this.paused ? t('screen.pauseTitle') : t('screen.resume');
     this.audio.playSfx(this.paused ? 'pause' : 'resume');
     this.autoSave();
   }
@@ -1985,25 +2103,28 @@ class Game {
     for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) if (k !== 'rotate') enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
     // 활성 패시브 유물(눈에 잘 안 보이는 효과)을 확인할 수 있게 표시. 디버프 뒤에 붙여 우선순위 양보.
     const relics = this.run?.relics || [];
-    if (relics.includes('set_goldhand')) player.push(`금화+${Math.round(Math.min(1, this.run.gold / 200) * 100)}%`);
-    if (relics.includes('set_overload')) player.push('과부하');
-    if (relics.includes('set_abszero') && this.enemySlowTimer > 0) player.push('절대영도');
-    if (relics.includes('set_sanctuary')) player.push('성소');
+    if (relics.includes('set_goldhand')) player.push(`${getLang() === 'ja' ? '金貨' : getLang() === 'en' ? 'GOLD' : '금화'}+${Math.round(Math.min(1, this.run.gold / 200) * 100)}%`);
+    if (relics.includes('set_overload')) player.push(getLang() === 'ja' ? '過負荷' : getLang() === 'en' ? 'OVERLOAD' : '과부하');
+    if (relics.includes('set_abszero') && this.enemySlowTimer > 0) player.push(getLang() === 'ja' ? '絶対零度' : getLang() === 'en' ? 'ABS ZERO' : '절대영도');
+    if (relics.includes('set_sanctuary')) player.push(getLang() === 'ja' ? '聖域' : getLang() === 'en' ? 'SANCTUARY' : '성소');
     const ch = this.challengeStatus();
-    if (ch) player.unshift(`도전 ${ch.text}`);
+    if (ch) player.unshift(`${ui('challenge')} ${ch.text}`);
     return { player, enemy };
   }
 
   challengeStatus() {
     const c = this.activeChallenge;
     if (!c) return null;
-    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: `${c.label}(${this.battleUsedHold ? '실패' : '유지'})` };
-    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
-    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
-    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, text: `${c.label}(${this.battleUsedCounterClockwise ? '실패' : '유지'})` };
-    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, text: `${c.label}(${this.battleUsedClockwise ? '실패' : '유지'})` };
-    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
-    if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
+    const fail = getLang() === 'ja' ? '失敗' : getLang() === 'en' ? 'fail' : '실패';
+    const keep = getLang() === 'ja' ? '維持' : getLang() === 'en' ? 'ok' : '유지';
+    const label = trChallengeLabel(c, c.label);
+    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: `${label}(${this.battleUsedHold ? fail : keep})` };
+    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${label}(${this.battleUsedSkill ? fail : keep})` };
+    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${label}(${this.battleUsedHardDrop ? fail : keep})` };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, text: `${label}(${this.battleUsedCounterClockwise ? fail : keep})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, text: `${label}(${this.battleUsedClockwise ? fail : keep})` };
+    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${getLang() === 'ja' ? 'タイムアタック' : getLang() === 'en' ? 'Time Attack' : c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
+    if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${getLang() === 'ja' ? 'ラインラッシュ' : getLang() === 'en' ? 'Line Rush' : c.label} ${this.battlePlayerClearedLines}/${c.params.target}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' lines' : '줄'}` };
     return null;
   }
 
@@ -2018,7 +2139,7 @@ class Game {
         if (this.run.equippedSkills.length < 3) this.run.equippedSkills.push(reward.id);
       } else this.run.gold += 30;
     }
-    return reward.label;
+    return trRewardLabel(reward, reward.label);
   }
 
   resolveEnemyStep() {
@@ -2239,30 +2360,30 @@ class Game {
   }
 
   castBossDebuff() {
-    const name = this.enemyCard.name;
+    const name = trEnemyName(this.enemyCard, this.enemyCard.name);
     const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'fog') {
       this.playerFogTimer = 4000;
-      this.flashAlert(`${name} OVERLOAD: 안개 (4초)`);
+      this.flashAlert(`${name} OVERLOAD: ${getLang() === 'ja' ? '霧' : getLang() === 'en' ? 'Fog' : '안개'} (4s)`);
     } else if (kind === 'invert') {
       this.playerInvertTimer = 3500;
-      this.flashAlert(`${name} OVERLOAD: 좌우 반전 (3.5초)`);
+      this.flashAlert(`${name} OVERLOAD: ${getLang() === 'ja' ? '左右反転' : getLang() === 'en' ? 'Invert controls' : '좌우 반전'} (3.5s)`);
     } else if (kind === 'rotate') {
       this.player.rotateLocked = true;
       this.applyPlayerDebuff('rotate', 3000);
       const target = this.player;
       this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
-      this.flashAlert(`${name} OVERLOAD: 회전 봉인 (3초)`);
+      this.flashAlert(`${name} OVERLOAD: ${trAbilityName('rotateLockPlayer', '회전 봉인')} (3s)`);
     } else if (kind === 'hyper') {
       this.playerHyperTimer = 5000;
-      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (5초)`);
+      this.flashAlert(`${name} OVERLOAD: ${trAbilityName('hyperBurst', '하이퍼 낙하')} (5s)`);
     } else if (kind === 'slow') {
       this.playerSlowTimer = 3500;
-      this.flashAlert(`${name} OVERLOAD: 중력 둔화 (3.5초)`);
+      this.flashAlert(`${name} OVERLOAD: ${trAbilityName('slowPlayer', '중력 둔화')} (3.5s)`);
     } else {
       this.player.addDurableGarbage(2, 2);
-      this.flashAlert(`${name} OVERLOAD: 지속 가비지 2줄`);
+      this.flashAlert(`${name} OVERLOAD: ${getLang() === 'ja' ? '持続ゴミ2行' : getLang() === 'en' ? '2 durable garbage rows' : '지속 가비지 2줄'}`);
     }
   }
 }
