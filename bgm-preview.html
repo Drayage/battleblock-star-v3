@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>BGM 미리듣기 — Korobeiniki 편곡</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0e1320; color: #e8ecf5; padding: 24px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  p { color: #9aa3b8; line-height: 1.6; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+  button { background: #1e2640; color: #e8ecf5; border: 1px solid #364066; border-radius: 8px; padding: 14px 16px; font-size: 15px; cursor: pointer; text-align: left; transition: 0.12s; }
+  button:hover { background: #2a3458; border-color: #5a6ba0; }
+  button.active { background: #3b4a82; border-color: #7d92d6; }
+  .stop { grid-column: 1 / -1; background: #532a2a; border-color: #864747; text-align: center; }
+  .stop:hover { background: #6b3838; }
+  .vol { margin-top: 16px; display: flex; align-items: center; gap: 10px; }
+  input[type=range] { flex: 1; }
+  .label { font-weight: 600; color: #c8d2ec; }
+  .meta { font-size: 12px; color: #8590ac; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <h1>🎵 BGM 미리듣기</h1>
+  <p>러시아 민요 <b>Korobeiniki</b>(코로베이니키, 퍼블릭 도메인)를 8-bit 칩튠 스타일로 편곡한 7가지 변주입니다. 브라우저에서 절차적으로 합성하므로 오디오 파일이 없습니다.</p>
+
+  <div class="vol">
+    <span class="label">볼륨</span>
+    <input id="vol" type="range" min="0" max="1" step="0.05" value="0.6">
+    <span id="volval">60%</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+<script type="module">
+  import { BGMPlayer, PRESETS } from './src/music.js';
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const player = new BGMPlayer(ctx);
+  const grid = document.getElementById('grid');
+  let active = null;
+
+  for (const [key, preset] of Object.entries(PRESETS)) {
+    const btn = document.createElement('button');
+    btn.innerHTML = `<div class="label">${preset.label}</div><div class="meta">${preset.bpm} BPM · ${preset.tracks.length}트랙</div>`;
+    btn.onclick = () => {
+      if (active === key) {
+        player.stop();
+        btn.classList.remove('active');
+        active = null;
+        return;
+      }
+      document.querySelectorAll('button.active').forEach(b => b.classList.remove('active'));
+      player.play(key);
+      btn.classList.add('active');
+      active = key;
+    };
+    grid.appendChild(btn);
+  }
+
+  const stop = document.createElement('button');
+  stop.className = 'stop';
+  stop.textContent = '⏹ 정지';
+  stop.onclick = () => {
+    player.stop();
+    document.querySelectorAll('button.active').forEach(b => b.classList.remove('active'));
+    active = null;
+  };
+  grid.appendChild(stop);
+
+  const vol = document.getElementById('vol');
+  const volval = document.getElementById('volval');
+  vol.oninput = () => {
+    player.setVolume(parseFloat(vol.value));
+    volval.textContent = `${Math.round(vol.value * 100)}%`;
+  };
+</script>
+</body>
+</html>
