@@ -37,6 +37,30 @@ const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
 
 // 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
+// 스킬/소모품 → SFX 카테고리 매핑. 신규 스킬 추가 시 여기에 등록한다.
+const SKILL_SFX = {
+  // 공격형
+  double_shot: 'strike', bomb_piece: 'explosion', overcharge: 'strike',
+  hyper_force: 'strike', garbage_barrage: 'penalty', mana_barrage: 'explosion',
+  mana_burn: 'strike', magnetic_collapse: 'crush', scramble_strike: 'dispel',
+  resonance: 'comboCharge',
+  // 방어/회복형
+  panic_guard: 'shield', emergency_shard: 'shield', ward_pulse: 'shield',
+  gauge_stall: 'shield',
+  // 정화/유틸
+  minor_purge: 'purge', purge: 'purge', line_shave: 'purge',
+  // 컨트롤(적 디버프)
+  rotate_seal: 'dispel', hold_lock: 'dispel', time_warp: 'freeze',
+  // 자기 강화
+  quick_cycle: 'mana', all_i_mode: 'mana'
+};
+const CONSUMABLE_SFX = {
+  battery: 'mana', shield: 'shield', bomb: 'explosion', focus: 'mana',
+  cleanse: 'purge', reroll_token: 'comboCharge', gold_pouch: 'coin',
+  hp_patch: 'mana', time_stop: 'freeze', igniter: 'strike',
+  hole_grenade: 'explosion', blackout_packet: 'dispel'
+};
+
 // 플레이어에게 직접 효과가 가는 능력일수록 비용을 더 높인다.
 const ENEMY_ABILITIES = {
   spike: {
@@ -1133,7 +1157,7 @@ class Game {
     const cdFactor = this.run.relics.includes('set_manawell') ? 0.5 : 1;
     this.skillCooldowns[id] = (skill.cooldown || 0) * cdFactor;
     this.message = `${skill.name} 발동`;
-    this.audio.playSfx('strike');
+    this.audio.playSfx(SKILL_SFX[id] || 'strike');
   }
 
   useConsumable(index) {
@@ -1143,6 +1167,7 @@ class Game {
     if (!item) return;
     this.run.consumables.splice(index, 1);
     this.message = item.use({ game: this, player: this.player, enemy: this.enemy });
+    this.audio.playSfx(CONSUMABLE_SFX[id] || 'mana');
     if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
     this.renderTouchSlots();
   }
