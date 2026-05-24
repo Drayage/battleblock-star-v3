@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260523-ko56';
-import { Deck } from './deck.js?v=20260523-ko56';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260524-audio2';
+import { Deck } from './deck.js?v=20260524-audio2';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -341,6 +341,7 @@ export class Board {
         this.grid[gy][gx] = null;
         this.bombFx.push({ x: gx, y: gy, timer: GAME_TIMING.BOMB_FX_FLASH, kind: 'glass', radius: 0 });
       }
+      if (shatter.size > 0) this._glassBrokeThisPlace = shatter.size;
     }
     if (this.current.card.traits.includes('heavyCrush')) {
       this.compactColumns([...new Set(cells.map(p => p.x))]);
@@ -420,6 +421,10 @@ export class Board {
     }
     this.applyReadyGarbage();
     this.lastAttack = result.attack;
+    if (this._glassBrokeThisPlace) {
+      result.glassBroken = this._glassBrokeThisPlace;
+      this._glassBrokeThisPlace = 0;
+    }
     if (this.defeated) return result;
     this.spawn();
     return result;
@@ -563,6 +568,7 @@ export class Board {
       attack: Number(attack.toFixed(2)),
       mana: Number(mana.toFixed(2)),
       bombRows,
+      exploded: bombCells.length + timeBombCells.length > 0,
       purge,
       slow: coolantCells * GAME_TIMING.COOLANT_SLOW,
       gold,

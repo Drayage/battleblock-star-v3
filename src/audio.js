@@ -1,7 +1,7 @@
 // BGM과 SFX를 묶어서 게임 씬에 따라 자동 전환하는 코디네이터.
 // 브라우저 자동재생 정책 때문에 첫 사용자 입력 전에는 AudioContext를 만들지 않는다.
-import { BGMPlayer, PRESETS as BGM_PRESETS } from './music.js';
-import { SFXPlayer } from './sfx.js';
+import { BGMPlayer, PRESETS as BGM_PRESETS } from './music.js?v=20260524-audio2';
+import { SFXPlayer } from './sfx.js?v=20260524-audio2';
 
 const STORAGE_KEY = 'bbs_audio_v1';
 
@@ -52,7 +52,11 @@ export class AudioManager {
     this.sfx.setVolume(this.sfxVolume);
     // 초기화 직전에 요청된 씬이 있으면 적용
     if (this.scene && this.bgmEnabled) this.bgm.play(this.scene);
+    this._emit();
   }
+
+  // 사용자 입력 전이라 AudioContext가 비어있는지 확인.
+  isUninitialized() { return !this.audio; }
 
   onChange(fn) { this._listeners.push(fn); }
   _emit() { this._listeners.forEach(fn => { try { fn(this); } catch {} }); }
@@ -62,6 +66,8 @@ export class AudioManager {
     if (this.scene === scene) return;
     this.scene = scene;
     if (!this.audio) return;
+    // 씬 전환 시 잔여 SFX(승리/패배 등) 즉시 중단해서 새 씬으로 끌고가지 않음.
+    this.sfx?.stopAll();
     if (!this.bgmEnabled || !scene) { this.bgm.stop(); return; }
     this.bgm.play(scene);
   }

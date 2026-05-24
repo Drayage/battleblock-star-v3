@@ -1,4 +1,4 @@
-const CACHE_NAME = 'battle-block-star-v3-ko56';
+const CACHE_NAME = 'battle-block-star-v3-audio2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -14,6 +14,9 @@ const APP_SHELL = [
   './src/progression.js',
   './src/renderer.js',
   './src/skills.js',
+  './src/audio.js',
+  './src/music.js',
+  './src/sfx.js',
   './assets/icon-192.png',
   './assets/icon-512.png'
 ];
