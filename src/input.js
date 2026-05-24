@@ -1,26 +1,25 @@
-import { GAME_TIMING } from './constants.js?v=20260523-ko54';
+import { GAME_TIMING } from './constants.js?v=20260523-ko55';
 
-// Standard gamepad button mapping (Xbox / PS layout)
+// Standard gamepad button mapping — 국룰 테트리스 레이아웃
 const BTN_ONE_SHOT = {
-  0:  'hard',        // A / Cross
-  1:  'rotate',      // B / Circle
-  2:  'ccw',         // X / Square
-  3:  'hold',        // Y / Triangle
-  4:  'skill0',      // LB / L1
-  5:  'skill1',      // RB / R1
-  6:  'skill2',      // LT / L2
-  7:  'consumable0', // RT / R2
-  9:  'pause',       // Start / Options
-  10: 'consumable1', // L3 (left stick click)
-  11: 'consumable2', // R3 (right stick click)
-  12: 'rotate',      // D-up (rotate alternate)
-  // 13 D-down, 14 D-left, 15 D-right handled via directional repeat
+  0:  'ccw',         // A / Cross → 반시계 회전
+  1:  'rotate',      // B / Circle → 시계 회전
+  2:  'skill0',      // X / Square → 스킬 1
+  3:  'skill1',      // Y / Triangle → 스킬 2
+  4:  'hold',        // LB / L1 → 홀드
+  5:  'skill2',      // RB / R1 → 스킬 3
+  6:  'consumable0', // LT / L2 → 소모품 1
+  7:  'consumable1', // RT / R2 → 소모품 2
+  9:  'pause',       // Start / Options → 일시정지
+  10: 'consumable2', // L3 (왼쪽 스틱 클릭) → 소모품 3
+  12: 'hard',        // D↑ → 하드 드롭
+  // 13 D↓, 14 D←, 15 D→ — directional repeat로 처리
 };
 
 export const GAMEPAD_LABELS = {
-  hard: 'A', rotate: 'B / D↑', ccw: 'X', hold: 'Y',
-  skill0: 'LB', skill1: 'RB', skill2: 'LT',
-  consumable0: 'RT', consumable1: 'L3', consumable2: 'R3',
+  hard: 'D↑', rotate: 'B', ccw: 'A', hold: 'L1',
+  skill0: 'X', skill1: 'Y', skill2: 'RB',
+  consumable0: 'LT', consumable1: 'RT', consumable2: 'L3',
   pause: 'Start',
 };
 
@@ -106,6 +105,11 @@ export class InputController {
   }
 
   applyGamepadLabels(connected) {
+    // 페이지 로드 전에 연결된 컨트롤러는 gamepadIndex가 -1일 수 있으므로 직접 감지
+    if (!connected && navigator.getGamepads) {
+      const found = [...navigator.getGamepads()].find(g => g?.connected);
+      if (found) { this.gamepadIndex = found.index; connected = true; }
+    }
     document.querySelectorAll('#touchSkills button[data-skill-idx]').forEach(btn => {
       const lbl = btn.querySelector('.key-label');
       if (!lbl) return;
