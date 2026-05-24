@@ -1699,14 +1699,14 @@ class Game {
     if (ins.selfGarbage > 0) this.audio.playSfx('penalty');
   }
 
-  // 위급 판정 = 보드에 쌓인 쓰레기 + 게이지에 예정된 쓰레기 합산(>=70%).
+  // 위급 판정 = 보드에 쌓인 쓰레기 + 게이지에 예정된 쓰레기 합산(>=50%).
   // 보스/엘리트는 자기 테마의 긴박 버전으로 전환.
   updateDangerAudio() {
     if (!this.inBattle() || this.battleEndResult) return;
     const rows = this.player?.rows || 1;
     const gRows = this.player?.grid?.filter(r => r.some(c => c?.traits?.includes('garbage'))).length || 0;
     const pending = (this.player?.garbageEntries || []).reduce((s, e) => s + Math.ceil(e.amount || 0), 0);
-    const danger = (gRows + pending) / rows >= 0.7;
+    const danger = (gRows + pending) / rows >= 0.5;
     if (danger) this.audio.playHeartbeat();
     const e = this.enemyCard;
     let baseScene, tenseScene;
