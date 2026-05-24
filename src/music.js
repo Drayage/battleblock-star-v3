@@ -386,14 +386,19 @@ export class BGMPlayer {
   play(presetName, fadeMs = 350) {
     const preset = PRESETS[presetName];
     if (!preset) return;
+    if (this.currentPreset === presetName) return; // 동일 곡이면 무시
     if (this.ctx.state === 'suspended') this.ctx.resume();
     if (this._pendingPlay) clearTimeout(this._pendingPlay);
+    const wasPlaying = this.currentPreset != null;
+    // 재진입 방지: 새 곡을 요청하는 즉시 currentPreset을 갱신해
+    // 매 프레임의 setIntensity가 또 play를 호출하지 않게 한다.
+    this.currentPreset = presetName;
     const start = () => {
+      if (this.currentPreset !== presetName) return;
       if (this.loopTimer) { clearTimeout(this.loopTimer); this.loopTimer = null; }
       const now = this.ctx.currentTime;
       for (const osc of this.activeNodes.slice()) { try { osc.stop(now); } catch {} }
       this.activeNodes = [];
-      this.currentPreset = presetName;
       // 페이드인
       this.master.gain.cancelScheduledValues(now);
       this.master.gain.setValueAtTime(0, now);
@@ -409,8 +414,7 @@ export class BGMPlayer {
       };
       schedule();
     };
-    // 현재 곡 재생 중이면 페이드아웃 후 시작
-    if (this.currentPreset) {
+    if (wasPlaying) {
       const now = this.ctx.currentTime;
       const fadeSec = fadeMs / 1000;
       this.master.gain.cancelScheduledValues(now);
