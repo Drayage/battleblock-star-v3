@@ -73,13 +73,14 @@ export class AudioManager {
   }
 
   // 현재 씬에서 강도만 바꾼다(예: battle → battleTense). null 주면 원래 씬으로.
+  // 위급 전환은 빠른 페이드(70ms)로 즉각 반응.
   setIntensity(overrideScene) {
     if (overrideScene === undefined) return;
     const target = overrideScene || this.scene;
     if (!target || !BGM_PRESETS[target]) return;
     if (!this.audio || !this.bgmEnabled) return;
     if (this.bgm.currentPreset === target) return;
-    this.bgm.play(target);
+    this.bgm.play(target, 70);
   }
 
   playSfx(name, arg) {

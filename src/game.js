@@ -1683,6 +1683,7 @@ class Game {
     document.getElementById('pauseBtn').textContent = this.paused ? '재개' : '일시정지';
     document.getElementById('pauseOverlay')?.classList.toggle('hidden', !this.paused);
     this.message = this.paused ? '일시정지' : '재개';
+    this.audio.playSfx(this.paused ? 'pause' : 'resume');
     this.autoSave();
   }
 
@@ -1698,8 +1699,8 @@ class Game {
     if (ins.selfGarbage > 0) this.audio.playSfx('penalty');
   }
 
-  // 위급 판정 = 보드에 쌓인 쓰레기 + 게이지에 예정된 쓰레기 합산.
-  // 70%↑이면 battleTense로 자동 전환 + 심장박동 SFX. 보스/엘리트는 자기 테마 유지.
+  // 위급 판정 = 보드에 쌓인 쓰레기 + 게이지에 예정된 쓰레기 합산(>=70%).
+  // 보스/엘리트는 자기 테마의 긴박 버전으로 전환.
   updateDangerAudio() {
     if (!this.inBattle() || this.battleEndResult) return;
     const rows = this.player?.rows || 1;
@@ -1708,8 +1709,11 @@ class Game {
     const danger = (gRows + pending) / rows >= 0.7;
     if (danger) this.audio.playHeartbeat();
     const e = this.enemyCard;
-    if (e?.type === 'boss' || e?.profile === 'elite') return;
-    this.audio.setIntensity(danger ? 'battleTense' : 'battle');
+    let baseScene, tenseScene;
+    if (e?.type === 'boss') { baseScene = 'boss'; tenseScene = 'bossTense'; }
+    else if (e?.profile === 'elite') { baseScene = 'elite'; tenseScene = 'eliteTense'; }
+    else { baseScene = 'battle'; tenseScene = 'battleTense'; }
+    this.audio.setIntensity(danger ? tenseScene : baseScene);
   }
 
   emitResolveSfx(result, attacker, defender) {

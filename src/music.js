@@ -310,6 +310,15 @@ export const PRESETS = {
       { notes: ELITE_BASS, type: 'triangle', vol: 0.16 }
     ]
   },
+  eliteTense: {
+    label: '엘리트 긴박',
+    bpm: 220,
+    tracks: [
+      { notes: ELITE_LEAD, type: 'square', vol: 0.17, detune: 6 },
+      { notes: ELITE_LEAD, type: 'sawtooth', vol: 0.09, detune: -8 },
+      { notes: ELITE_BASS, type: 'sawtooth', vol: 0.18 }
+    ]
+  },
   boss: {
     label: '보스',
     bpm: 80,
@@ -318,6 +327,16 @@ export const PRESETS = {
       { notes: BOSS_LEAD, type: 'square', vol: 0.08, detune: -10 },
       { notes: BOSS_BASS, type: 'sawtooth', vol: 0.22 },
       { notes: BOSS_PAD, type: 'triangle', vol: 0.10 }
+    ]
+  },
+  bossTense: {
+    label: '보스 긴박',
+    bpm: 132,
+    tracks: [
+      { notes: BOSS_LEAD, type: 'sawtooth', vol: 0.18, detune: 8 },
+      { notes: BOSS_LEAD, type: 'square', vol: 0.10, detune: -12 },
+      { notes: BOSS_BASS, type: 'sawtooth', vol: 0.24 },
+      { notes: BOSS_PAD, type: 'sawtooth', vol: 0.12 }
     ]
   }
 };
