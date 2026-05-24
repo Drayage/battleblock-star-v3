@@ -209,6 +209,19 @@ class Game {
     wireToggle('sfxToggleBtn', () => this.audio.sfxEnabled, v => this.audio.setSfxEnabled(v));
     wireToggle('bgmToggleBtnPause', () => this.audio.bgmEnabled, v => this.audio.setBgmEnabled(v));
     wireToggle('sfxToggleBtnPause', () => this.audio.sfxEnabled, v => this.audio.setSfxEnabled(v));
+    const wireSlider = (sliderId, labelId, get, set) => {
+      const slider = document.getElementById(sliderId);
+      const label = document.getElementById(labelId);
+      if (!slider || !label) return;
+      const refresh = () => { const v = get(); slider.value = Math.round(v * 100); label.textContent = `${Math.round(v * 100)}%`; };
+      slider.addEventListener('input', () => { this.audio.ensureInit(); set(parseFloat(slider.value) / 100); });
+      this.audio.onChange(refresh);
+      refresh();
+    };
+    wireSlider('bgmVolSlider', 'bgmVolLabel', () => this.audio.bgmVolume, v => this.audio.setBgmVolume(v));
+    wireSlider('sfxVolSlider', 'sfxVolLabel', () => this.audio.sfxVolume, v => this.audio.setSfxVolume(v));
+    wireSlider('bgmVolSliderPause', 'bgmVolLabelPause', () => this.audio.bgmVolume, v => this.audio.setBgmVolume(v));
+    wireSlider('sfxVolSliderPause', 'sfxVolLabelPause', () => this.audio.sfxVolume, v => this.audio.setSfxVolume(v));
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
