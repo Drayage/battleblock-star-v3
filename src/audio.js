@@ -1,7 +1,7 @@
 // BGM과 SFX를 묶어서 게임 씬에 따라 자동 전환하는 코디네이터.
 // 브라우저 자동재생 정책 때문에 첫 사용자 입력 전에는 AudioContext를 만들지 않는다.
-import { BGMPlayer, PRESETS as BGM_PRESETS } from './music.js?v=20260524-audio2';
-import { SFXPlayer } from './sfx.js?v=20260524-audio2';
+import { BGMPlayer, PRESETS as BGM_PRESETS } from './music.js?v=20260524-audio3';
+import { SFXPlayer } from './sfx.js?v=20260524-audio3';
 
 const STORAGE_KEY = 'bbs_audio_v1';
 

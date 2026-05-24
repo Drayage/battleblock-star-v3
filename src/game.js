@@ -1,12 +1,12 @@
-import { Board } from './board.js?v=20260524-audio2';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio2';
-import { Deck } from './deck.js?v=20260524-audio2';
-import { AI } from './ai.js?v=20260524-audio2';
-import { Renderer } from './renderer.js?v=20260524-audio2';
-import { InputController } from './input.js?v=20260524-audio2';
-import { AudioManager } from './audio.js?v=20260524-audio2';
-import { SKILLS } from './skills.js?v=20260524-audio2';
-import { CONSUMABLES } from './consumables.js?v=20260524-audio2';
+import { Board } from './board.js?v=20260524-audio3';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio3';
+import { Deck } from './deck.js?v=20260524-audio3';
+import { AI } from './ai.js?v=20260524-audio3';
+import { Renderer } from './renderer.js?v=20260524-audio3';
+import { InputController } from './input.js?v=20260524-audio3';
+import { AudioManager } from './audio.js?v=20260524-audio3';
+import { SKILLS } from './skills.js?v=20260524-audio3';
+import { CONSUMABLES } from './consumables.js?v=20260524-audio3';
 import {
   RunState,
   RELICS,
@@ -27,7 +27,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260524-audio2';
+} from './progression.js?v=20260524-audio3';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -265,7 +265,7 @@ class Game {
     if (id === 'gameScreen') {
       const e = this.enemyCard;
       if (e?.type === 'boss') return this.audio.setScene('boss');
-      if (e?.profile === 'elite') return this.audio.setScene('elite');
+      if (e?.type === 'elite') return this.audio.setScene('elite');
       return this.audio.setScene('battle');
     }
   }
@@ -1730,7 +1730,7 @@ class Game {
     const e = this.enemyCard;
     let baseScene, tenseScene;
     if (e?.type === 'boss') { baseScene = 'boss'; tenseScene = 'bossTense'; }
-    else if (e?.profile === 'elite') { baseScene = 'elite'; tenseScene = 'eliteTense'; }
+    else if (e?.type === 'elite') { baseScene = 'elite'; tenseScene = 'eliteTense'; }
     else { baseScene = 'battle'; tenseScene = 'battleTense'; }
     this.audio.setIntensity(danger ? tenseScene : baseScene);
   }
@@ -2245,6 +2245,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260524-audio2').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260524-audio3').catch(() => {});
   });
 }
