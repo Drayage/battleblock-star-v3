@@ -142,13 +142,15 @@ export class InputController {
   }
 
   // Returns all currently focusable buttons in the active screen (visible, not disabled).
+  // <summary> 도 포함해 <details>를 컨트롤러로 열 수 있게 한다.
   // When a fixed overlay (#slotPicker, #deckModal) is open, navigate its buttons instead.
   _menuFocusables() {
     const overlay = document.querySelector('#slotPicker.active, #deckModal.active');
     const root = overlay || document.querySelector('.screen.active');
     if (!root) return [];
-    return [...root.querySelectorAll('button:not([disabled])')].filter(el => {
-      if (!overlay && el.closest('details:not([open])')) return false;
+    return [...root.querySelectorAll('button:not([disabled]), summary')].filter(el => {
+      // <details> 안쪽 버튼은 열려 있을 때만 포커스. summary 자체는 항상 포커스 가능.
+      if (!overlay && el.tagName !== 'SUMMARY' && el.closest('details:not([open])')) return false;
       const r = el.getBoundingClientRect();
       return r.width > 0 && r.height > 0;
     });
