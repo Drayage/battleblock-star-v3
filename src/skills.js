@@ -30,7 +30,7 @@ export const SKILLS = {
     icon: '🔄',
     name: '빠른 순환',
     tier: 'bronze',
-    cost: 26,
+    cost: 18,
     cooldown: 10000,
     desc: '현재 블록을 버리고 다음 블록을 뽑습니다.',
     activate({ player }) {
