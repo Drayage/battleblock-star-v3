@@ -1,4 +1,5 @@
 import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260524-audio3';
+import { GAMEPAD_LABELS } from './input.js?v=20260524-audio3';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
 // 일부 글리프는 폰트상 작게 렌더돼 키워서 그린다.
@@ -386,7 +387,9 @@ export class Renderer {
         ctx.fillStyle = '#7a8ca0';
       }
       ctx.font = '9px Courier New';
-      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${skill.name}`, ox + 5, slotY + 9);
+      const gpKey = this.gpConnected ? GAMEPAD_LABELS[`skill${i}`] : null;
+      const keyTag = gpKey ? ` (${gpKey})` : '';
+      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}.${keyTag} ${skill.name}`, ox + 5, slotY + 9);
       ctx.fillText(`${skill.cost}MP`, ox + 5, slotY + 17);
       ctx.globalAlpha = 1;
     });
@@ -398,7 +401,9 @@ export class Renderer {
       ctx.strokeStyle = '#534875';
       ctx.strokeRect(ox, oy + 276 + i * 22, width, 18);
       ctx.fillStyle = '#ded4ff';
-      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}. ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
+      const gpC = this.gpConnected ? GAMEPAD_LABELS[`consumable${i}`] : null;
+      const ct = gpC ? ` (${gpC})` : '';
+      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}.${ct} ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
     });
   }
 

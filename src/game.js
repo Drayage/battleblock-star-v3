@@ -1850,6 +1850,7 @@ class Game {
     this.updateDangerAudio();
     this.updateSkillButtons();
     if (this.enemy.defeated) this.queueBattleEnd('win');
+    this.renderer.gpConnected = (this.input?.gamepadIndex ?? -1) >= 0;
     this.renderer.draw({
       player: this.player,
       enemy: this.enemy,
