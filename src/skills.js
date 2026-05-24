@@ -1,4 +1,6 @@
-export const SKILLS = {
+import { wrapDataMap } from './i18n-data.js?v=20260524-audio4';
+
+const SKILLS_KO = {
   minor_purge: {
     id: 'minor_purge',
     icon: '🧹',
@@ -310,3 +312,5 @@ export const SKILLS = {
     }
   }
 };
+
+export const SKILLS = wrapDataMap(SKILLS_KO, 'skill');

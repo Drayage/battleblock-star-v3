@@ -6,6 +6,7 @@ import { Renderer } from './renderer.js?v=20260524-audio4';
 import { InputController } from './input.js?v=20260524-audio4';
 import { AudioManager } from './audio.js?v=20260524-audio4';
 import { t, getLang, setLang, onLangChange, applyDomTranslations, LANGS } from './i18n.js?v=20260524-audio4';
+import { tEnemyName, tKindLabel } from './i18n-data.js?v=20260524-audio4';
 import { SKILLS } from './skills.js?v=20260524-audio4';
 import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
 import {
@@ -71,7 +72,7 @@ const ENEMY_ABILITIES = {
     cooldown: 18000,
     cast(g) {
       g.player.receiveGarbage(1);
-      g.flashAlert(`${g.enemyCard.name} 능력: 쓰레기 급증 +1`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 쓰레기 급증 +1`);
     }
   },
   slowPlayer: {
@@ -81,7 +82,7 @@ const ENEMY_ABILITIES = {
     cooldown: 22000,
     cast(g) {
       g.playerSlowTimer = 3000;
-      g.flashAlert(`${g.enemyCard.name} 능력: 중력 둔화 (3초)`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 중력 둔화 (3초)`);
     }
   },
   power: {
@@ -91,7 +92,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.player.receiveGarbage(2);
-      g.flashAlert(`${g.enemyCard.name} 능력: 파워 폭발 +2`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 파워 폭발 +2`);
     }
   },
   rotateLockPlayer: {
@@ -104,7 +105,7 @@ const ENEMY_ABILITIES = {
       g.applyPlayerDebuff?.('rotate', 2000);
       const target = g.player;
       g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
-      g.flashAlert(`${g.enemyCard.name} 능력: 회전 봉인 (2초)`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 회전 봉인 (2초)`);
     }
   },
   hyperBurst: {
@@ -114,7 +115,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.playerHyperTimer = 5000;
-      g.flashAlert(`${g.enemyCard.name} 능력: 하이퍼 낙하 (5초)`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 하이퍼 낙하 (5초)`);
     }
   },
   polluteDeck: {
@@ -124,7 +125,7 @@ const ENEMY_ABILITIES = {
     cooldown: 26000,
     cast(g) {
       g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
-      g.flashAlert(`${g.enemyCard.name} 능력: 덱 오염 (방해 블록 주입)`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 덱 오염 (방해 블록 주입)`);
     }
   },
   rushGauge: {
@@ -134,7 +135,7 @@ const ENEMY_ABILITIES = {
     cooldown: 20000,
     cast(g) {
       g.playerGaugeRushTimer = 5000;
-      g.flashAlert(`${g.enemyCard.name} 능력: 게이지 가속 (5초)`);
+      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 게이지 가속 (5초)`);
     }
   }
 };
@@ -366,7 +367,7 @@ class Game {
         ? `<small class="ability-tag">⚔️ 능력: [${abilityDef.label}] ${abilityDef.desc}</small>`
         : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ 능력: [OVERLOAD] 게이지가 차면 무작위 디버프를 시전합니다.</small>` : '');
       btn.innerHTML = `
-        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${enemy.name}</strong>
+        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${tEnemyName(enemy.name)}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
@@ -458,7 +459,7 @@ class Game {
       hp: 'HP', hpForCurse: 'HP',
       removeCard: '제거', removeChoice: '제거', gamble: '도박', cleanup: '정리', gold: '골드'
     };
-    return map[kind] ? `<em class="kind-tag">[${map[kind]}]</em> ` : '';
+    return map[kind] ? `<em class="kind-tag">[${tKindLabel(map[kind])}]</em> ` : '';
   }
 
   kindIcon(choice) {
@@ -1097,7 +1098,7 @@ class Game {
     this.skillCooldowns = {};
     this.message = '전투 시작';
     document.getElementById('battleTitle').textContent = `${this.run.round}라운드${this.run.practiceMode ? ' [연습]' : ''}`;
-    document.getElementById('battleMeta').textContent = enemyCard.name;
+    document.getElementById('battleMeta').textContent = tEnemyName(this.enemyCard?.name);
     this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
     this.show('gameScreen');
@@ -2239,7 +2240,7 @@ class Game {
   }
 
   castBossDebuff() {
-    const name = this.enemyCard.name;
+    const name = tEnemyName(this.enemyCard?.name);
     const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'fog') {

@@ -1,4 +1,6 @@
-export const CONSUMABLES = {
+import { wrapDataMap } from "./i18n-data.js?v=20260524-audio4";
+
+const CONSUMABLES_KO = {
   battery: {
     id: 'battery',
     icon: '🔋',
@@ -164,3 +166,5 @@ export const CONSUMABLES = {
     }
   }
 };
+
+export const CONSUMABLES = wrapDataMap(CONSUMABLES_KO, 'consumable');

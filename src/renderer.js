@@ -1,5 +1,6 @@
 import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260524-audio4';
 import { GAMEPAD_LABELS } from './input.js?v=20260524-audio4';
+import { tEnemyName } from './i18n-data.js?v=20260524-audio4';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
 // 일부 글리프는 폰트상 작게 렌더돼 키워서 그린다.
@@ -82,7 +83,7 @@ export class Renderer {
     for (let r = 0; r < player.rows; r++) {
       if (player.grid[r] && player.grid[r].some(c => c)) { stackH = player.rows - r; break; }
     }
-    ctx.fillText(`${enemyCard.name} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
+    ctx.fillText(`${tEnemyName(enemyCard.name)} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     const curTag = blockTag(player.current?.card);
     const youLabel = L.mobile

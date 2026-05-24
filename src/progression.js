@@ -2,8 +2,9 @@ import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, S
 import { Deck, shuffle } from './deck.js?v=20260524-audio4';
 import { SKILLS } from './skills.js?v=20260524-audio4';
 import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
+import { wrapDataMap } from "./i18n-data.js?v=20260524-audio4";
 
-export const RELICS = {
+const RELICS_KO = {
   combo_amp: {
     id: 'combo_amp',
     icon: '🔥',
@@ -222,6 +223,7 @@ export const RELICS = {
     desc: '받는 공격 게이지가 즉시 빨간색이 됩니다(지연 없음). 라인 클리어로 파란색으로 되돌릴 수 없습니다. 대신 한 번에 받는 최대 쓰레기는 3줄로 제한됩니다.'
   }
 };
+export const RELICS = wrapDataMap(RELICS_KO, "relic");
 
 const PROFILE_ICON = {
   balanced: '⚖️', fast: '⚡', opener: '🚀', turtle: '🐢', spiker: '🔱',
