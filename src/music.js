@@ -35,8 +35,36 @@ function transpose(track, semitones) {
 // 각 곡은 Korobeiniki의 모티브(하행 E-D-C-B, Em-Am-B7-Em 진행)만 빌려와
 // 독자적인 멜로디/리듬/조성으로 재작곡되었다. 단위: 4분음표 = 1박.
 
-// === 1. 타이틀 — 평화로운 아르페지오, E단조, 느린 4/4 ===
+// === 1. 타이틀 — 활기찬 G장조 행진곡 (밝고 빠르게, 페이지 진입 환영용) ===
 const TITLE_LEAD = [
+  ['D5', 1], ['G5', 1], ['B5', 1], ['A5', 1],
+  ['G5', 1], ['F#5', 1], ['E5', 1], ['D5', 1],
+  ['G5', 1], ['A5', 1], ['B5', 2],
+  ['D6', 1], ['B5', 1], ['A5', 2],
+  ['G5', 1], ['B5', 1], ['D6', 1], ['B5', 1],
+  ['G5', 1], ['A5', 1], ['F#5', 2],
+  ['E5', 1], ['G5', 1], ['A5', 1], ['B5', 1],
+  ['G5', 1], ['A5', 1], ['D5', 1], ['G5', 1]
+];
+const TITLE_ARP = [
+  ['G4', 1], ['B4', 1], ['D5', 1], ['B4', 1],
+  ['G4', 1], ['B4', 1], ['D5', 1], ['B4', 1],
+  ['F#4', 1], ['A4', 1], ['D5', 1], ['A4', 1],
+  ['F#4', 1], ['A4', 1], ['D5', 1], ['A4', 1],
+  ['E4', 1], ['G4', 1], ['B4', 1], ['G4', 1],
+  ['E4', 1], ['G4', 1], ['B4', 1], ['G4', 1],
+  ['C4', 1], ['E4', 1], ['G4', 1], ['E4', 1],
+  ['C4', 1], ['E4', 1], ['D4', 1], ['F#4', 1]
+];
+const TITLE_BASS = [
+  ['G2', 2], ['D3', 2], ['G2', 2], ['B2', 2],
+  ['D2', 2], ['A2', 2], ['D2', 2], ['F#2', 2],
+  ['E2', 2], ['B2', 2], ['E2', 2], ['G2', 2],
+  ['C2', 2], ['G2', 2], ['D2', 2], ['F#2', 2]
+];
+
+// === 게임오버 — 기존 차분한 E단조 곡을 게임오버 화면에 (회상/여운) ===
+const GAMEOVER_LEAD = [
   ['E5', 3], ['G5', 1], ['B5', 2], ['A5', 2],
   ['G5', 2], ['F#5', 1], ['E5', 1], ['D5', 4],
   ['C5', 3], ['B4', 1], ['A4', 2], ['B4', 2],
@@ -46,7 +74,7 @@ const TITLE_LEAD = [
   ['F#5', 2], ['E5', 2], ['D5', 2], ['C5', 2],
   ['B4', 1], ['A4', 1], ['B4', 1], ['D5', 1], ['F#5', 1], ['E5', 1], ['D5', 1], ['B4', 1]
 ];
-const TITLE_ARP = [
+const GAMEOVER_ARP = [
   ['E4', 1], ['G4', 1], ['B4', 1], ['E5', 1], ['B4', 1], ['G4', 1], ['B4', 1], ['G4', 1],
   ['E4', 1], ['G4', 1], ['B4', 1], ['E5', 1], ['B4', 1], ['G4', 1], ['B4', 1], ['G4', 1],
   ['A3', 1], ['C4', 1], ['E4', 1], ['A4', 1], ['E4', 1], ['C4', 1], ['E4', 1], ['C4', 1],
@@ -56,7 +84,7 @@ const TITLE_ARP = [
   ['E3', 1], ['G3', 1], ['B3', 1], ['E4', 1], ['B3', 1], ['G3', 1], ['B3', 1], ['G3', 1],
   ['E3', 1], ['B3', 1], ['E4', 1], ['B3', 1], ['E3', 1], ['B3', 1], ['E4', 1], ['B3', 1]
 ];
-const TITLE_BASS = [
+const GAMEOVER_BASS = [
   ['E2', 8], ['E2', 8], ['A2', 8], ['A2', 8],
   ['G2', 8], ['F#2', 8], ['E2', 8], ['B2', 4], ['F#2', 4]
 ];
@@ -79,15 +107,26 @@ const SHOP_BASS = [
   ['C3', 2], ['D3', 2], ['A2', 2], ['F#3', 2]
 ];
 
-// === 3. 선택 화면 — 명상적 앰비언트, 긴 음표 위주 ===
+// === 3. 선택 화면 — 밝고 가벼운 D장조 산책 (부드러운 픽업 시작) ===
 const SELECT_LEAD = [
-  ['B4', 4], ['D5', 4], ['E5', 8],
-  ['A4', 4], ['C5', 4], ['E5', 8],
-  ['F#4', 4], ['A4', 4], ['D5', 8],
-  ['G4', 4], ['B4', 4], ['D5', 4], ['A4', 4]
+  ['A4', 1], ['D5', 1], ['F#5', 2],
+  ['E5', 1], ['D5', 1], ['F#5', 2],
+  ['G5', 1], ['F#5', 1], ['E5', 2],
+  ['D5', 2], ['A4', 2],
+  ['D5', 1], ['F#5', 1], ['A5', 2],
+  ['G5', 1], ['F#5', 1], ['E5', 2],
+  ['F#5', 1], ['D5', 1], ['E5', 2],
+  ['A4', 2], ['F#4', 1], ['A4', 1]
 ];
 const SELECT_PAD = [
-  ['E3', 16], ['A3', 16], ['D3', 16], ['B2', 8], ['F#3', 8]
+  ['D3', 4], ['A3', 4],
+  ['D3', 4], ['F#3', 4],
+  ['G3', 4], ['B3', 4],
+  ['A3', 4], ['E3', 4],
+  ['D3', 4], ['A3', 4],
+  ['G3', 4], ['B3', 4],
+  ['A3', 4], ['C#4', 4],
+  ['D3', 4], ['A3', 4]
 ];
 
 // === 4. 전투 — 메인 테마, E장조(밝은 톤), 코로베이니키 모티브 변주 ===
@@ -210,11 +249,21 @@ const BOSS_PAD = [
 export const PRESETS = {
   title: {
     label: '타이틀',
+    bpm: 132,
+    tracks: [
+      { notes: TITLE_LEAD, type: 'square', vol: 0.18 },
+      { notes: TITLE_LEAD, type: 'triangle', vol: 0.10, detune: 8 },
+      { notes: TITLE_ARP, type: 'triangle', vol: 0.12 },
+      { notes: TITLE_BASS, type: 'sawtooth', vol: 0.16 }
+    ]
+  },
+  gameover: {
+    label: '게임 오버',
     bpm: 78,
     tracks: [
-      { notes: TITLE_LEAD, type: 'triangle', vol: 0.18 },
-      { notes: TITLE_ARP, type: 'sine', vol: 0.10 },
-      { notes: TITLE_BASS, type: 'sine', vol: 0.16 }
+      { notes: GAMEOVER_LEAD, type: 'triangle', vol: 0.18 },
+      { notes: GAMEOVER_ARP, type: 'sine', vol: 0.10 },
+      { notes: GAMEOVER_BASS, type: 'sine', vol: 0.16 }
     ]
   },
   shop: {
@@ -228,10 +277,11 @@ export const PRESETS = {
   },
   select: {
     label: '선택 화면',
-    bpm: 64,
+    bpm: 96,
     tracks: [
-      { notes: SELECT_LEAD, type: 'sine', vol: 0.15 },
-      { notes: SELECT_PAD, type: 'triangle', vol: 0.09 }
+      { notes: SELECT_LEAD, type: 'triangle', vol: 0.16 },
+      { notes: SELECT_LEAD, type: 'sine', vol: 0.08, detune: 6 },
+      { notes: SELECT_PAD, type: 'sine', vol: 0.11 }
     ]
   },
   battle: {
@@ -275,8 +325,9 @@ export const PRESETS = {
 export class BGMPlayer {
   constructor(ctx) {
     this.ctx = ctx;
+    this.targetVolume = 0.6;
     this.master = ctx.createGain();
-    this.master.gain.value = 0.6;
+    this.master.gain.value = this.targetVolume;
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = 4200;
@@ -285,10 +336,12 @@ export class BGMPlayer {
     this.activeNodes = [];
     this.loopTimer = null;
     this.currentPreset = null;
+    this._pendingPlay = null;
   }
 
   setVolume(v) {
-    this.master.gain.setTargetAtTime(Math.max(0, Math.min(1, v)), this.ctx.currentTime, 0.05);
+    this.targetVolume = Math.max(0, Math.min(1, v));
+    this.master.gain.setTargetAtTime(this.targetVolume, this.ctx.currentTime, 0.05);
   }
 
   scheduleNote(time, freq, dur, type, vol, detune = 0) {
@@ -329,30 +382,58 @@ export class BGMPlayer {
     return totalBeats * beat;
   }
 
-  play(presetName) {
-    this.stop();
+  // 부드러운 크로스페이드: 현재 트랙을 fadeMs 동안 페이드아웃 후 새 트랙을 페이드인.
+  play(presetName, fadeMs = 350) {
     const preset = PRESETS[presetName];
     if (!preset) return;
-    this.currentPreset = presetName;
     if (this.ctx.state === 'suspended') this.ctx.resume();
-    const schedule = () => {
-      if (this.currentPreset !== presetName) return;
-      const start = this.ctx.currentTime + 0.05;
-      let loopLen = 0;
-      for (const track of preset.tracks) {
-        loopLen = Math.max(loopLen, this.scheduleTrack(track, preset.bpm, start));
-      }
-      this.loopTimer = setTimeout(schedule, (loopLen - 0.08) * 1000);
+    if (this._pendingPlay) clearTimeout(this._pendingPlay);
+    const start = () => {
+      if (this.loopTimer) { clearTimeout(this.loopTimer); this.loopTimer = null; }
+      const now = this.ctx.currentTime;
+      for (const osc of this.activeNodes.slice()) { try { osc.stop(now); } catch {} }
+      this.activeNodes = [];
+      this.currentPreset = presetName;
+      // 페이드인
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(0, now);
+      this.master.gain.linearRampToValueAtTime(this.targetVolume, now + Math.max(0.05, fadeMs / 1000));
+      const schedule = () => {
+        if (this.currentPreset !== presetName) return;
+        const t = this.ctx.currentTime + 0.05;
+        let loopLen = 0;
+        for (const track of preset.tracks) {
+          loopLen = Math.max(loopLen, this.scheduleTrack(track, preset.bpm, t));
+        }
+        this.loopTimer = setTimeout(schedule, (loopLen - 0.08) * 1000);
+      };
+      schedule();
     };
-    schedule();
+    // 현재 곡 재생 중이면 페이드아웃 후 시작
+    if (this.currentPreset) {
+      const now = this.ctx.currentTime;
+      const fadeSec = fadeMs / 1000;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(this.master.gain.value, now);
+      this.master.gain.linearRampToValueAtTime(0, now + fadeSec);
+      this._pendingPlay = setTimeout(start, fadeMs + 10);
+    } else {
+      start();
+    }
   }
 
-  stop() {
+  stop(fadeMs = 250) {
     this.currentPreset = null;
+    if (this._pendingPlay) { clearTimeout(this._pendingPlay); this._pendingPlay = null; }
     if (this.loopTimer) { clearTimeout(this.loopTimer); this.loopTimer = null; }
     const now = this.ctx.currentTime;
-    for (const osc of this.activeNodes.slice()) {
-      try { osc.stop(now + 0.05); } catch {}
-    }
+    const fadeSec = Math.max(0.02, fadeMs / 1000);
+    this.master.gain.cancelScheduledValues(now);
+    this.master.gain.setValueAtTime(this.master.gain.value, now);
+    this.master.gain.linearRampToValueAtTime(0, now + fadeSec);
+    setTimeout(() => {
+      for (const osc of this.activeNodes.slice()) { try { osc.stop(); } catch {} }
+      this.activeNodes = [];
+    }, fadeMs + 20);
   }
 }

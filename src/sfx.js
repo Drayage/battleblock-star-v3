@@ -45,10 +45,14 @@ const PRESETS = {
     noiseBurst(ctx, { dur: 0.06, vol: 0.14, cutoffStart: 2000, cutoffEnd: 400 });
   },
 
-  // === 콤보 (n에 따라 피치 상승) ===
+  // === 콤보 — 라인 클리어 직후 살짝 지연 + 두꺼운 톤으로 묻히지 않게 ===
   combo: (ctx, n = 1) => {
-    const freq = 440 * Math.pow(1.122, Math.min(12, n - 1));
-    beep(ctx, { freq, dur: 0.08, type: 'square', vol: 0.18 });
+    const base = 660 * Math.pow(1.122, Math.min(10, n - 1));
+    setTimeout(() => {
+      beep(ctx, { freqStart: base * 0.7, freqEnd: base, dur: 0.20, type: 'triangle', vol: 0.32 });
+      beep(ctx, { freqStart: base * 0.7 * 2, freqEnd: base * 2, dur: 0.20, type: 'square', vol: 0.16 });
+      beep(ctx, { freqStart: base * 0.7 * 0.5, freqEnd: base * 0.5, dur: 0.22, type: 'sawtooth', vol: 0.10 });
+    }, 220);
   },
 
   // === 전투 이벤트 ===
@@ -68,13 +72,24 @@ const PRESETS = {
 
   // === 메타 ===
   challengeWin: ctx => arpeggio(ctx, [523, 659, 784, 1047], 0.08, 0.20, 'square', 0.22),
+  challengeFail: ctx => {
+    arpeggio(ctx, [659, 523, 392], 0.10, 0.18, 'sawtooth', 0.20);
+  },
   victory: ctx => {
     arpeggio(ctx, [523, 659, 784, 1047], 0.10, 0.30, 'square', 0.22);
     arpeggio(ctx, [784, 988, 1175, 1568], 0.10, 0.30, 'triangle', 0.12);
   },
-  defeat: ctx => beep(ctx, { freqStart: 440, freqEnd: 110, dur: 0.60, type: 'sawtooth', vol: 0.22 }),
-  click: ctx => beep(ctx, { freq: 700, dur: 0.02, type: 'square', vol: 0.10 }),
-  purchase: ctx => arpeggio(ctx, [880, 1175, 1568], 0.04, 0.10, 'square', 0.20)
+  defeat: ctx => beep(ctx, { freqStart: 440, freqEnd: 165, dur: 0.32, type: 'sawtooth', vol: 0.22 }),
+  click: ctx => beep(ctx, { freq: 880, dur: 0.025, type: 'square', vol: 0.12 }),
+  select: ctx => arpeggio(ctx, [659, 988], 0.03, 0.06, 'square', 0.16),
+  purchase: ctx => arpeggio(ctx, [880, 1175, 1568], 0.04, 0.10, 'square', 0.20),
+  reroll: ctx => arpeggio(ctx, [523, 659, 784, 659, 523], 0.04, 0.08, 'triangle', 0.18),
+  glassBreak: ctx => {
+    // 고주파 노이즈 + 짧은 띵 톤
+    noiseBurst(ctx, { dur: 0.22, vol: 0.22, cutoffStart: 8000, cutoffEnd: 2000 });
+    beep(ctx, { freqStart: 2400, freqEnd: 600, dur: 0.18, type: 'triangle', vol: 0.16 });
+    setTimeout(() => beep(ctx, { freqStart: 1800, freqEnd: 400, dur: 0.12, type: 'triangle', vol: 0.10 }), 50);
+  }
 };
 
 function beep(ctx, opts) {
@@ -99,6 +114,8 @@ function beep(ctx, opts) {
   gain.gain.linearRampToValueAtTime(0, t + dur);
   osc.start(t);
   osc.stop(t + dur + 0.02);
+  ctx._active?.add?.(osc);
+  osc.onended = () => ctx._active?.delete?.(osc);
 }
 
 function noiseBurst(ctx, { dur, vol = 0.2, cutoffStart = 4000, cutoffEnd = 800 }) {
@@ -134,6 +151,7 @@ export class SFXPlayer {
     this.master.gain.value = 0.7;
     this.master.connect(masterGain || audioCtx.destination);
     this._lastHeartbeat = 0;
+    this._active = new Set();
   }
 
   setVolume(v) {
@@ -153,5 +171,14 @@ export class SFXPlayer {
     if (now - this._lastHeartbeat < 0.9) return;
     this._lastHeartbeat = now;
     this.play('heartbeat');
+  }
+
+  // 화면 전환 시 현재 울리는 모든 SFX 즉시 중단(짧은 페이드).
+  stopAll() {
+    const now = this.audio.currentTime;
+    for (const osc of Array.from(this._active)) {
+      try { osc.stop(now + 0.04); } catch {}
+    }
+    this._active.clear();
   }
 }

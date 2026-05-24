@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260523-ko56';
+import { GAME_TIMING } from './constants.js?v=20260524-audio2';
 
 // Standard gamepad button mapping — 국룰 테트리스 레이아웃
 const BTN_ONE_SHOT = {

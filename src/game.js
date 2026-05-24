@@ -1,12 +1,12 @@
-import { Board } from './board.js?v=20260523-ko56';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260523-ko56';
-import { Deck } from './deck.js?v=20260523-ko56';
-import { AI } from './ai.js?v=20260523-ko56';
-import { Renderer } from './renderer.js?v=20260523-ko56';
-import { InputController } from './input.js?v=20260523-ko56';
-import { AudioManager } from './audio.js?v=20260523-ko56';
-import { SKILLS } from './skills.js?v=20260523-ko56';
-import { CONSUMABLES } from './consumables.js?v=20260523-ko56';
+import { Board } from './board.js?v=20260524-audio2';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio2';
+import { Deck } from './deck.js?v=20260524-audio2';
+import { AI } from './ai.js?v=20260524-audio2';
+import { Renderer } from './renderer.js?v=20260524-audio2';
+import { InputController } from './input.js?v=20260524-audio2';
+import { AudioManager } from './audio.js?v=20260524-audio2';
+import { SKILLS } from './skills.js?v=20260524-audio2';
+import { CONSUMABLES } from './consumables.js?v=20260524-audio2';
 import {
   RunState,
   RELICS,
@@ -27,7 +27,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260523-ko56';
+} from './progression.js?v=20260524-audio2';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -190,6 +190,12 @@ class Game {
     const audioInit = () => { this.audio.ensureInit(); this.updateSceneBgm(); };
     window.addEventListener('pointerdown', audioInit, { once: true });
     window.addEventListener('keydown', audioInit, { once: true });
+    // 페이지 진입 시 BGM이 막혀있다면 짧은 안내.
+    setTimeout(() => {
+      if (this.audio.isUninitialized() && this.audio.bgmEnabled) {
+        this.showToast?.('🔊 화면 클릭 시 음악 시작', 'elite');
+      }
+    }, 800);
     // 음악·SFX 토글 버튼 (메뉴/일시정지 오버레이 공통)
     const wireToggle = (id, get, set) => {
       const btn = document.getElementById(id);
@@ -242,7 +248,7 @@ class Game {
     if (id === 'mapScreen') return this.audio.setScene('select');
     if (id === 'eventScreen') return this.audio.setScene('select');
     if (id === 'shopScreen') return this.audio.setScene('shop');
-    if (id === 'endScreen') return this.audio.setScene('title');
+    if (id === 'endScreen') return this.audio.setScene('gameover');
     if (id === 'gameScreen') {
       const e = this.enemyCard;
       if (e?.type === 'boss') return this.audio.setScene('boss');
@@ -330,7 +336,7 @@ class Game {
         ${abilityHtml}
         ${challengeHtml}
       `;
-      btn.addEventListener('click', () => this.startBattle(enemy));
+      btn.addEventListener('click', () => { this.audio.playSfx('select'); this.startBattle(enemy); });
       wrap.appendChild(btn);
     }
   }
@@ -371,6 +377,7 @@ class Game {
       btn.disabled = !this.canUseEvent(choice);
       btn.addEventListener('click', () => {
         if (btn.disabled) return;
+        this.audio.playSfx('select');
         if (offeredGambleAffordable && choice.kind !== 'gamble') {
           this.run.gambleClosed = true;
           this.run.gambleNext = null;
@@ -614,13 +621,14 @@ class Game {
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
         if (btn.disabled || this.run.gold < price) return;
+        this.audio.playSfx('purchase');
         this.buyShopItem(item);
       });
       const lockBtn = document.createElement('button');
       lockBtn.className = 'shop-lock';
       lockBtn.textContent = locked.has(key) ? '잠금됨' : '잠금';
       lockBtn.disabled = soldOut;
-      lockBtn.addEventListener('click', () => this.toggleShopLock(item));
+      lockBtn.addEventListener('click', () => { this.audio.playSfx('click'); this.toggleShopLock(item); });
       slot.appendChild(btn);
       slot.appendChild(lockBtn);
       wrap.appendChild(slot);
@@ -632,6 +640,7 @@ class Game {
     rerollBtn.disabled = this.run.gold < rerollCost;
     rerollBtn.addEventListener('click', () => {
       if (this.run.gold < rerollCost) return;
+      this.audio.playSfx('reroll');
       this.rerollShop();
     });
     wrap.appendChild(rerollBtn);
@@ -1339,6 +1348,7 @@ class Game {
       } else {
         this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
         this.showToast('❌ 도전 실패 — 보너스 없음', 'challenge-fail');
+        this.audio.playSfx('challengeFail');
       }
     }
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
@@ -1372,6 +1382,7 @@ class Game {
       btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
+        this.audio.playSfx('select');
         applyReward(this.run, reward);
         this.normalizePersistentGrid();
         this.run.round++;
@@ -1687,13 +1698,14 @@ class Game {
     if (ins.selfGarbage > 0) this.audio.playSfx('penalty');
   }
 
-  // 플레이어가 위급할 때(쓰레기 70%↑) battleTense로 자동 전환 + 심장박동 SFX.
-  // 보스/엘리트는 자기 테마 유지.
+  // 위급 판정 = 보드에 쌓인 쓰레기 + 게이지에 예정된 쓰레기 합산.
+  // 70%↑이면 battleTense로 자동 전환 + 심장박동 SFX. 보스/엘리트는 자기 테마 유지.
   updateDangerAudio() {
     if (!this.inBattle() || this.battleEndResult) return;
     const rows = this.player?.rows || 1;
     const gRows = this.player?.grid?.filter(r => r.some(c => c?.traits?.includes('garbage'))).length || 0;
-    const danger = gRows / rows >= 0.7;
+    const pending = (this.player?.garbageEntries || []).reduce((s, e) => s + Math.ceil(e.amount || 0), 0);
+    const danger = (gRows + pending) / rows >= 0.7;
     if (danger) this.audio.playHeartbeat();
     const e = this.enemyCard;
     if (e?.type === 'boss' || e?.profile === 'elite') return;
@@ -1707,12 +1719,14 @@ class Game {
       else if (c === 3) this.audio.playSfx('clear3');
       else if (c === 2) this.audio.playSfx('clear2');
       else if (c === 1) this.audio.playSfx('clear1');
-      if (result.bombRows && result.bombRows.length) this.audio.playSfx('explosion');
+      if (result.exploded || (result.bombRows && result.bombRows.length)) this.audio.playSfx('explosion');
+      if (result.glassBroken) this.audio.playSfx('glassBreak');
       if (result.slow) this.audio.playSfx('freeze');
       if (result.gold) this.audio.playSfx('coin');
       if (result.chargeGained) this.audio.playSfx('comboCharge');
       if (this.player?.combo >= 2 && c > 0) this.audio.playSfx('combo', this.player.combo);
     } else if (attacker === this.enemy) {
+      if (result.glassBroken) this.audio.playSfx('glassBreak');
       if (result.attack > 0 || result.cleared > 0) this.audio.playSfx('enemyHit');
     }
   }
@@ -2208,6 +2222,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260523-ko56').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260524-audio2').catch(() => {});
   });
 }
