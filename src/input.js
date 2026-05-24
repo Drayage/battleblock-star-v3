@@ -1,4 +1,4 @@
-import { GAME_TIMING } from './constants.js?v=20260523-ko55';
+import { GAME_TIMING } from './constants.js?v=20260523-ko56';
 
 // Standard gamepad button mapping — 국룰 테트리스 레이아웃
 const BTN_ONE_SHOT = {
@@ -114,12 +114,14 @@ export class InputController {
       const lbl = btn.querySelector('.key-label');
       if (!lbl) return;
       const i = Number(btn.dataset.skillIdx);
-      lbl.textContent = connected ? (GAMEPAD_LABELS[`skill${i}`] ?? `${i + 1}.`) : `${i + 1}.`;
+      const key = GAMEPAD_LABELS[`skill${i}`];
+      lbl.textContent = (connected && key) ? ` (${key})` : '';
     });
     document.querySelectorAll('#touchConsumables button').forEach((btn, i) => {
       const lbl = btn.querySelector('.key-label');
       if (!lbl) return;
-      lbl.textContent = connected ? (GAMEPAD_LABELS[`consumable${i}`] ?? `${i + 4}.`) : `${i + 4}.`;
+      const key = GAMEPAD_LABELS[`consumable${i}`];
+      lbl.textContent = (connected && key) ? ` (${key})` : '';
     });
   }
 
