@@ -32,6 +32,19 @@ function transpose(track, semitones) {
   });
 }
 
+// 긴 sustain 음을 짧은 반복 트레몰로로 분할 (긴박감 강화).
+// subdivisions 단위(박당)로 쪼갬: 1=8분음표, 2=16분음표, 4=32분음표.
+function pulsate(track, subdivisions = 2) {
+  const out = [];
+  for (const [note, d] of track) {
+    if (!note || note === '-') { out.push([note, d]); continue; }
+    const count = Math.max(1, Math.round(d * subdivisions));
+    const each = d / count;
+    for (let i = 0; i < count; i++) out.push([note, each]);
+  }
+  return out;
+}
+
 // 각 곡은 Korobeiniki의 모티브(하행 E-D-C-B, Em-Am-B7-Em 진행)만 빌려와
 // 독자적인 멜로디/리듬/조성으로 재작곡되었다. 단위: 4분음표 = 1박.
 
@@ -294,12 +307,13 @@ export const PRESETS = {
   },
   battleTense: {
     label: '전투 긴박',
-    bpm: 196,
+    bpm: 230,
     tracks: [
-      { notes: TENSE_LEAD, type: 'square', vol: 0.15, detune: 6 },
-      { notes: TENSE_LEAD, type: 'sawtooth', vol: 0.08, detune: -10 },
+      { notes: TENSE_LEAD, type: 'square', vol: 0.15, detune: 10 },
+      { notes: TENSE_LEAD, type: 'sawtooth', vol: 0.10, detune: -14 },
+      { notes: transpose(TENSE_LEAD, 12), type: 'triangle', vol: 0.08 }, // 옥타브-업 사이렌
       { notes: TENSE_COUNTER, type: 'triangle', vol: 0.10 },
-      { notes: TENSE_BASS, type: 'sawtooth', vol: 0.16 }
+      { notes: TENSE_BASS, type: 'sawtooth', vol: 0.18 }
     ]
   },
   elite: {
@@ -312,11 +326,12 @@ export const PRESETS = {
   },
   eliteTense: {
     label: '엘리트 긴박',
-    bpm: 220,
+    bpm: 256,
     tracks: [
-      { notes: ELITE_LEAD, type: 'square', vol: 0.17, detune: 6 },
-      { notes: ELITE_LEAD, type: 'sawtooth', vol: 0.09, detune: -8 },
-      { notes: ELITE_BASS, type: 'sawtooth', vol: 0.18 }
+      { notes: ELITE_LEAD, type: 'square', vol: 0.17, detune: 10 },
+      { notes: ELITE_LEAD, type: 'sawtooth', vol: 0.10, detune: -12 },
+      { notes: transpose(ELITE_LEAD, 12), type: 'triangle', vol: 0.09 }, // 옥타브-업 사이렌
+      { notes: pulsate(ELITE_BASS, 2), type: 'sawtooth', vol: 0.18 }     // 베이스 8분음표 펄스
     ]
   },
   boss: {
@@ -331,11 +346,13 @@ export const PRESETS = {
   },
   bossTense: {
     label: '보스 긴박',
-    bpm: 132,
+    bpm: 168,
     tracks: [
-      { notes: BOSS_LEAD, type: 'sawtooth', vol: 0.18, detune: 8 },
-      { notes: BOSS_LEAD, type: 'square', vol: 0.10, detune: -12 },
-      { notes: BOSS_BASS, type: 'sawtooth', vol: 0.24 },
+      // 긴 sustain을 16분음표 트레몰로로 분할 — 보스 테마가 폭주하는 느낌
+      { notes: pulsate(BOSS_LEAD, 2), type: 'sawtooth', vol: 0.18, detune: 10 },
+      { notes: pulsate(BOSS_LEAD, 2), type: 'square', vol: 0.10, detune: -14 },
+      { notes: transpose(pulsate(BOSS_LEAD, 2), 12), type: 'triangle', vol: 0.08 }, // 옥타브-업
+      { notes: pulsate(BOSS_BASS, 2), type: 'sawtooth', vol: 0.24 },                 // 베이스 8분음표 펄스
       { notes: BOSS_PAD, type: 'sawtooth', vol: 0.12 }
     ]
   }
