@@ -110,4 +110,18 @@ export class AudioManager {
 
   toggleBgm() { this.setBgmEnabled(!this.bgmEnabled); }
   toggleSfx() { this.setSfxEnabled(!this.sfxEnabled); }
+
+  setBgmVolume(v) {
+    this.bgmVolume = Math.max(0, Math.min(1, v));
+    this._saveSettings();
+    this.bgm?.setVolume(this.bgmVolume);
+    this._emit();
+  }
+
+  setSfxVolume(v) {
+    this.sfxVolume = Math.max(0, Math.min(1, v));
+    this._saveSettings();
+    this.sfx?.setVolume(this.sfxVolume);
+    this._emit();
+  }
 }

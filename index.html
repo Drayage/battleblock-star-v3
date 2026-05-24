@@ -72,6 +72,10 @@
         <button id="bgmToggleBtn" class="ghost" data-label="음악">음악</button>
         <button id="sfxToggleBtn" class="ghost" data-label="효과음">효과음</button>
       </div>
+      <div class="audio-sliders">
+        <label class="audio-slider"><span>음악 <strong id="bgmVolLabel">60%</strong></span><input id="bgmVolSlider" type="range" min="0" max="100" value="60"></label>
+        <label class="audio-slider"><span>효과음 <strong id="sfxVolLabel">70%</strong></span><input id="sfxVolSlider" type="range" min="0" max="100" value="70"></label>
+      </div>
     </section>
 
     <section id="mapScreen" class="screen">
@@ -148,6 +152,10 @@
             <div class="audio-toggles">
               <button id="bgmToggleBtnPause" class="ghost" data-label="음악">음악</button>
               <button id="sfxToggleBtnPause" class="ghost" data-label="효과음">효과음</button>
+            </div>
+            <div class="audio-sliders">
+              <label class="audio-slider"><span>음악 <strong id="bgmVolLabelPause">60%</strong></span><input id="bgmVolSliderPause" type="range" min="0" max="100" value="60"></label>
+              <label class="audio-slider"><span>효과음 <strong id="sfxVolLabelPause">70%</strong></span><input id="sfxVolSliderPause" type="range" min="0" max="100" value="70"></label>
             </div>
             <p class="subtitle">일시정지 버튼을 다시 누르면 재개됩니다.</p>
           </div>
