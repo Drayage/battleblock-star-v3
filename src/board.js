@@ -153,7 +153,12 @@ export class Board {
     board.clearDelayBonus = 0;
     board.delaysGarbageOnClear = true;
     board.instantGarbage = false;
-    board.pendingDrops = (state.pendingDrops || []).map(d => ({ ...d }));
+    // 구버전 세이브 호환: {x, y, radius} → {col: x, maxY: y+radius}
+    board.pendingDrops = (state.pendingDrops || []).map(d => {
+      if (d.col != null && d.maxY != null) return { col: d.col, maxY: d.maxY };
+      const radius = d.radius ?? 1;
+      return { col: d.x, maxY: Math.min((state.rows || DEFAULT_ROWS) - 1, (d.y ?? 0) + radius) };
+    });
     board.pendingDropTimer = state.pendingDropTimer || 0;
     board.fillQueue();
     return board;
@@ -539,24 +544,27 @@ export class Board {
     this.grid = kept;
 
     const clearedBelow = y => rows.filter(r => r > y).length;
-    const drops = [];
+    const allCols = new Map(); // colIdx → maxDestroyedY (across all bombs + chains)
     const bombR = 1 + this.explodeRadiusBonus;
     const timeR = 2 + this.explodeRadiusBonus;
     let blastBonusAttack = 0;
+    const mergeCols = src => {
+      for (const [c, my] of src) if (!allCols.has(c) || my > allCols.get(c)) allCols.set(c, my);
+    };
     for (const { x, y } of bombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
-      const destroyed = this.explodeBombAt(x, targetY, bombR);
+      const { destroyed, cols } = this.explodeBombAt(x, targetY, bombR);
       blastBonusAttack += Math.min(1.5, destroyed * 0.05);
-      drops.push({ x, y: targetY, radius: bombR });
+      mergeCols(cols);
     }
     for (const { x, y } of timeBombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
-      const destroyed = this.explodeBombAt(x, targetY, timeR);
+      const { destroyed, cols } = this.explodeBombAt(x, targetY, timeR);
       blastBonusAttack += Math.min(1.5, destroyed * 0.05);
-      drops.push({ x, y: targetY, radius: timeR });
+      mergeCols(cols);
     }
     if (this.explodeRadiusBonus > 0) attack += blastBonusAttack;
-    if (drops.length) this.queueExplosionDrops(drops);
+    if (allCols.size) this.queueExplosionDrops(allCols);
     if (purgeCells > 0) {
       // 클렌즈 칸당 가비지 1줄 제거.
       const purgedRows = this.purgeGarbageRows(purgeCells);
@@ -595,10 +603,11 @@ export class Board {
     }
   }
 
-  explodeBombAt(x, y, radius = 1) {
+  explodeBombAt(x, y, radius = 1, tracker = null) {
     this.bombFx.push({ x, y, timer: GAME_TIMING.BOMB_FX_FLASH, radius });
     const chained = [];
     let destroyed = 0;
+    const cols = tracker || new Map(); // colIdx → maxDestroyedY (for proper drop after grid shifts)
     for (let r = Math.max(0, y - radius); r <= Math.min(this.rows - 1, y + radius); r++) {
       for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
         const cell = this.grid[r][c];
@@ -608,10 +617,11 @@ export class Board {
         }
         if (cell) destroyed++;
         this.grid[r][c] = null;
+        if (!cols.has(c) || r > cols.get(c)) cols.set(c, r);
       }
     }
-    for (const ch of chained) destroyed += this.explodeBombAt(ch.x, ch.y, ch.radius);
-    return destroyed;
+    for (const ch of chained) destroyed += this.explodeBombAt(ch.x, ch.y, ch.radius, cols);
+    return tracker ? destroyed : { destroyed, cols };
   }
 
   dropCellsAbove(x, y) {
@@ -636,17 +646,12 @@ export class Board {
     }
   }
 
-  dropCellsAboveExplosion(x, y, radius = 1) {
-    const bottomY = Math.min(this.rows - 1, y + radius);
-    for (let c = Math.max(0, x - radius); c <= Math.min(this.cols - 1, x + radius); c++) {
-      this.dropCellsAbove(c, bottomY);
-    }
-  }
-
   // 폭발로 비운 직후 위 칸을 곧바로 당기지 않고, 잠깐 뒤에 떨어뜨려 자연스럽게 보이게 한다.
-  queueExplosionDrops(drops) {
+  // drops 형식: Map<colIdx, maxDestroyedY>. 컬럼별로 가장 깊은 파괴 지점까지 위에서 끌어내림.
+  // purgeGarbageRows가 사이에 그리드를 시프트해도 적정 위치로 자동 보정됨.
+  queueExplosionDrops(colsMap) {
     this.flushPendingDrops();
-    this.pendingDrops = drops.map(d => ({ ...d }));
+    this.pendingDrops = [...colsMap].map(([col, maxY]) => ({ col, maxY }));
     this.pendingDropTimer = GAME_TIMING.EXPLOSION_DROP_DELAY;
   }
 
@@ -658,7 +663,7 @@ export class Board {
     const drops = this.pendingDrops;
     this.pendingDrops = [];
     this.pendingDropTimer = 0;
-    for (const d of drops) this.dropCellsAboveExplosion(d.x, d.y, d.radius);
+    for (const d of drops) this.dropCellsAbove(d.col, d.maxY);
   }
 
   detonateAll() {
@@ -670,8 +675,12 @@ export class Board {
         else if (cell?.traits.includes('timeBomb')) targets.push({ x: c, y: r, radius: 2 });
       }
     }
-    for (const t of targets) this.explodeBombAt(t.x, t.y, t.radius);
-    if (targets.length) this.queueExplosionDrops(targets.map(t => ({ x: t.x, y: t.y, radius: t.radius })));
+    const allCols = new Map();
+    for (const t of targets) {
+      const { cols } = this.explodeBombAt(t.x, t.y, t.radius);
+      for (const [c, my] of cols) if (!allCols.has(c) || my > allCols.get(c)) allCols.set(c, my);
+    }
+    if (allCols.size) this.queueExplosionDrops(allCols);
     return targets.length;
   }
 
@@ -822,6 +831,12 @@ export class Board {
       if (r < 0) break;
       this.grid.splice(r, 1);
       this.grid.unshift(emptyRow());
+      // 그리드가 1줄 시프트됨: r 위쪽 행은 모두 +1로 이동. 큐된 폭발 drop의 maxY도 따라 보정.
+      if (this.pendingDrops?.length) {
+        for (const d of this.pendingDrops) {
+          if (d.maxY < r) d.maxY = Math.min(this.rows - 1, d.maxY + 1);
+        }
+      }
       removed++;
     }
     return removed;
