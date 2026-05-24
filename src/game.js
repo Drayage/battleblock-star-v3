@@ -1,12 +1,13 @@
-import { Board } from './board.js?v=20260524-audio3';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio3';
-import { Deck } from './deck.js?v=20260524-audio3';
-import { AI } from './ai.js?v=20260524-audio3';
-import { Renderer } from './renderer.js?v=20260524-audio3';
-import { InputController } from './input.js?v=20260524-audio3';
-import { AudioManager } from './audio.js?v=20260524-audio3';
-import { SKILLS } from './skills.js?v=20260524-audio3';
-import { CONSUMABLES } from './consumables.js?v=20260524-audio3';
+import { Board } from './board.js?v=20260524-audio4';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio4';
+import { Deck } from './deck.js?v=20260524-audio4';
+import { AI } from './ai.js?v=20260524-audio4';
+import { Renderer } from './renderer.js?v=20260524-audio4';
+import { InputController } from './input.js?v=20260524-audio4';
+import { AudioManager } from './audio.js?v=20260524-audio4';
+import { t, getLang, setLang, onLangChange, applyDomTranslations, LANGS } from './i18n.js?v=20260524-audio4';
+import { SKILLS } from './skills.js?v=20260524-audio4';
+import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
 import {
   RunState,
   RELICS,
@@ -27,7 +28,7 @@ import {
   shouldShowEvent,
   setProgress,
   abilityOf
-} from './progression.js?v=20260524-audio3';
+} from './progression.js?v=20260524-audio4';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -179,6 +180,15 @@ class Game {
     this.battleTimeouts = new Set();
     this.message = '';
     this.bindUi();
+    applyDomTranslations();
+    this.refreshLangButtons();
+    onLangChange(() => {
+      applyDomTranslations();
+      this.refreshLangButtons();
+      // 동적 토글/메뉴 라벨도 갱신
+      this.audio._emit?.();
+      this.refreshMenu();
+    });
     this.refreshMenu();
     requestAnimationFrame(t => this.loop(t));
   }
@@ -200,7 +210,11 @@ class Game {
     const wireToggle = (id, get, set) => {
       const btn = document.getElementById(id);
       if (!btn) return;
-      const refresh = () => { btn.textContent = `${btn.dataset.label}: ${get() ? 'ON' : 'OFF'}`; btn.classList.toggle('off', !get()); };
+      const refresh = () => {
+        const lbl = btn.dataset.i18nLabel ? t(btn.dataset.i18nLabel) : btn.dataset.label;
+        btn.textContent = `${lbl}: ${get() ? t('common.on') : t('common.off')}`;
+        btn.classList.toggle('off', !get());
+      };
       btn.addEventListener('click', () => { this.audio.ensureInit(); set(!get()); refresh(); });
       this.audio.onChange(refresh);
       refresh();
@@ -222,6 +236,9 @@ class Game {
     wireSlider('sfxVolSlider', 'sfxVolLabel', () => this.audio.sfxVolume, v => this.audio.setSfxVolume(v));
     wireSlider('bgmVolSliderPause', 'bgmVolLabelPause', () => this.audio.bgmVolume, v => this.audio.setBgmVolume(v));
     wireSlider('sfxVolSliderPause', 'sfxVolLabelPause', () => this.audio.sfxVolume, v => this.audio.setSfxVolume(v));
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => { setLang(btn.dataset.lang); });
+    });
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
@@ -241,6 +258,13 @@ class Game {
     document.getElementById('eventDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
+    });
+  }
+
+  refreshLangButtons() {
+    const cur = getLang();
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === cur);
     });
   }
 
@@ -274,7 +298,7 @@ class Game {
     document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
     document.getElementById('menuGold').textContent = this.run.gold;
     document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
-    document.getElementById('menuDeck').textContent = `${this.run.deckCount()}장`;
+    document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
@@ -2247,6 +2271,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260524-audio3').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260524-audio4').catch(() => {});
   });
 }

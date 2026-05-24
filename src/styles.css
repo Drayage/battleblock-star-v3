@@ -113,3 +113,7 @@ button{font:inherit}
 .audio-slider span{display:flex;justify-content:space-between;align-items:center}
 .audio-slider strong{color:#e8ecf5;font-weight:600;font-variant-numeric:tabular-nums}
 .audio-slider input[type=range]{width:100%;accent-color:#7d92d6}
+
+.lang-buttons{display:flex;gap:6px;flex-wrap:wrap}
+.lang-buttons .lang-btn{font-size:12px;padding:6px 10px;min-width:0}
+.lang-buttons .lang-btn.active{background:#3b4a82;border-color:#7d92d6;color:#e8ecf5}
