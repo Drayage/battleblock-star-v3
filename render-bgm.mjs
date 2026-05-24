@@ -126,7 +126,7 @@ function toWav(samples) {
 
 mkdirSync('bgm-out', { recursive: true });
 for (const [key, preset] of Object.entries(PRESETS)) {
-  const samples = renderPreset(preset, 1);
+  const samples = renderPreset(preset, 2);
   const wav = toWav(samples);
   const path = `bgm-out/${key}.wav`;
   writeFileSync(path, wav);
