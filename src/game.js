@@ -4,6 +4,7 @@ import { Deck } from './deck.js?v=20260523-ko56';
 import { AI } from './ai.js?v=20260523-ko56';
 import { Renderer } from './renderer.js?v=20260523-ko56';
 import { InputController } from './input.js?v=20260523-ko56';
+import { AudioManager } from './audio.js?v=20260523-ko56';
 import { SKILLS } from './skills.js?v=20260523-ko56';
 import { CONSUMABLES } from './consumables.js?v=20260523-ko56';
 import {
@@ -118,6 +119,7 @@ class Game {
     this.canvas = document.getElementById('gameCanvas');
     this.renderer = new Renderer(this.canvas);
     this.input = new InputController(this);
+    this.audio = new AudioManager();
     this.run = new RunState();
     this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
@@ -160,6 +162,23 @@ class Game {
   bindUi() {
     document.getElementById('practiceToggleBtn').addEventListener('click', () => this.togglePracticeMode());
     this.refreshPracticeToggle();
+    // 첫 사용자 입력 시 AudioContext 활성화 (브라우저 자동재생 정책).
+    const audioInit = () => { this.audio.ensureInit(); this.updateSceneBgm(); };
+    window.addEventListener('pointerdown', audioInit, { once: true });
+    window.addEventListener('keydown', audioInit, { once: true });
+    // 음악·SFX 토글 버튼 (메뉴/일시정지 오버레이 공통)
+    const wireToggle = (id, get, set) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const refresh = () => { btn.textContent = `${btn.dataset.label}: ${get() ? 'ON' : 'OFF'}`; btn.classList.toggle('off', !get()); };
+      btn.addEventListener('click', () => { this.audio.ensureInit(); set(!get()); refresh(); });
+      this.audio.onChange(refresh);
+      refresh();
+    };
+    wireToggle('bgmToggleBtn', () => this.audio.bgmEnabled, v => this.audio.setBgmEnabled(v));
+    wireToggle('sfxToggleBtn', () => this.audio.sfxEnabled, v => this.audio.setSfxEnabled(v));
+    wireToggle('bgmToggleBtnPause', () => this.audio.bgmEnabled, v => this.audio.setBgmEnabled(v));
+    wireToggle('sfxToggleBtnPause', () => this.audio.sfxEnabled, v => this.audio.setSfxEnabled(v));
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
@@ -190,6 +209,22 @@ class Game {
     // Clear gamepad focus highlights on every screen transition
     document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
     if (this.input) { this.input.gpMenuIdx = 0; this.input.gpMenuRepeat = {}; this.input.gpPrev = {}; }
+    this.updateSceneBgm();
+  }
+
+  updateSceneBgm() {
+    const id = this.screen;
+    if (id === 'menu') return this.audio.setScene('title');
+    if (id === 'mapScreen') return this.audio.setScene('select');
+    if (id === 'eventScreen') return this.audio.setScene('select');
+    if (id === 'shopScreen') return this.audio.setScene('shop');
+    if (id === 'endScreen') return this.audio.setScene('title');
+    if (id === 'gameScreen') {
+      const e = this.enemyCard;
+      if (e?.type === 'boss') return this.audio.setScene('boss');
+      if (e?.profile === 'elite') return this.audio.setScene('elite');
+      return this.audio.setScene('battle');
+    }
   }
 
   refreshMenu() {
@@ -1040,16 +1075,16 @@ class Game {
       if (action === 'left') action = 'right';
       else if (action === 'right') action = 'left';
     }
-    if (action === 'left') this.groundAdjust(() => this.player.move(-1, 0));
-    if (action === 'right') this.groundAdjust(() => this.player.move(1, 0));
+    if (action === 'left') { if (this.groundAdjust(() => this.player.move(-1, 0))) this.audio.playSfx('move'); }
+    if (action === 'right') { if (this.groundAdjust(() => this.player.move(1, 0))) this.audio.playSfx('move'); }
     if (action === 'soft') {
-      if (this.player.move(0, 1)) this.resetLockDelay();
+      if (this.player.move(0, 1)) { this.resetLockDelay(); this.audio.playSfx('softDrop'); }
       else this.message = 'Grounded';
     }
-    if (action === 'rotate') { this.groundAdjust(() => this.player.rotate(1)); this.battleUsedClockwise = true; }
-    if (action === 'ccw') { this.groundAdjust(() => this.player.rotate(-1)); this.battleUsedCounterClockwise = true; }
-    if (action === 'hold') { if (this.player.hold()) this.battleUsedHold = true; }
-    if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.input.vibrate('harddrop'); this.resolve(this.player.hardDrop(), this.player); }
+    if (action === 'rotate') { if (this.groundAdjust(() => this.player.rotate(1))) this.audio.playSfx('rotate'); this.battleUsedClockwise = true; }
+    if (action === 'ccw') { if (this.groundAdjust(() => this.player.rotate(-1))) this.audio.playSfx('rotate'); this.battleUsedCounterClockwise = true; }
+    if (action === 'hold') { if (this.player.hold()) { this.battleUsedHold = true; this.audio.playSfx('hold'); } }
+    if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.input.vibrate('harddrop'); this.audio.playSfx('hardDrop'); this.resolve(this.player.hardDrop(), this.player); }
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
   }
@@ -1098,6 +1133,7 @@ class Game {
     const cdFactor = this.run.relics.includes('set_manawell') ? 0.5 : 1;
     this.skillCooldowns[id] = (skill.cooldown || 0) * cdFactor;
     this.message = `${skill.name} 발동`;
+    this.audio.playSfx('strike');
   }
 
   useConsumable(index) {
@@ -1114,6 +1150,7 @@ class Game {
   resolve(result, attacker) {
     if (!result) return;
     const defender = attacker === this.player ? this.enemy : this.player;
+    if (attacker === this.player) this.emitPlaceSfx(result);
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (result.cleared > 0 && attacker === this.player) {
       this.battlePlayerClearedLines += result.cleared;
@@ -1193,6 +1230,7 @@ class Game {
         if (toSend > 0) defender.receiveGarbage(toSend);
       }
     }
+    this.emitResolveSfx(result, attacker, defender);
     if (this.player.defeated && !this.playerSurvivesLethal()) return this.queueBattleEnd('loss');
     if (this.enemy.defeated) return this.queueBattleEnd('win');
     this.autoSave();
@@ -1245,6 +1283,7 @@ class Game {
     this.battleEndDelay = result === 'win' ? GAME_TIMING.BATTLE_WIN_DELAY : GAME_TIMING.BATTLE_LOSS_DELAY;
     this.message = result === 'win' ? '적 처치' : '전투 패배';
     this.input.vibrate(result === 'win' ? 'win' : 'hurt');
+    this.audio.playSfx(result === 'win' ? 'victory' : 'defeat');
     this.autoSave();
   }
 
@@ -1271,6 +1310,7 @@ class Game {
         const rewardDesc = this.grantChallengeReward(this.activeChallenge.reward);
         this.pendingChallengeText = ` · 도전 성공! ${rewardDesc}`;
         this.showToast(`🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
+        this.audio.playSfx('challengeWin');
       } else {
         this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
         this.showToast('❌ 도전 실패 — 보너스 없음', 'challenge-fail');
@@ -1605,8 +1645,51 @@ class Game {
     if (!this.inBattle() || this.battleEndResult) return;
     this.paused = !this.paused;
     document.getElementById('pauseBtn').textContent = this.paused ? '재개' : '일시정지';
+    document.getElementById('pauseOverlay')?.classList.toggle('hidden', !this.paused);
     this.message = this.paused ? '일시정지' : '재개';
     this.autoSave();
+  }
+
+  // 즉발 효과(onPlace)에 따른 SFX. result.instant는 board.applyOnPlace에서 채워진다.
+  emitPlaceSfx(result) {
+    const ins = result?.instant;
+    if (!ins) return;
+    if (ins.attack > 0) this.audio.playSfx('strike');
+    if (ins.canceled > 0) this.audio.playSfx('shield');
+    if (ins.purgedRows > 0) this.audio.playSfx('purge');
+    if (ins.mana > 0) this.audio.playSfx('mana');
+    if (ins.dispelEnemy) this.audio.playSfx('dispel');
+    if (ins.selfGarbage > 0) this.audio.playSfx('penalty');
+  }
+
+  // 플레이어가 위급할 때(쓰레기 70%↑) battleTense로 자동 전환 + 심장박동 SFX.
+  // 보스/엘리트는 자기 테마 유지.
+  updateDangerAudio() {
+    if (!this.inBattle() || this.battleEndResult) return;
+    const rows = this.player?.rows || 1;
+    const gRows = this.player?.grid?.filter(r => r.some(c => c?.traits?.includes('garbage'))).length || 0;
+    const danger = gRows / rows >= 0.7;
+    if (danger) this.audio.playHeartbeat();
+    const e = this.enemyCard;
+    if (e?.type === 'boss' || e?.profile === 'elite') return;
+    this.audio.setIntensity(danger ? 'battleTense' : 'battle');
+  }
+
+  emitResolveSfx(result, attacker, defender) {
+    if (attacker === this.player) {
+      const c = result.cleared || 0;
+      if (c >= 4) this.audio.playSfx('clear4');
+      else if (c === 3) this.audio.playSfx('clear3');
+      else if (c === 2) this.audio.playSfx('clear2');
+      else if (c === 1) this.audio.playSfx('clear1');
+      if (result.bombRows && result.bombRows.length) this.audio.playSfx('explosion');
+      if (result.slow) this.audio.playSfx('freeze');
+      if (result.gold) this.audio.playSfx('coin');
+      if (result.chargeGained) this.audio.playSfx('comboCharge');
+      if (this.player?.combo >= 2 && c > 0) this.audio.playSfx('combo', this.player.combo);
+    } else if (attacker === this.enemy) {
+      if (result.attack > 0 || result.cleared > 0) this.audio.playSfx('enemyHit');
+    }
   }
 
   loop(now) {
@@ -1702,6 +1785,7 @@ class Game {
       this.resolve(this.resolveEnemyStep(), this.enemy);
     }
     this.updateEnemyAbility(dt);
+    this.updateDangerAudio();
     this.updateSkillButtons();
     if (this.enemy.defeated) this.queueBattleEnd('win');
     this.renderer.draw({
@@ -2051,6 +2135,7 @@ class Game {
     if ((this.enemy?.mp || 0) < cfg.cost) return;
     this.enemyAbilityTimer = 0;
     this.enemy.mp = Math.max(0, this.enemy.mp - cfg.cost);
+    this.audio.playSfx('enemySkill');
     cfg.cast(this);
   }
 
@@ -2061,6 +2146,7 @@ class Game {
     if ((this.enemy?.mp || 0) < 50) return;
     this.bossOverloadCharge = 0;
     this.enemy.mp = Math.max(0, this.enemy.mp - 50);
+    this.audio.playSfx('enemySkill');
     this.castBossDebuff();
   }
 
