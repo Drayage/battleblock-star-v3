@@ -1384,6 +1384,7 @@ class Game {
     const relicText = grantedRelic ? ` · 유물 획득: ${RELICS[grantedRelic].name}` : '';
     document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText}${this.pendingChallengeText || ''} · 보상 선택`;
     document.getElementById('enemyChoices').innerHTML = '';
+    this.renderDeckViewer();
     const panel = document.getElementById('rewardPanel');
     const wrap = document.getElementById('rewardChoices');
     panel.classList.remove('hidden');
