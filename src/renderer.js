@@ -218,15 +218,17 @@ export class Renderer {
       const ghost = board.current.clone();
       ghost.y = gy;
       const color = COLORS[board.current.card.id] || '#fff';
-      const inset = Math.max(2, Math.floor(cs * 0.10));
+      const inset = 3;
       const size = cs - inset * 2;
       ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = Math.max(4, Math.floor(cs * 0.24));
+      ctx.lineWidth = Math.max(1.25, Math.floor(cs * 0.07));
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.72;
       for (const { x, y } of ghost.cells) if (y >= 0) {
         const gx = ox + x * cs + inset;
         const gyPx = oy + y * cs + inset;
-        ctx.globalAlpha = 0.58;
-        ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.16));
-        ctx.strokeStyle = color;
         ctx.strokeRect(gx, gyPx, size, size);
       }
       ctx.restore();
