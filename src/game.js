@@ -873,6 +873,7 @@ class Game {
     }
     if (choice.kind === 'gamble') {
       const tier = choice.gtier || 'bronze';
+      let alchemyResult = null;
       this.run.gold -= choice.bet;
       const won = Math.random() < (choice.chance ?? 0.55);
       if (won) {
@@ -881,7 +882,8 @@ class Game {
         else if (tier === 'silver') this.run.gambleNext = 'gold';
         else if (tier === 'gold') {
           if (!this.run.relics.includes('alchemy_core')) this.run.relics.push('alchemy_core');
-          this.applyAlchemyCore();
+          this.discover('relics', 'alchemy_core');
+          alchemyResult = this.applyAlchemyCore();
           this.run.gambleNext = null;
           this.run.gambleClosed = true;
         }
@@ -889,20 +891,47 @@ class Game {
         if (tier !== 'bronze') this.run.gambleClosed = true;
         this.run.gambleNext = null;
       }
-      return this.playGambleEffect(won, choice.bet, done, choice.reward ?? 60);
+      return this.playGambleEffect(won, choice.bet, () => {
+        if (alchemyResult) this.showAlchemyCoreToast(alchemyResult);
+        done();
+      }, choice.reward ?? 60);
     }
     if (choice.kind === 'contract') this.run.deck.addCard(choice.id);
     done();
   }
 
   applyAlchemyCore() {
+    let transformed = 0;
+    const added = [];
+    const removed = new Map();
+    for (const id of this.run.deck.removedBase || []) removed.set(id, (removed.get(id) || 0) + 1);
     for (const base of BASE_TYPES) {
       const pool = BLOCK_UPGRADES[base];
       if (!pool || !pool.length) continue;
-      const to = pool[Math.floor(Math.random() * pool.length)];
-      this.run.deck.replaceCard(base, to);
+      const remaining = Math.max(0, 3 - (removed.get(base) || 0));
+      for (let i = 0; i < remaining; i++) {
+        const to = pool[Math.floor(Math.random() * pool.length)];
+        this.run.deck.removedBase.push(base);
+        this.run.deck.extraCards.push(to);
+        this.discover('cards', to);
+        added.push(to);
+        transformed++;
+      }
     }
     this.run.deck.refill();
+    return { transformed, added };
+  }
+
+  showAlchemyCoreToast(result = {}) {
+    const relic = RELICS.alchemy_core;
+    const count = result.transformed || 0;
+    const text = getLang() === 'ja'
+      ? `${relic.icon ?? ''}${dataName('relic', relic, relic.name)}獲得! 基本ブロック${count}枚を特殊ブロックに変換`
+      : getLang() === 'en'
+        ? `${relic.icon ?? ''}${dataName('relic', relic, relic.name)} obtained! Transformed ${count} basic blocks into special blocks`
+        : `${relic.icon ?? ''}${relic.name} 획득! 기본 블록 ${count}장을 특수 블록으로 변환`;
+    this.showToast(text, 'elite', 3600);
+    this.renderDeckViewer();
   }
 
   playGambleEffect(won, bet, done = () => {}, reward = 60) {
