@@ -339,6 +339,22 @@ const CHALLENGES = {
 };
 
 const UI = {
+  ko: {
+    gold: '골드',
+    nextBattle: '다음 전투',
+    deal: '특가 ',
+    locked: '고정됨',
+    lock: '고정',
+    reroll: '리롤',
+    rerollDesc: '상점 상품을 새로 뽑습니다. 리롤할 때마다 비용이 10G씩 증가합니다.',
+    soldOut: '품절',
+    buy: '구매',
+    skills: '스킬',
+    consumables: '소모품',
+    relics: '유물',
+    cardPickRemove: '제거할 카드 선택',
+    hpRows: n => `HP +${n}줄`
+  },
   en: {
     round: n => `${n} Round`, roundClear: n => `Round ${n} Clear`, gold: 'Gold', deck: 'Deck',
     cardsUnit: 'cards', chooseOne: 'Choose one', challenge: 'Challenge', reward: 'Reward', ability: 'Ability',

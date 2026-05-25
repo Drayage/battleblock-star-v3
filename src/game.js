@@ -958,7 +958,7 @@ class Game {
       slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${this.shopItemTitle(item)}</strong><span>${soldOut ? ui('soldOut') : `${isDeal ? ui('deal') : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${this.shopItemTitle(item)}</strong><span>${soldOut ? ui('soldOut') : `${isDeal ? ui('deal') : ''}${price} ${ui('gold')}`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
@@ -978,7 +978,7 @@ class Game {
     const rerollCost = this.shopRerollCost();
     const rerollBtn = document.createElement('button');
     rerollBtn.className = 'choice shop';
-    rerollBtn.innerHTML = `<strong>${ui('reroll')}</strong><span>${rerollCost} Gold</span><small>${ui('rerollDesc')}</small>`;
+    rerollBtn.innerHTML = `<strong>${ui('reroll')}</strong><span>${rerollCost} ${ui('gold')}</span><small>${ui('rerollDesc')}</small>`;
     rerollBtn.disabled = this.run.gold < rerollCost;
     rerollBtn.addEventListener('click', () => {
       if (this.run.gold < rerollCost) return;
@@ -990,7 +990,6 @@ class Game {
   }
 
   shopItemTitle(item) {
-    if (getLang() === 'ko') return item.title;
     if (item.kind === 'card') return `${ui('buy')} ${trCardName(CARD_LIBRARY[item.id], CARD_LIBRARY[item.id]?.name)}`;
     if (item.kind === 'skill') return `${ui('skills')}: ${dataName('skill', SKILLS[item.id], SKILLS[item.id]?.name)} (MP ${SKILLS[item.id].cost})`;
     if (item.kind === 'relic') return `${ui('relics')}: ${dataName('relic', RELICS[item.id], RELICS[item.id]?.name)}`;
