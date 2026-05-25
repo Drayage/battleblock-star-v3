@@ -447,7 +447,12 @@ class Game {
         if (!map.has(key) || (enemy.type === 'boss' && map.get(key).type !== 'boss')) map.set(key, enemy);
       }
     }
-    return this.sortByTierName([...map.values()], enemy => trEnemyName(enemy, enemy.name));
+    const typeRank = enemy => ({ normal: 0, elite: 1, boss: 2 }[enemy?.type] ?? 0);
+    return [...map.values()].sort((a, b) =>
+      typeRank(a) - typeRank(b)
+      || this.tierRank(a.tier) - this.tierRank(b.tier)
+      || trEnemyName(a, a.name).localeCompare(trEnemyName(b, b.name), this.currentLocale())
+    );
   }
 
   tierRank(tier) {
