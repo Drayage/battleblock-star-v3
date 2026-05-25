@@ -166,6 +166,7 @@ class Game {
     this.input = new InputController(this);
     this.audio = new AudioManager();
     this.run = new RunState();
+    this.lastRunResult = null;
     this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
     this.player = null;
@@ -316,7 +317,7 @@ class Game {
     if (id === 'mapScreen') return this.audio.setScene('select');
     if (id === 'eventScreen') return this.audio.setScene('select');
     if (id === 'shopScreen') return this.audio.setScene('shop');
-    if (id === 'endScreen') return this.audio.setScene('gameover');
+    if (id === 'endScreen') return this.audio.setScene(this.lastRunResult === 'win' ? 'clear' : 'gameover');
     if (id === 'gameScreen') {
       const e = this.enemyCard;
       if (e?.type === 'boss') return this.audio.setScene('boss');
@@ -482,6 +483,14 @@ class Game {
   }
 
   eventTitle(choice) {
+    if (choice.kind === 'gamble') {
+      const labels = {
+        bronze: { en: 'Gamble', ja: '賭博' },
+        silver: { en: 'Silver Gamble', ja: 'シルバー賭博' },
+        gold: { en: 'Gold Gamble', ja: 'ゴールド賭博' }
+      };
+      return getLang() === 'ko' ? choice.title : labels[choice.gtier || 'bronze']?.[getLang()] || labels.bronze.en;
+    }
     if (choice.kind === 'starterSkill') return dataName('skill', SKILLS[choice.id], choice.title);
     if (choice.kind === 'skill') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'スキル教官' : 'Skill Trainer');
     if (choice.kind === 'consumable') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '補給キャッシュ' : 'Supply Cache');
@@ -501,6 +510,12 @@ class Game {
 
   eventDesc(choice) {
     if (getLang() === 'ko') return choice.desc;
+    if (choice.kind === 'gamble') {
+      const chance = Math.round((choice.chance ?? 0.55) * 100);
+      return getLang() === 'ja'
+        ? `${choice.bet}ゴールドを賭けます。成功率${chance}%で${choice.reward}ゴールドを受け取り、失敗すると失います。`
+        : `Bet ${choice.bet} gold. ${chance}% chance to win ${choice.reward} gold; lose it on failure.`;
+    }
     if (choice.kind === 'starterSkill') return dataDesc('skill', SKILLS[choice.id], choice.desc);
     if (choice.kind === 'removeCard') return getLang() === 'ja'
       ? `デッキから${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}を1枚除去します。`
@@ -689,6 +704,10 @@ class Game {
   }
 
   playGambleEffect(won, bet, done = () => {}, reward = 60) {
+    const lang = getLang();
+    const rollingText = lang === 'ja' ? '運命をめくっています…' : lang === 'en' ? 'Turning fate...' : '운명을 뒤집는 중…';
+    const winText = lang === 'ja' ? '大当たり! 賭け成功' : lang === 'en' ? 'Jackpot! Bet won' : '대박! 베팅 성공';
+    const loseText = lang === 'ja' ? 'ハズレ… 賭け失敗' : lang === 'en' ? 'Bust... Bet lost' : '꽝… 베팅 실패';
     const host = document.getElementById('app') || document.body;
     const overlay = document.createElement('div');
     overlay.className = 'gamble-overlay';
@@ -697,7 +716,7 @@ class Game {
     card.textContent = '?';
     const label = document.createElement('div');
     label.className = 'gamble-result';
-    label.textContent = '운명을 뒤집는 중…';
+    label.textContent = rollingText;
     overlay.append(card, label);
     host.appendChild(overlay);
 
@@ -707,7 +726,7 @@ class Game {
       finished = true;
       card.classList.add('reveal', won ? 'win' : 'lose');
       card.textContent = won ? `+${reward}G` : `-${bet}G`;
-      label.textContent = won ? '대박! 베팅 성공' : '꽝… 베팅 실패';
+      label.textContent = won ? winText : loseText;
       label.classList.add(won ? 'win' : 'lose');
       setTimeout(() => { overlay.remove(); done(); }, 1150);
     };
@@ -1509,6 +1528,11 @@ class Game {
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
+    if (this.enemyCard?.type === 'boss' || isRunComplete(this.run)) {
+      this.run.round = Math.max(this.run.round, 20);
+      this.endRun(true);
+      return;
+    }
     this.showRewards(makeRewards(this.enemyCard.rewardPool), relicId);
     this.autoSave();
   }
@@ -1596,6 +1620,8 @@ class Game {
 
   endRun(win) {
     this.clearBattleTimeouts();
+    this.lastRunResult = win ? 'win' : 'loss';
+    if (win) this.audio.playSfx('runClear');
     this.saveRecord(win);
     this.deleteSave(true);
     document.getElementById('endScreen').classList.toggle('run-clear', win);

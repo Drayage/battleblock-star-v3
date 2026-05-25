@@ -32,14 +32,17 @@ export class Renderer {
   }
 
   resize(playerRows, enemyRows) {
-    const mobile = window.innerWidth < 720;
-    const rows = Math.max(playerRows, enemyRows);
-    const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
+    const viewportW = Math.floor(window.visualViewport?.width || window.innerWidth);
     const viewportH = Math.floor(window.visualViewport?.height || window.innerHeight);
+    const mobile = viewportW < 720;
+    const rows = Math.max(playerRows, enemyRows);
+    const mobileWidth = Math.max(320, Math.min(430, viewportW));
     const mobileY = 68;
     const widthCell = Math.floor((mobileWidth - 44) / COLS);
     const heightCell = Math.floor((viewportH - 228) / playerRows);
-    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
+    const desktopHeightCell = Math.floor((viewportH - 168) / rows);
+    const desktopWidthCell = Math.floor((viewportW - 72) / 38);
+    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : Math.max(18, Math.min(25, desktopHeightCell, desktopWidthCell));
     const mobileBoardBottom = mobileY + playerRows * cell;
     // mobileInfo 패널: 18px 갭 + 158px 패널 = 176px. 여유 4px 추가.
     const mobileInfoH = 180;
@@ -61,8 +64,8 @@ export class Renderer {
     this.canvas.style.height = `${this.layout.h}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const scale = mobile
-      ? Math.min(1, (window.innerWidth - 4) / this.layout.w, (viewportH - 190) / this.layout.h)
-      : Math.min(1, (window.innerWidth - 8) / this.layout.w, (window.innerHeight - 162) / this.layout.h);
+      ? Math.min(1, (viewportW - 4) / this.layout.w, (viewportH - 190) / this.layout.h)
+      : Math.min(1, (viewportW - 8) / this.layout.w, (viewportH - 128) / this.layout.h);
     this.canvas.style.transform = `scale(${scale})`;
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
@@ -214,10 +217,25 @@ export class Renderer {
       const gy = board.ghostY();
       const ghost = board.current.clone();
       ghost.y = gy;
-      ctx.strokeStyle = COLORS[board.current.card.id] || '#fff';
-      ctx.globalAlpha = 0.55;
-      for (const { x, y } of ghost.cells) if (y >= 0) ctx.strokeRect(ox + x * cs + 3, oy + y * cs + 3, cs - 6, cs - 6);
-      ctx.globalAlpha = 1;
+      const color = COLORS[board.current.card.id] || '#fff';
+      const inset = Math.max(2, Math.floor(cs * 0.10));
+      const size = cs - inset * 2;
+      ctx.save();
+      for (const { x, y } of ghost.cells) if (y >= 0) {
+        const gx = ox + x * cs + inset;
+        const gyPx = oy + y * cs + inset;
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = color;
+        ctx.fillRect(gx, gyPx, size, size);
+        ctx.globalAlpha = 0.92;
+        ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.14));
+        ctx.strokeStyle = 'rgba(255,255,255,.95)';
+        ctx.strokeRect(gx - 1, gyPx - 1, size + 2, size + 2);
+        ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.18));
+        ctx.strokeStyle = color;
+        ctx.strokeRect(gx, gyPx, size, size);
+      }
+      ctx.restore();
       for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0);
     }
     if (board.flash > 0) {
@@ -297,11 +315,17 @@ export class Renderer {
 
   cell(x, y, cs, type, fuse = 0) {
     const ctx = this.ctx;
-    const pad = Math.max(1, Math.floor(cs * 0.08));
+    const pad = Math.max(1, Math.floor(cs * 0.06));
+    const size = cs - pad * 2;
     ctx.fillStyle = COLORS[type] || '#d9e0ef';
-    ctx.fillRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2);
+    ctx.fillRect(x + pad, y + pad, size, size);
     ctx.fillStyle = 'rgba(255,255,255,.16)';
-    ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
+    ctx.fillRect(x + pad, y + pad, size, Math.max(2, Math.floor(cs * 0.15)));
+    ctx.lineWidth = Math.max(1, Math.ceil(cs * 0.06));
+    ctx.strokeStyle = 'rgba(255,255,255,.50)';
+    ctx.strokeRect(x + pad + 0.5, y + pad + 0.5, size - 1, size - 1);
+    ctx.strokeStyle = 'rgba(0,0,0,.38)';
+    ctx.strokeRect(x + pad + 1.5, y + pad + 1.5, size - 3, size - 3);
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
       const mark = fuse > 0 ? String(fuse)

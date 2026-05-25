@@ -279,6 +279,15 @@ export const PRESETS = {
       { notes: GAMEOVER_BASS, type: 'sine', vol: 0.16 }
     ]
   },
+  clear: {
+    label: 'Run Clear',
+    bpm: 124,
+    tracks: [
+      { notes: TITLE_LEAD, type: 'triangle', vol: 0.16 },
+      { notes: TITLE_ARP, type: 'sine', vol: 0.10 },
+      { notes: TITLE_BASS, type: 'triangle', vol: 0.14 }
+    ]
+  },
   shop: {
     label: '상점',
     bpm: 116,
