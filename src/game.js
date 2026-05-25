@@ -336,6 +336,7 @@ class Game {
     document.getElementById('codexBtn').textContent = this.menuText('codex');
     document.getElementById('recordsBtn').textContent = this.menuText('records');
     document.getElementById('settingsBtn').textContent = this.menuText('settings');
+    document.getElementById('startRunBtn').textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
     document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
     document.getElementById('menuGold').textContent = this.run.gold;
     document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
@@ -560,6 +561,8 @@ class Game {
     if (!btn) return;
     btn.textContent = this.practiceMode ? 'ON' : 'OFF';
     btn.classList.toggle('practice-active', this.practiceMode);
+    const startBtn = document.getElementById('startRunBtn');
+    if (startBtn) startBtn.textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
   }
 
   newRun() {
