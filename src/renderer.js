@@ -224,7 +224,7 @@ export class Renderer {
       for (const { x, y } of ghost.cells) if (y >= 0) {
         const gx = ox + x * cs + inset;
         const gyPx = oy + y * cs + inset;
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.58;
         ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.16));
         ctx.strokeStyle = color;
         ctx.strokeRect(gx, gyPx, size, size);
