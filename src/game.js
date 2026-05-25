@@ -26,7 +26,7 @@ import {
   trRewardLabel,
   trRewardDetail
 } from './i18n.js?v=20260524-audio4';
-import { SKILLS } from './skills.js?v=20260526-hyperforce1';
+import { SKILLS } from './skills.js?v=20260526-wardbalance1';
 import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
 import {
   RunState,

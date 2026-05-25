@@ -85,9 +85,9 @@ export const SKILLS = {
     tier: 'bronze',
     cost: 30,
     cooldown: 9000,
-    desc: '예정된 모든 쓰레기 공격을 즉시 차단합니다.',
+    desc: '게이지에 쌓인 적 공격을 즉시 4줄 차단합니다.',
     activate({ player }) {
-      player.garbageQueue = 0;
+      player.cancelGarbage(4);
       return true;
     }
   },
@@ -238,12 +238,12 @@ export const SKILLS = {
     icon: '🛡️',
     name: '게이지 차단',
     tier: 'silver',
-    cost: 35,
-    cooldown: 9000,
-    desc: '게이지에 쌓인 적 공격을 즉시 4줄 차단합니다.',
+    cost: 75,
+    cooldown: 20000,
+    desc: '게이지에 쌓인 적 공격을 전부 차단합니다.',
     activate({ player }) {
       if (player.defeated) return false;
-      player.cancelGarbage(4);
+      player.garbageQueue = 0;
       return true;
     }
   },
