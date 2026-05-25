@@ -225,7 +225,7 @@ const DATA = {
     line_shave: { en: ['Line Shave', 'Delete the bottom 2 occupied rows of your field.'], ja: ['ライン削り', '自分のフィールド下部の占有行を2行削除します。'] },
     panic_guard: { en: ['Panic Guard', 'Immediately blocks all queued garbage attacks.'], ja: ['パニックガード', '予定されたゴミ攻撃をすべて即時ブロックします。'] },
     overcharge: { en: ['Overcharge', 'Your next 3 line clears deal 50% more attack.'], ja: ['過充電', '次の3回のラインクリア攻撃力が50%増加します。'] },
-    hyper_force: { en: ['Hyper Force', 'For 1.5 seconds, force enemy blocks down to disrupt placement.'], ja: ['ハイパーフォース', '1.5秒間、敵ブロックを強制落下させて配置を乱します。'] },
+    hyper_force: { en: ['Hyper Force', 'For 1.5 seconds, force enemy blocks down early to disrupt placement.'], ja: ['ハイパーフォース', '1.5秒間、敵ブロックを早めに強制落下させて配置を乱します。'] },
     purge: { en: ['Purge', 'Remove the lowest 3 garbage rows without taking damage.'], ja: ['パージ', 'ダメージなしで一番下のゴミ行を3行除去します。'] },
     all_i_mode: { en: ['All-I Mode', 'The next 4 blocks are all I minos.'], ja: ['オールIモード', '次の4個のブロックがすべてIミノになります。'] },
     time_warp: { en: ['Time Warp', 'Slow enemy actions for 5 seconds.'], ja: ['タイムワープ', '5秒間、敵の行動速度を低下させます。'] },

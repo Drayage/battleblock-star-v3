@@ -26,7 +26,7 @@ import {
   trRewardLabel,
   trRewardDetail
 } from './i18n.js?v=20260524-audio4';
-import { SKILLS } from './skills.js?v=20260524-audio4';
+import { SKILLS } from './skills.js?v=20260526-hyperforce1';
 import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
 import {
   RunState,
@@ -1484,6 +1484,7 @@ class Game {
     this.playerHyperTimer = 0;
     this.playerInvertTimer = 0;
     this.enemyForceDropTimer = 0;
+    this.enemyForceDropSteps = 0;
     this.bossOverloadCharge = 0;
     this.bossRhythmSent = 0;
     this.bossRhythmRestTimer = 0;
@@ -2035,6 +2036,7 @@ class Game {
         playerHyperTimer: this.playerHyperTimer || 0,
         playerInvertTimer: this.playerInvertTimer || 0,
         enemyForceDropTimer: this.enemyForceDropTimer || 0,
+        enemyForceDropSteps: this.enemyForceDropSteps || 0,
         bossOverloadCharge: this.bossOverloadCharge || 0,
         bossRhythmSent: this.bossRhythmSent || 0,
         bossRhythmRestTimer: this.bossRhythmRestTimer || 0,
@@ -2102,6 +2104,7 @@ class Game {
         this.playerHyperTimer = state.battle.playerHyperTimer || 0;
         this.playerInvertTimer = state.battle.playerInvertTimer || 0;
         this.enemyForceDropTimer = state.battle.enemyForceDropTimer || 0;
+        this.enemyForceDropSteps = state.battle.enemyForceDropSteps || 0;
         this.bossOverloadCharge = state.battle.bossOverloadCharge || 0;
         this.bossRhythmSent = state.battle.bossRhythmSent || 0;
         this.bossRhythmRestTimer = state.battle.bossRhythmRestTimer || 0;
@@ -2296,6 +2299,7 @@ class Game {
     this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
     this.playerInvertTimer = Math.max(0, (this.playerInvertTimer || 0) - dt);
     this.enemyForceDropTimer = Math.max(0, (this.enemyForceDropTimer || 0) - dt);
+    if (this.enemyForceDropTimer <= 0) this.enemyForceDropSteps = 0;
     this.alertTimer = Math.max(0, (this.alertTimer || 0) - dt);
     this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
@@ -2464,8 +2468,19 @@ class Game {
 
   resolveEnemyStep() {
     if (this.enemyForceDropTimer > 0 && this.enemy?.current && !this.enemy.defeated) {
-      this.ai.queue = [];
-      return this.enemy.hardDrop();
+      const result = this.ai.step(this.enemy);
+      if (result) {
+        this.enemyForceDropSteps = 0;
+        this.enemyActionStall = 0;
+        return result;
+      }
+      this.enemyForceDropSteps = (this.enemyForceDropSteps || 0) + 1;
+      if (this.enemyForceDropSteps >= 3) {
+        this.enemyForceDropSteps = 0;
+        this.ai.queue = [];
+        return this.enemy.hardDrop();
+      }
+      return null;
     }
     const result = this.ai.step(this.enemy);
     if (result) {
