@@ -2264,6 +2264,7 @@ class Game {
         playerFog: this.playerFogTimer,
         alert: this.alertTimer > 0 ? this.alertText : null
       });
+      this.input.update(now);
       return;
     }
     this.battleElapsedSec += dt / 1000;
