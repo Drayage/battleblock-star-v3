@@ -224,14 +224,8 @@ export class Renderer {
       for (const { x, y } of ghost.cells) if (y >= 0) {
         const gx = ox + x * cs + inset;
         const gyPx = oy + y * cs + inset;
-        ctx.globalAlpha = 0.22;
-        ctx.fillStyle = color;
-        ctx.fillRect(gx, gyPx, size, size);
-        ctx.globalAlpha = 0.92;
-        ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.14));
-        ctx.strokeStyle = 'rgba(255,255,255,.95)';
-        ctx.strokeRect(gx - 1, gyPx - 1, size + 2, size + 2);
-        ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.18));
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = Math.max(2, Math.ceil(cs * 0.16));
         ctx.strokeStyle = color;
         ctx.strokeRect(gx, gyPx, size, size);
       }
@@ -315,17 +309,11 @@ export class Renderer {
 
   cell(x, y, cs, type, fuse = 0) {
     const ctx = this.ctx;
-    const pad = Math.max(1, Math.floor(cs * 0.06));
-    const size = cs - pad * 2;
+    const pad = Math.max(1, Math.floor(cs * 0.08));
     ctx.fillStyle = COLORS[type] || '#d9e0ef';
-    ctx.fillRect(x + pad, y + pad, size, size);
+    ctx.fillRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2);
     ctx.fillStyle = 'rgba(255,255,255,.16)';
-    ctx.fillRect(x + pad, y + pad, size, Math.max(2, Math.floor(cs * 0.15)));
-    ctx.lineWidth = Math.max(1, Math.ceil(cs * 0.06));
-    ctx.strokeStyle = 'rgba(255,255,255,.50)';
-    ctx.strokeRect(x + pad + 0.5, y + pad + 0.5, size - 1, size - 1);
-    ctx.strokeStyle = 'rgba(0,0,0,.38)';
-    ctx.strokeRect(x + pad + 1.5, y + pad + 1.5, size - 3, size - 3);
+    ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
     if (type === TYPES.GARBAGE) return;
     if (cs >= 16) {
       const mark = fuse > 0 ? String(fuse)
