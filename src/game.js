@@ -56,6 +56,7 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
+const CODEX_KEY = 'battleBlockStar.codexSeen.v1';
 
 // 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
 // 스킬/소모품 → SFX 카테고리 매핑. 신규 스킬 추가 시 여기에 등록한다.
@@ -167,6 +168,8 @@ class Game {
     this.audio = new AudioManager();
     this.run = new RunState();
     this.lastRunResult = null;
+    this.codexSeen = this.loadCodexSeen();
+    this.codexTab = 'cards';
     this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
     this.player = null;
@@ -271,6 +274,9 @@ class Game {
     document.querySelectorAll('.lang-btn').forEach(btn => {
       btn.addEventListener('click', () => { setLang(btn.dataset.lang); });
     });
+    document.getElementById('codexBtn')?.addEventListener('click', () => this.openCodex());
+    document.getElementById('recordsBtn')?.addEventListener('click', () => this.openMenuPanel('records'));
+    document.getElementById('settingsBtn')?.addEventListener('click', () => this.openMenuPanel('settings'));
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
@@ -327,13 +333,29 @@ class Game {
   }
 
   refreshMenu() {
+    document.getElementById('codexBtn').textContent = this.menuText('codex');
+    document.getElementById('recordsBtn').textContent = this.menuText('records');
+    document.getElementById('settingsBtn').textContent = this.menuText('settings');
     document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
     document.getElementById('menuGold').textContent = this.run.gold;
     document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
     document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
+    this.discoverRunState();
     this.renderRecords();
+  }
+
+  menuText(key) {
+    const lang = getLang();
+    const map = {
+      codex: { ko: '도감', en: 'Codex', ja: '図鑑' },
+      records: { ko: '기록', en: 'Records', ja: '記録' },
+      settings: { ko: '설정', en: 'Settings', ja: '設定' },
+      close: { ko: '닫기', en: 'Close', ja: '閉じる' },
+      unknown: { ko: '???', en: '???', ja: '???' }
+    };
+    return map[key]?.[lang] || map[key]?.ko || key;
   }
 
   renderRecords() {
@@ -348,6 +370,183 @@ class Game {
     el.innerHTML = `<strong>${bestText}</strong>` + records.slice(0, 5).map(r =>
       `<span>${ui('round', r.round)} · ${r.gold}G · ${r.result === 'win' ? (getLang() === 'ja' ? '勝利' : getLang() === 'en' ? 'Win' : '승리') : (getLang() === 'ja' ? '敗北' : getLang() === 'en' ? 'Loss' : '패배')}</span>`
     ).join('');
+  }
+
+  renderRecords() {
+    const el = document.getElementById('recordList');
+    const records = this.loadRecords();
+    const best = records.reduce((top, r) => Math.max(top, r.round), 0);
+    if (!records.length) {
+      el.innerHTML = `<span class="muted">${getLang() === 'ja' ? '記録なし。' : getLang() === 'en' ? 'No records.' : '기록 없음.'}</span>`;
+      return;
+    }
+    const bestText = getLang() === 'ja' ? `最高記録: ${best}ラウンド` : getLang() === 'en' ? `Best Record: Round ${best}` : `최고 기록 ${best}라운드`;
+    const resultText = r => r.result === 'win'
+      ? (getLang() === 'ja' ? '勝利' : getLang() === 'en' ? 'Win' : '승리')
+      : (getLang() === 'ja' ? '敗北' : getLang() === 'en' ? 'Loss' : '패배');
+    const locale = getLang() === 'ja' ? 'ja-JP' : getLang() === 'en' ? 'en-US' : 'ko-KR';
+    el.innerHTML = `<strong>${bestText}</strong>` + records.slice(0, 10).map(r => `
+      <div class="record-entry">
+        <strong><span>${resultText(r)} · ${ui('round', r.round)}</span><span>${r.gold}G</span></strong>
+        <small>HP ${r.hpRows ?? '-'} · ${ui('deck')} ${r.deckCount ?? '-'} · ${ui('skills')} ${r.skillCount ?? 0} · ${ui('relics')} ${r.relicCount ?? 0} · ${ui('consumables')} ${r.consumableCount ?? 0}</small>
+        <small>${r.at ? new Date(r.at).toLocaleString(locale) : ''}</small>
+      </div>
+    `).join('');
+  }
+
+  escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  loadCodexSeen() {
+    const empty = { cards: [], relics: [], consumables: [], skills: [], enemies: [] };
+    try { return { ...empty, ...JSON.parse(localStorage.getItem(CODEX_KEY) || '{}') }; }
+    catch { return empty; }
+  }
+
+  saveCodexSeen() {
+    localStorage.setItem(CODEX_KEY, JSON.stringify(this.codexSeen));
+  }
+
+  discover(kind, id) {
+    if (!id || !this.codexSeen[kind] || this.codexSeen[kind].includes(id)) return;
+    this.codexSeen[kind].push(id);
+    this.saveCodexSeen();
+  }
+
+  discoverItem(item) {
+    if (!item) return;
+    if (item.kind === 'card' || item.kind === 'contract' || item.kind === 'grantCard') this.discover('cards', item.id);
+    if (item.kind === 'relic' || item.kind === 'relicDig' || item.kind === 'setRelic') this.discover('relics', item.id);
+    if (item.kind === 'skill' || item.kind === 'starterSkill') this.discover('skills', item.id);
+    if (item.kind === 'consumable') this.discover('consumables', item.id);
+    if (item.kind === 'upgradeCard') { this.discover('cards', item.from); this.discover('cards', item.to); }
+    if (item.kind === 'hpForCurse') this.discover('cards', item.card);
+  }
+
+  discoverRunState() {
+    for (const id of this.run.deck.draw || []) this.discover('cards', id);
+    for (const id of this.run.deck.discard || []) this.discover('cards', id);
+    for (const id of this.run.deck.extraCards || []) this.discover('cards', id);
+    for (const id of this.run.relics || []) this.discover('relics', id);
+    for (const id of this.run.ownedSkills || []) this.discover('skills', id);
+    for (const id of this.run.equippedSkills || []) this.discover('skills', id);
+    for (const id of this.run.consumables || []) this.discover('consumables', id);
+  }
+
+  enemyCodexKey(enemy) {
+    return enemy?.i18nKey || enemy?.name || enemy?.id;
+  }
+
+  allCodexEnemies() {
+    const map = new Map();
+    for (let round = 1; round <= 20; round++) {
+      for (const enemy of makeEnemyChoices(round, [])) {
+        const key = this.enemyCodexKey(enemy);
+        if (!map.has(key) || (enemy.type === 'boss' && map.get(key).type !== 'boss')) map.set(key, enemy);
+      }
+    }
+    return [...map.values()].sort((a, b) => trEnemyName(a, a.name).localeCompare(trEnemyName(b, b.name)));
+  }
+
+  ensureMenuModal() {
+    let modal = document.getElementById('menuModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'menuModal';
+      modal.className = 'menu-modal';
+      modal.innerHTML = '<div class="menu-modal-inner"><div class="menu-modal-head"><h2></h2><button class="ghost" data-close="1"></button></div><div class="menu-modal-body"></div></div>';
+      document.body.appendChild(modal);
+      modal.addEventListener('click', e => {
+        if (e.target === modal || e.target.dataset.close) {
+          modal.classList.remove('active');
+          this.returnMenuPanels();
+        }
+      });
+    }
+    modal.querySelector('[data-close]').textContent = this.menuText('close');
+    return modal;
+  }
+
+  returnMenuPanels() {
+    const menu = document.getElementById('menu');
+    const anchor = document.getElementById('startRunBtn');
+    ['.menu-records-panel', '.menu-settings-panel'].forEach(selector => {
+      const panel = document.querySelector(selector);
+      if (!panel) return;
+      panel.classList.remove('in-modal');
+      if (panel.parentElement?.classList.contains('menu-modal-body')) menu.insertBefore(panel, anchor);
+    });
+  }
+
+  openMenuPanel(kind) {
+    const modal = this.ensureMenuModal();
+    const body = modal.querySelector('.menu-modal-body');
+    this.returnMenuPanels();
+    body.innerHTML = '';
+    if (kind === 'records') {
+      modal.querySelector('h2').textContent = this.menuText('records');
+      this.renderRecords();
+      const panel = document.querySelector('.menu-records-panel');
+      panel.classList.add('in-modal');
+      body.appendChild(panel);
+    } else {
+      modal.querySelector('h2').textContent = this.menuText('settings');
+      const panel = document.querySelector('.menu-settings-panel');
+      panel.classList.add('in-modal');
+      body.appendChild(panel);
+    }
+    modal.classList.add('active');
+    this.input?.resetMenuFocus();
+  }
+
+  openCodex() {
+    const modal = this.ensureMenuModal();
+    modal.querySelector('h2').textContent = this.menuText('codex');
+    const body = modal.querySelector('.menu-modal-body');
+    this.returnMenuPanels();
+    body.innerHTML = '<div class="codex-tabs"></div><div class="codex-grid"></div>';
+    this.renderCodex(body);
+    modal.classList.add('active');
+    this.input?.resetMenuFocus();
+  }
+
+  renderCodex(body) {
+    const tabs = [
+      ['cards', getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Blocks' : '블록'],
+      ['relics', ui('relics')],
+      ['consumables', ui('consumables')],
+      ['skills', ui('skills')],
+      ['enemies', getLang() === 'ja' ? 'モンスター' : getLang() === 'en' ? 'Monsters' : '몬스터']
+    ];
+    const tabWrap = body.querySelector('.codex-tabs');
+    const grid = body.querySelector('.codex-grid');
+    tabWrap.innerHTML = '';
+    for (const [key, label] of tabs) {
+      const btn = document.createElement('button');
+      btn.className = `ghost${this.codexTab === key ? ' active' : ''}`;
+      btn.textContent = label;
+      btn.addEventListener('click', () => { this.codexTab = key; this.renderCodex(body); });
+      tabWrap.appendChild(btn);
+    }
+    grid.innerHTML = '';
+    const seen = new Set(this.codexSeen[this.codexTab] || []);
+    const locked = () => `<div class="codex-card locked">${this.menuText('unknown')}</div>`;
+    if (this.codexTab === 'cards') Object.values(CARD_LIBRARY).forEach(card => {
+      if (!seen.has(card.id)) return grid.insertAdjacentHTML('beforeend', locked());
+      const node = document.createElement('div');
+      node.className = `codex-card ${this.tierClass(card.tier)}`;
+      node.innerHTML = `<strong>${this.escapeHtml(trCardName(card, card.name))}</strong><span class="codex-meta">${card.cellCount} cells · ${card.shapeId}</span><small>${this.escapeHtml(trCardDesc(card, CARD_DESCRIPTIONS[card.id] || ''))}</small>`;
+      node.appendChild(this.blockPreview(card, 7));
+      grid.appendChild(node);
+    });
+    if (this.codexTab === 'relics') Object.values(RELICS).forEach(relic => grid.insertAdjacentHTML('beforeend', seen.has(relic.id) ? `<div class="codex-card ${this.tierClass(relic.tier)}"><strong>${relic.icon || 'R'} ${this.escapeHtml(dataName('relic', relic, relic.name))}</strong><span class="codex-meta">${relic.tier}</span><small>${this.escapeHtml(dataDesc('relic', relic, relic.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'consumables') Object.values(CONSUMABLES).forEach(item => grid.insertAdjacentHTML('beforeend', seen.has(item.id) ? `<div class="codex-card ${this.tierClass(item.tier)}"><strong>${item.icon || item.short} ${this.escapeHtml(dataName('consumable', item, item.name))}</strong><span class="codex-meta">${item.tier}</span><small>${this.escapeHtml(dataDesc('consumable', item, item.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'skills') Object.values(SKILLS).forEach(skill => grid.insertAdjacentHTML('beforeend', seen.has(skill.id) ? `<div class="codex-card ${this.tierClass(skill.tier)}"><strong>${skill.icon || 'S'} ${this.escapeHtml(dataName('skill', skill, skill.name))}</strong><span class="codex-meta">${skill.cost} MP · ${skill.tier}</span><small>${this.escapeHtml(dataDesc('skill', skill, skill.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'enemies') this.allCodexEnemies().forEach(enemy => {
+      const key = this.enemyCodexKey(enemy);
+      grid.insertAdjacentHTML('beforeend', seen.has(key) ? `<div class="codex-card ${this.tierClass(enemy.tier)}"><strong>${enemy.icon || ''} ${this.escapeHtml(trEnemyName(enemy, enemy.name))}</strong><span class="codex-meta">${enemy.type.toUpperCase()} · HP ${enemy.startingRows} · ${enemy.rewardGold}G</span><small>${this.escapeHtml(trEnemyStyle(enemy, enemy.style))}</small><small>AI ${enemy.aiProfile} · Speed ${enemy.speed} · Garbage ${enemy.startingGarbage}</small></div>` : locked());
+    });
   }
 
   togglePracticeMode() {
@@ -367,6 +566,7 @@ class Game {
     document.getElementById('endScreen').classList.remove('run-clear');
     this.run = new RunState();
     this.run.practiceMode = this.practiceMode;
+    this.discoverRunState();
     this.routeNextScreen();
     this.autoSave();
   }
@@ -389,6 +589,7 @@ class Game {
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
     for (const enemy of makeEnemyChoices(this.run.round, this.run.relics)) {
+      this.discover('enemies', this.enemyCodexKey(enemy));
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
@@ -436,6 +637,7 @@ class Game {
       && choices.some(c => c.kind === 'gamble' && this.canUseEvent(c));
     if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: '여분의 골드', desc: '소량의 골드를 가져갑니다.' }];
     for (const choice of choices) {
+      this.discoverItem(choice);
       const btn = document.createElement('button');
       btn.className = `choice event ${this.tierClass(choice.tier)}`;
       btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${this.kindIcon(choice)}${this.eventTitle(choice)}</strong><span>${this.eventName(choice)}</span><small>${this.eventDesc(choice)}</small>`;
@@ -747,6 +949,7 @@ class Game {
     const locked = new Set(stock.locked || []);
     const dealKey = stock.dealKey || null;
     for (const item of items) {
+      this.discoverItem(item);
       const key = shopItemKey(item);
       const soldOut = sold.has(key);
       const isDeal = key === dealKey && !soldOut;
@@ -870,6 +1073,7 @@ class Game {
   }
 
   renderDeckSections({ deck, skill, consumable, relic }) {
+    this.discoverRunState();
     if (deck) {
       const counts = new Map();
       for (const id of this.run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
@@ -1040,6 +1244,7 @@ class Game {
       const price = this.effectivePrice(item, stock.dealKey === shopItemKey(item));
       return this.chooseRemoveCard(price, () => finish(true, 0), () => finish(false));
     }
+    this.discoverItem(item);
     applyReward(this.run, item);
     finish(true);
   }
@@ -1071,6 +1276,7 @@ class Game {
 
   acquireSkill(id, done = () => {}, skipped = done) {
     if (this.run.ownedSkills.includes(id)) return skipped(false);
+    this.discover('skills', id);
     const add = slot => {
       this.run.ownedSkills.push(id);
       if (slot == null && this.run.equippedSkills.length < 3) this.run.equippedSkills.push(id);
@@ -1089,6 +1295,7 @@ class Game {
   }
 
   acquireConsumable(id, done = () => {}, skipped = done) {
+    this.discover('consumables', id);
     const add = slot => {
       if (slot == null && this.run.consumables.length < 3) this.run.consumables.push(id);
       else if (slot != null) this.run.consumables[slot] = id;
@@ -1144,6 +1351,7 @@ class Game {
   startBattle(enemyCard) {
     this.clearBattleTimeouts();
     this.enemyCard = enemyCard;
+    this.discover('enemies', this.enemyCodexKey(enemyCard));
     if (this.run.relics.includes('steel_heart')) {
       this.run.hpRows = Math.min(28, this.run.hpRows + 1);
     }
@@ -1518,6 +1726,7 @@ class Game {
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     if (relicId) {
+      this.discover('relics', relicId);
       const r = RELICS[relicId];
       this.showToast(getLang() === 'ja'
         ? `⚔️ エリート撃破!  ${r.icon ?? ''}${dataName('relic', r, r.name)} 遺物獲得`
@@ -1550,12 +1759,14 @@ class Game {
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
     rewards.forEach(reward => {
+      this.discoverItem(reward);
       const btn = document.createElement('button');
       btn.className = `choice reward ${this.tierClass(reward.tier)}`;
       btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${this.rewardTitle(reward)}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         this.audio.playSfx('select');
+        this.discoverItem(reward);
         applyReward(this.run, reward);
         this.normalizePersistentGrid();
         this.run.round++;
@@ -1631,14 +1842,20 @@ class Game {
   }
 
   saveRecord(win) {
+    if (this.run.practiceMode) return;
     const records = this.loadRecords();
     records.unshift({
       round: Math.min(this.run.round, 20),
       gold: this.run.gold,
       result: win ? 'win' : 'loss',
+      hpRows: this.run.hpRows,
+      deckCount: this.run.deckCount(),
+      relicCount: this.run.relics.length,
+      skillCount: this.run.ownedSkills.length,
+      consumableCount: this.run.consumables.length,
       at: Date.now()
     });
-    localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 5)));
+    localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 20)));
   }
 
   loadRecords() {
@@ -1832,6 +2049,8 @@ class Game {
         this.paused = false;
         this.routeNextScreen();
       }
+      this.discoverRunState();
+      this.discover('enemies', this.enemyCodexKey(this.enemyCard));
       this.refreshMenu();
     } catch (err) {
       console.warn('Save load failed', err);
