@@ -447,7 +447,45 @@ class Game {
         if (!map.has(key) || (enemy.type === 'boss' && map.get(key).type !== 'boss')) map.set(key, enemy);
       }
     }
-    return [...map.values()].sort((a, b) => trEnemyName(a, a.name).localeCompare(trEnemyName(b, b.name)));
+    return this.sortByTierName([...map.values()], enemy => trEnemyName(enemy, enemy.name));
+  }
+
+  tierRank(tier) {
+    return { bronze: 0, silver: 1, gold: 2, diamond: 3 }[tier] ?? 9;
+  }
+
+  currentLocale() {
+    return getLang() === 'ja' ? 'ja-JP' : getLang() === 'en' ? 'en-US' : 'ko-KR';
+  }
+
+  sortByTierName(items, nameOf) {
+    return [...items].sort((a, b) =>
+      this.tierRank(a.tier) - this.tierRank(b.tier)
+      || String(nameOf(a)).localeCompare(String(nameOf(b)), this.currentLocale())
+    );
+  }
+
+  sortedCodexCards() {
+    const abilityOrder = [
+      'none',
+      'highPower', 'bomb', 'manaBonus', 'purgeGarbage', 'coolant', 'bounty', 'wardBlock', 'comboCharge',
+      'dispel', 'instantAttack', 'instantGuard', 'instantMana', 'instantPurge', 'oddPower'
+    ];
+    const shapeOrder = ['I', 'J', 'L', 'O', 'S', 'T', 'Z', 'CROSS5', 'HEAVY5', 'WIDE6', 'HOOK5', 'PENTA_T', 'OVERDRIVE6'];
+    const abilityRank = id => {
+      const rank = abilityOrder.indexOf(id);
+      return rank >= 0 ? rank : abilityOrder.length;
+    };
+    const shapeRank = id => {
+      const rank = shapeOrder.indexOf(id);
+      return rank >= 0 ? rank : shapeOrder.length;
+    };
+    return Object.values(CARD_LIBRARY).sort((a, b) =>
+      abilityRank(a.abilityId) - abilityRank(b.abilityId)
+      || shapeRank(a.shapeId) - shapeRank(b.shapeId)
+      || this.tierRank(a.tier) - this.tierRank(b.tier)
+      || trCardName(a, a.name).localeCompare(trCardName(b, b.name), this.currentLocale())
+    );
   }
 
   ensureMenuModal() {
@@ -533,7 +571,7 @@ class Game {
     grid.innerHTML = '';
     const seen = new Set(this.codexSeen[this.codexTab] || []);
     const locked = () => `<div class="codex-card locked">${this.menuText('unknown')}</div>`;
-    if (this.codexTab === 'cards') Object.values(CARD_LIBRARY).forEach(card => {
+    if (this.codexTab === 'cards') this.sortedCodexCards().forEach(card => {
       if (!seen.has(card.id)) return grid.insertAdjacentHTML('beforeend', locked());
       const node = document.createElement('div');
       node.className = `codex-card ${this.tierClass(card.tier)}`;
@@ -541,9 +579,9 @@ class Game {
       node.appendChild(this.blockPreview(card, 7));
       grid.appendChild(node);
     });
-    if (this.codexTab === 'relics') Object.values(RELICS).forEach(relic => grid.insertAdjacentHTML('beforeend', seen.has(relic.id) ? `<div class="codex-card ${this.tierClass(relic.tier)}"><strong>${relic.icon || 'R'} ${this.escapeHtml(dataName('relic', relic, relic.name))}</strong><span class="codex-meta">${relic.tier}</span><small>${this.escapeHtml(dataDesc('relic', relic, relic.desc))}</small></div>` : locked()));
-    if (this.codexTab === 'consumables') Object.values(CONSUMABLES).forEach(item => grid.insertAdjacentHTML('beforeend', seen.has(item.id) ? `<div class="codex-card ${this.tierClass(item.tier)}"><strong>${item.icon || item.short} ${this.escapeHtml(dataName('consumable', item, item.name))}</strong><span class="codex-meta">${item.tier}</span><small>${this.escapeHtml(dataDesc('consumable', item, item.desc))}</small></div>` : locked()));
-    if (this.codexTab === 'skills') Object.values(SKILLS).forEach(skill => grid.insertAdjacentHTML('beforeend', seen.has(skill.id) ? `<div class="codex-card ${this.tierClass(skill.tier)}"><strong>${skill.icon || 'S'} ${this.escapeHtml(dataName('skill', skill, skill.name))}</strong><span class="codex-meta">${skill.cost} MP · ${skill.tier}</span><small>${this.escapeHtml(dataDesc('skill', skill, skill.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'relics') this.sortByTierName(Object.values(RELICS), relic => dataName('relic', relic, relic.name)).forEach(relic => grid.insertAdjacentHTML('beforeend', seen.has(relic.id) ? `<div class="codex-card ${this.tierClass(relic.tier)}"><strong>${relic.icon || 'R'} ${this.escapeHtml(dataName('relic', relic, relic.name))}</strong><span class="codex-meta">${relic.tier}</span><small>${this.escapeHtml(dataDesc('relic', relic, relic.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'consumables') this.sortByTierName(Object.values(CONSUMABLES), item => dataName('consumable', item, item.name)).forEach(item => grid.insertAdjacentHTML('beforeend', seen.has(item.id) ? `<div class="codex-card ${this.tierClass(item.tier)}"><strong>${item.icon || item.short} ${this.escapeHtml(dataName('consumable', item, item.name))}</strong><span class="codex-meta">${item.tier}</span><small>${this.escapeHtml(dataDesc('consumable', item, item.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'skills') this.sortByTierName(Object.values(SKILLS), skill => dataName('skill', skill, skill.name)).forEach(skill => grid.insertAdjacentHTML('beforeend', seen.has(skill.id) ? `<div class="codex-card ${this.tierClass(skill.tier)}"><strong>${skill.icon || 'S'} ${this.escapeHtml(dataName('skill', skill, skill.name))}</strong><span class="codex-meta">${skill.cost} MP · ${skill.tier}</span><small>${this.escapeHtml(dataDesc('skill', skill, skill.desc))}</small></div>` : locked()));
     if (this.codexTab === 'enemies') this.allCodexEnemies().forEach(enemy => {
       const key = this.enemyCodexKey(enemy);
       grid.insertAdjacentHTML('beforeend', seen.has(key) ? `<div class="codex-card ${this.tierClass(enemy.tier)}"><strong>${enemy.icon || ''} ${this.escapeHtml(trEnemyName(enemy, enemy.name))}</strong><span class="codex-meta">${enemy.type.toUpperCase()} · HP ${enemy.startingRows} · ${enemy.rewardGold}G</span><small>${this.escapeHtml(trEnemyStyle(enemy, enemy.style))}</small><small>AI ${enemy.aiProfile} · Speed ${enemy.speed} · Garbage ${enemy.startingGarbage}</small></div>` : locked());
