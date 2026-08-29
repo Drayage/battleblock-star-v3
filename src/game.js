@@ -345,7 +345,6 @@ class Game {
     this.run.practiceMode = this.practiceMode;
     this.runShopSpent = 0;
     this.runBattleTetris = false;
-    this.runLClear = false;
     this.runGarbageNuke = false;
     this.runEliteKills = 0;
     this.runConsUsed = 0;
@@ -579,6 +578,7 @@ class Game {
       this.run.deck.removeCard(choice.id);
       this.run.deck.refill();
       this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
+      if (CARD_LIBRARY[choice.id]?.shapeId === 'L') this.unlockAchievement('l_clear');
     }
     if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
@@ -982,6 +982,7 @@ class Game {
         this.run.deck.removeCard(id);
         this.run.deck.refill();
         this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
+        if (CARD_LIBRARY[id]?.shapeId === 'L') this.unlockAchievement('l_clear');
         done(true);
       },
       onSkip: () => skipped(false)
@@ -1276,7 +1277,6 @@ class Game {
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (result.cleared > 0 && attacker === this.player) {
       this.battlePlayerClearedLines += result.cleared;
-      if (result.placedShapeId === 'L') this.runLClear = true;
       // 한 번에 쓰레기 8줄 이상 제거 (직접 클리어 + 클렌즈 onPlace 포함)
       const totalGarbage = (result.garbageCleared || 0) + (result.instant?.purgedRows || 0);
       if (totalGarbage >= 8) this.runGarbageNuke = true;
@@ -1653,7 +1653,6 @@ class Game {
     if (this.run.equippedSkills.length >= 3) this.unlockAchievement('skill_master');
     if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
     if ((this.runEliteKills || 0) >= 3) this.unlockAchievement('elite_hunter');
-    if (this.runLClear) this.unlockAchievement('l_clear');
     if ((this.runConsUsed || 0) >= 5) this.unlockAchievement('cons_user');
     // 한 종류 10개: 덱의 카드 shapeId 카운트
     const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
