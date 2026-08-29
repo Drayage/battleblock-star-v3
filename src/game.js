@@ -595,7 +595,7 @@ class Game {
       return this.acquireSkill(choice.id, done);
     }
     if (choice.kind === 'consumable') return this.acquireConsumable(choice.id, done);
-    if (choice.kind === 'gold') this.run.gold += choice.amount;
+    if (choice.kind === 'gold') this.run.gold += Math.round(choice.amount * (this.currentAscMod().goldFactor ?? 1.0));
     if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
     if (choice.kind === 'relicDig') {
       this.run.hpRows = Math.max(8, this.run.hpRows - choice.amount);
@@ -1463,7 +1463,7 @@ class Game {
     }
     this.checkBattleAchievements(this.enemyCard.type);
     this.checkBattleMilestoneAchievements();
-    const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
+    const goldMult = (this.run.relics.includes('greed') ? 1.2 : 1) * (this.currentAscMod().goldFactor ?? 1.0);
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     this.runMaxGold = Math.max(this.runMaxGold || 0, this.run.gold);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
@@ -1851,6 +1851,7 @@ class Game {
     if (mod.manaFactor < 1.0) mods.push(`마나 회복 -${Math.round((1 - mod.manaFactor) * 100)}%`);
     if (mod.playerStartHp != null) mods.push(`시작 체력 ${mod.playerStartHp}줄`);
     if (mod.enemyAttackFactor > 1.0) mods.push(`적 공격력 +${Math.round((mod.enemyAttackFactor - 1) * 100)}%`);
+    if (mod.goldFactor != null && mod.goldFactor < 1.0) mods.push(`골드 획득 -${Math.round((1 - mod.goldFactor) * 100)}%`);
     if (mod.rewardTierPenalty > 0) mods.push(`보상 티어 -${mod.rewardTierPenalty}`);
     if (mod.startCurseCards > 0) mods.push(`시작 저주카드 ${mod.startCurseCards}장`);
     const lockHint = lvl >= max && lvl < 10 ? `<small class="asc-lock">🔒 ${lang === 'en' ? 'Clear to unlock next' : '클리어하면 다음 단계 해금'}</small>` : '';
@@ -2406,14 +2407,15 @@ class Game {
 
   grantChallengeReward(reward) {
     if (!reward) return '';
-    if (reward.kind === 'gold') this.run.gold += reward.amount;
-    else if (reward.kind === 'relic') { if (!this.run.relics.includes(reward.id)) this.run.relics.push(reward.id); else this.run.gold += 40; }
-    else if (reward.kind === 'consumable') { if (this.run.consumables.length < 3) this.run.consumables.push(reward.id); else this.run.gold += 20; }
+    const gf = this.currentAscMod().goldFactor ?? 1.0;
+    if (reward.kind === 'gold') this.run.gold += Math.round(reward.amount * gf);
+    else if (reward.kind === 'relic') { if (!this.run.relics.includes(reward.id)) this.run.relics.push(reward.id); else this.run.gold += Math.round(40 * gf); }
+    else if (reward.kind === 'consumable') { if (this.run.consumables.length < 3) this.run.consumables.push(reward.id); else this.run.gold += Math.round(20 * gf); }
     else if (reward.kind === 'skill') {
       if (!this.run.ownedSkills.includes(reward.id)) {
         this.run.ownedSkills.push(reward.id);
         if (this.run.equippedSkills.length < 3) this.run.equippedSkills.push(reward.id);
-      } else this.run.gold += 30;
+      } else this.run.gold += Math.round(30 * gf);
     }
     return reward.label;
   }

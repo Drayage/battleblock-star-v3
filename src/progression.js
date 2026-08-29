@@ -954,7 +954,7 @@ export const ASCENSION_MODS = [
   { level:  9, label: 'A9',  ko: '절망',   en: 'Despair',    ja: '絶望',
     garbage: 5, speedFactor: 0.72, eliteChanceBonus: 0.40,
     playerFallFactor: 0.72, manaFactor: 0.50, playerStartHp: 16,
-    enemyAttackFactor: 1.60, rewardTierPenalty: 1, startCurseCards: 3 },
+    enemyAttackFactor: 1.60, rewardTierPenalty: 1, startCurseCards: 3, goldFactor: 0.8 },
   { level: 10, label: 'A10', ko: '신화',   en: 'Mythic',     ja: '神話',
     garbage: 6, speedFactor: 0.68, eliteChanceBonus: 0.50,
     playerFallFactor: 0.68, manaFactor: 0.40, playerStartHp: 15,
