@@ -538,7 +538,7 @@ export function makeEnemyChoices(round, ownedRelics = [], ascMod = null) {
   const normalCandidates = unlocked.filter(enemy => !enemy.mirror || mirrorAllowed);
   const normalPool = shuffle(round <= 2 ? normalCandidates.filter(enemy => ['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name)) : round <= 5 ? normalCandidates.filter(enemy => !['마나 도둑', '클렌즈 워든'].includes(enemy.name)) : normalCandidates);
   const elitePool = shuffle(ELITES.filter(enemy => !enemy.minRound || round >= enemy.minRound));
-  const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
+  const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01 + (ascMod?.eliteChanceBonus ?? 0);
   const choices = [];
   const usedChallengeIds = [];
   for (let i = 0; i < count; i++) {
@@ -601,11 +601,15 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
   };
 }
 
-export function makeRewards(pool = 'normal') {
+export function makeRewards(pool = 'normal', tierPenalty = 0) {
   const elite = String(pool).startsWith('elite');
-  const sourceTier = String(pool).includes(TIERS.GOLD) ? TIERS.GOLD
+  let sourceTier = String(pool).includes(TIERS.GOLD) ? TIERS.GOLD
     : String(pool).includes(TIERS.SILVER) ? TIERS.SILVER
       : pool === 'normal' ? TIERS.BRONZE : pool;
+  if (!elite && tierPenalty > 0) {
+    const idx = TIER_ORDER.indexOf(sourceTier);
+    sourceTier = TIER_ORDER[Math.max(0, idx - tierPenalty)] ?? TIERS.BRONZE;
+  }
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
     .filter(isPlayerRewardCard)
     .map(card => [card.id, card]));
@@ -909,13 +913,52 @@ export function isRunComplete(run) {
   return run.round > MAX_ROUND;
 }
 
+// 각 레벨의 효과는 누적. speedFactor/playerFallFactor < 1.0 = 더 빠름(어려움)
 export const ASCENSION_MODS = [
-  { level: 0, label: 'A0', ko: '기본', en: 'Normal', ja: '通常', garbage: 0, speedFactor: 1.0 },
-  { level: 1, label: 'A1', ko: '단련', en: 'Hardened', ja: '鍛錬', garbage: 1, speedFactor: 1.0 },
-  { level: 2, label: 'A2', ko: '격전', en: 'Intense', ja: '激戦', garbage: 1, speedFactor: 0.88 },
-  { level: 3, label: 'A3', ko: '폭풍', en: 'Storm', ja: '嵐', garbage: 2, speedFactor: 0.85 },
-  { level: 4, label: 'A4', ko: '지옥', en: 'Inferno', ja: '地獄', garbage: 2, speedFactor: 0.82 },
-  { level: 5, label: 'A5', ko: '초월', en: 'Ascended', ja: '超越', garbage: 3, speedFactor: 0.78 },
+  { level:  0, label: 'A0',  ko: '기본',   en: 'Normal',     ja: '通常',
+    garbage: 0, speedFactor: 1.00, eliteChanceBonus: 0.00,
+    playerFallFactor: 1.00, manaFactor: 1.00, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  1, label: 'A1',  ko: '단련',   en: 'Hardened',   ja: '鍛錬',
+    garbage: 1, speedFactor: 1.00, eliteChanceBonus: 0.00,
+    playerFallFactor: 1.00, manaFactor: 1.00, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  2, label: 'A2',  ko: '격전',   en: 'Intense',    ja: '激戦',
+    garbage: 1, speedFactor: 0.90, eliteChanceBonus: 0.10,
+    playerFallFactor: 1.00, manaFactor: 1.00, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  3, label: 'A3',  ko: '폭풍',   en: 'Storm',      ja: '嵐',
+    garbage: 1, speedFactor: 0.88, eliteChanceBonus: 0.10,
+    playerFallFactor: 0.88, manaFactor: 0.80, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  4, label: 'A4',  ko: '지옥',   en: 'Inferno',    ja: '地獄',
+    garbage: 2, speedFactor: 0.85, eliteChanceBonus: 0.15,
+    playerFallFactor: 0.85, manaFactor: 0.80, playerStartHp: null,
+    enemyAttackFactor: 1.20, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  5, label: 'A5',  ko: '초월',   en: 'Ascended',   ja: '超越',
+    garbage: 2, speedFactor: 0.82, eliteChanceBonus: 0.20,
+    playerFallFactor: 0.82, manaFactor: 0.70, playerStartHp: 18,
+    enemyAttackFactor: 1.20, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  6, label: 'A6',  ko: '심연',   en: 'Abyss',      ja: '深淵',
+    garbage: 3, speedFactor: 0.80, eliteChanceBonus: 0.25,
+    playerFallFactor: 0.80, manaFactor: 0.65, playerStartHp: 18,
+    enemyAttackFactor: 1.30, rewardTierPenalty: 1, startCurseCards: 0 },
+  { level:  7, label: 'A7',  ko: '혼돈',   en: 'Chaos',      ja: '混沌',
+    garbage: 3, speedFactor: 0.78, eliteChanceBonus: 0.30,
+    playerFallFactor: 0.78, manaFactor: 0.60, playerStartHp: 17,
+    enemyAttackFactor: 1.40, rewardTierPenalty: 1, startCurseCards: 2 },
+  { level:  8, label: 'A8',  ko: '멸망',   en: 'Ruin',       ja: '滅亡',
+    garbage: 4, speedFactor: 0.75, eliteChanceBonus: 0.35,
+    playerFallFactor: 0.75, manaFactor: 0.55, playerStartHp: 17,
+    enemyAttackFactor: 1.50, rewardTierPenalty: 1, startCurseCards: 2 },
+  { level:  9, label: 'A9',  ko: '절망',   en: 'Despair',    ja: '絶望',
+    garbage: 5, speedFactor: 0.72, eliteChanceBonus: 0.40,
+    playerFallFactor: 0.72, manaFactor: 0.50, playerStartHp: 16,
+    enemyAttackFactor: 1.60, rewardTierPenalty: 2, startCurseCards: 3 },
+  { level: 10, label: 'A10', ko: '신화',   en: 'Mythic',     ja: '神話',
+    garbage: 6, speedFactor: 0.68, eliteChanceBonus: 0.50,
+    playerFallFactor: 0.68, manaFactor: 0.40, playerStartHp: 15,
+    enemyAttackFactor: 1.80, rewardTierPenalty: 2, startCurseCards: 4 },
 ];
 
 export const ACHIEVEMENTS = [
@@ -928,7 +971,9 @@ export const ACHIEVEMENTS = [
   { id: 'relic_hunter', icon: '🧬', ko: '유물 사냥꾼', en: 'Relic Hunter', ja: '遺物ハンター', ko_d: '유물 5개 이상 보유하고 클리어', en_d: 'Clear with 5+ relics', ja_d: '遺物5個以上でクリア' },
   { id: 'lucky_gambler', icon: '🎰', ko: '행운의 도박사', en: 'Lucky Gambler', ja: '幸運の賭博師', ko_d: '도박에서 승리', en_d: 'Win a gamble', ja_d: 'ギャンブルに勝利した' },
   { id: 'deck_cleaner', icon: '✂️', ko: '덱 청소부', en: 'Deck Cleaner', ja: 'デッキ清掃員', ko_d: '카드 제거 5회 사용 (누적)', en_d: 'Remove cards 5 times (total)', ja_d: 'カード除去5回使用(累計)' },
-  { id: 'ascension_1', icon: '🌙', ko: '승천자', en: 'Ascendant', ja: '昇天者', ko_d: '승천 1단계 이상에서 클리어', en_d: 'Clear at Ascension 1+', ja_d: '昇天1以上でクリア' },
-  { id: 'ascension_3', icon: '⭐', ko: '별의 전사', en: 'Star Warrior', ja: '星の戦士', ko_d: '승천 3단계 이상에서 클리어', en_d: 'Clear at Ascension 3+', ja_d: '昇天3以上でクリア' },
-  { id: 'ascension_5', icon: '🌟', ko: '초월자', en: 'Transcended', ja: '超越者', ko_d: '승천 5단계에서 클리어', en_d: 'Clear at Ascension 5', ja_d: '昇天5でクリア' },
+  { id: 'ascension_1', icon: '🌙', ko: '승천자', en: 'Ascendant', ja: '昇天者', ko_d: '승천 A1 이상에서 클리어', en_d: 'Clear at Ascension A1+', ja_d: '昇天A1以上でクリア' },
+  { id: 'ascension_3', icon: '⭐', ko: '별의 전사', en: 'Star Warrior', ja: '星の戦士', ko_d: '승천 A3 이상에서 클리어', en_d: 'Clear at Ascension A3+', ja_d: '昇天A3以上でクリア' },
+  { id: 'ascension_5', icon: '🌟', ko: '초월자', en: 'Transcended', ja: '超越者', ko_d: '승천 A5 이상에서 클리어', en_d: 'Clear at Ascension A5+', ja_d: '昇天A5以上でクリア' },
+  { id: 'ascension_8', icon: '💎', ko: '심연의 정복자', en: 'Abyss Conqueror', ja: '深淵の征服者', ko_d: '승천 A8 이상에서 클리어', en_d: 'Clear at Ascension A8+', ja_d: '昇天A8以上でクリア' },
+  { id: 'ascension_10', icon: '👑', ko: '신화의 왕', en: 'Mythic King', ja: '神話の王', ko_d: '승천 A10(신화)에서 클리어', en_d: 'Clear at Ascension A10 (Mythic)', ja_d: '昇天A10(神話)でクリア' },
 ];

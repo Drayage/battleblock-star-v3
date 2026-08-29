@@ -40,7 +40,8 @@ window.BBS_RELICS = RELICS;
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
 const ACHIEVEMENT_KEY = 'bbs.achievements.v1';
-const ASCENSION_KEY = 'bbs.ascension.v1';
+const ASCENSION_KEY = 'bbs.ascension.v1';     // 선택된 레벨
+const ASCENSION_MAX_KEY = 'bbs.ascension.max.v1'; // 최대 해금 레벨
 const LIFETIME_KEY = 'bbs.lifetime.v1';
 
 // 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
@@ -342,6 +343,11 @@ class Game {
     document.getElementById('endScreen').classList.remove('run-clear');
     this.run = new RunState();
     this.run.practiceMode = this.practiceMode;
+    const ascMod = this.currentAscMod();
+    if (ascMod.playerStartHp != null) this.run.hpRows = ascMod.playerStartHp;
+    for (let i = 0; i < (ascMod.startCurseCards ?? 0); i++) {
+      this.run.deck.addCard(i % 2 === 0 ? 'HEAVY_JUNK' : 'WIDE_JUNK');
+    }
     this.routeNextScreen();
     this.autoSave();
   }
@@ -1206,8 +1212,9 @@ class Game {
   }
 
   currentFallInterval() {
-    if (this.playerHyperTimer > 0) return GAME_TIMING.PLAYER_FALL_INTERVAL * 0.12;
-    return GAME_TIMING.PLAYER_FALL_INTERVAL;
+    const base = GAME_TIMING.PLAYER_FALL_INTERVAL * (this.currentAscMod().playerFallFactor ?? 1.0);
+    if (this.playerHyperTimer > 0) return base * 0.12;
+    return base;
   }
 
   useSkill(index) {
@@ -1290,11 +1297,12 @@ class Game {
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.instant?.dispelEnemy && attacker === this.player) this.dispelEnemyAbilities();
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
+    const manaFactor = this.currentAscMod().manaFactor ?? 1.0;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
-      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35);
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35 * manaFactor);
     }
     if (attacker === this.player && result.cleared > 0 && !this.player.held && this.run.relics.includes('hold_cache')) {
-      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5 * manaFactor);
     }
     if (result.attack > 0) {
       // Heat and power scaling are shared battle pressure and apply to both sides.
@@ -1319,7 +1327,9 @@ class Game {
           }
         }
       }
-      const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
+      const enemyAtk = (attacker === this.enemy) ? (this.currentAscMod().enemyAttackFactor ?? 1.0) : 1.0;
+      const scaledAttack = attack * enemyAtk;
+      const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, scaledAttack - 1) : scaledAttack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
         const toSend = Math.floor(attacker.attackPool);
@@ -1428,7 +1438,7 @@ class Game {
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
-    this.showRewards(makeRewards(this.enemyCard.rewardPool), relicId);
+    this.showRewards(makeRewards(this.enemyCard.rewardPool, this.currentAscMod().rewardTierPenalty ?? 0), relicId);
     this.autoSave();
   }
 
@@ -1518,16 +1528,28 @@ class Game {
     if (win) {
       const lvl = this.getAscensionLevel();
       this.checkRunAchievements(lvl);
+      // 단계별 해금: 이번 레벨 클리어 시 다음 레벨 해금
+      const prevMax = this.getMaxAscension();
+      if (!prevCleared) {
+        this.setMaxAscension(1); // 첫 클리어 → A1 해금
+      } else if (lvl >= prevMax && lvl < 10) {
+        this.setMaxAscension(lvl + 1);
+      }
+      const newMax = this.getMaxAscension();
       const box = document.getElementById('ascensionUnlockBox');
       if (box) {
         if (!prevCleared) {
           box.classList.remove('hidden');
-          box.textContent = '🔓 승천 레벨이 해금되었습니다! 메인 메뉴에서 선택하세요.';
+          box.textContent = '🔓 승천 시스템 해금! 메인 메뉴에서 A1 이상을 선택하세요.';
           setTimeout(() => box.classList.add('hidden'), 6000);
-        } else if (lvl < 5) {
+        } else if (newMax > prevMax && lvl < 10) {
           box.classList.remove('hidden');
-          box.textContent = `🌟 A${lvl} 클리어! A${lvl + 1} 모드가 해금됩니다.`;
+          box.textContent = `🌟 ${ASCENSION_MODS[lvl].label} 클리어! ${ASCENSION_MODS[newMax]?.label ?? 'A10'} 해금!`;
           setTimeout(() => box.classList.add('hidden'), 4000);
+        } else if (lvl >= 10) {
+          box.classList.remove('hidden');
+          box.textContent = '👑 신화(A10) 클리어! 최고 난이도 정복!';
+          setTimeout(() => box.classList.add('hidden'), 5000);
         } else {
           box.classList.add('hidden');
         }
@@ -1586,6 +1608,8 @@ class Game {
     if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
     if (ascensionLevel >= 3) this.unlockAchievement('ascension_3');
     if (ascensionLevel >= 5) this.unlockAchievement('ascension_5');
+    if (ascensionLevel >= 8) this.unlockAchievement('ascension_8');
+    if (ascensionLevel >= 10) this.unlockAchievement('ascension_10');
     const lt = this.loadLifetime();
     lt.totalWins = (lt.totalWins || 0) + 1;
     this.saveLifetime(lt);
@@ -1621,13 +1645,25 @@ class Game {
   }
 
   // ===== 승천 =====
+  getMaxAscension() {
+    const n = parseInt(localStorage.getItem(ASCENSION_MAX_KEY) || '0', 10);
+    return isNaN(n) ? 0 : Math.max(0, Math.min(10, n));
+  }
+
+  setMaxAscension(n) {
+    const clamped = Math.max(0, Math.min(10, n));
+    if (clamped > this.getMaxAscension()) localStorage.setItem(ASCENSION_MAX_KEY, String(clamped));
+  }
+
   getAscensionLevel() {
     const n = parseInt(localStorage.getItem(ASCENSION_KEY) || '0', 10);
-    return isNaN(n) ? 0 : Math.max(0, Math.min(5, n));
+    const max = this.getMaxAscension();
+    return isNaN(n) ? 0 : Math.max(0, Math.min(max, n));
   }
 
   setAscensionLevel(n) {
-    localStorage.setItem(ASCENSION_KEY, String(Math.max(0, Math.min(5, n))));
+    const max = this.getMaxAscension();
+    localStorage.setItem(ASCENSION_KEY, String(Math.max(0, Math.min(max, n))));
   }
 
   hasEverCleared() {
@@ -1644,15 +1680,24 @@ class Game {
     if (!this.hasEverCleared()) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
     const lvl = this.getAscensionLevel();
+    const max = this.getMaxAscension();
     const mod = ASCENSION_MODS[lvl];
     const lang = getLang();
     const modName = lang === 'en' ? mod.en : lang === 'ja' ? mod.ja : mod.ko;
     const downBtn = lvl > 0 ? `<button class="ghost asc-btn" data-asc="${lvl - 1}">◀</button>` : `<button class="ghost asc-btn" disabled>◀</button>`;
-    const upBtn = lvl < 5 ? `<button class="ghost asc-btn" data-asc="${lvl + 1}">▶</button>` : `<button class="ghost asc-btn" disabled>▶</button>`;
+    const upBtn = lvl < max ? `<button class="ghost asc-btn" data-asc="${lvl + 1}">▶</button>` : `<button class="ghost asc-btn" disabled title="${lvl < 10 ? (lang === 'en' ? 'Clear this level to unlock' : '이 레벨 클리어 시 해금') : ''}">▶</button>`;
     const mods = [];
-    if (mod.garbage > 0) mods.push(`${lang === 'ja' ? '敵開始ゴミ +' : lang === 'en' ? 'Enemy start garbage +' : '적 시작 쓰레기 +'}${mod.garbage}`);
-    if (mod.speedFactor < 1.0) mods.push(`${lang === 'ja' ? '敵速度 +' : lang === 'en' ? 'Enemy speed +' : '적 드롭 속도 +'}${Math.round((1 - mod.speedFactor) * 100)}%`);
-    el.innerHTML = `<span>${lang === 'ja' ? '昇天レベル' : lang === 'en' ? 'Ascension Level' : '승천 레벨'}: ${downBtn} <strong>${mod.label} ${modName}</strong> ${upBtn}</span>${mods.length ? `<small class="asc-mods">${mods.join(' · ')}</small>` : ''}`;
+    if (mod.garbage > 0) mods.push(`적 쓰레기 +${mod.garbage}`);
+    if (mod.speedFactor < 1.0) mods.push(`적 속도 +${Math.round((1 - mod.speedFactor) * 100)}%`);
+    if (mod.eliteChanceBonus > 0) mods.push(`엘리트 확률 +${Math.round(mod.eliteChanceBonus * 100)}%`);
+    if (mod.playerFallFactor < 1.0) mods.push(`내 낙하속도 +${Math.round((1 - mod.playerFallFactor) * 100)}%`);
+    if (mod.manaFactor < 1.0) mods.push(`마나 회복 -${Math.round((1 - mod.manaFactor) * 100)}%`);
+    if (mod.playerStartHp != null) mods.push(`시작 체력 ${mod.playerStartHp}줄`);
+    if (mod.enemyAttackFactor > 1.0) mods.push(`적 공격력 +${Math.round((mod.enemyAttackFactor - 1) * 100)}%`);
+    if (mod.rewardTierPenalty > 0) mods.push(`보상 티어 -${mod.rewardTierPenalty}`);
+    if (mod.startCurseCards > 0) mods.push(`시작 저주카드 ${mod.startCurseCards}장`);
+    const lockHint = lvl >= max && lvl < 10 ? `<small class="asc-lock">🔒 ${lang === 'en' ? 'Clear to unlock next' : '클리어하면 다음 단계 해금'}</small>` : '';
+    el.innerHTML = `<span>${lang === 'ja' ? '昇天レベル' : lang === 'en' ? 'Ascension' : '승천'}: ${downBtn} <strong>${mod.label} ${modName}</strong> ${upBtn}</span>${mods.length ? `<small class="asc-mods">${mods.join(' · ')}</small>` : ''}${lockHint}`;
     el.querySelectorAll('.asc-btn[data-asc]').forEach(btn => {
       btn.addEventListener('click', () => {
         this.setAscensionLevel(parseInt(btn.dataset.asc, 10));
