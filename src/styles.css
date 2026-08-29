@@ -117,3 +117,28 @@ button{font:inherit}
 .lang-buttons{display:flex;gap:6px;flex-wrap:wrap}
 .lang-buttons .lang-btn{font-size:12px;padding:6px 10px;min-width:0}
 .lang-buttons .lang-btn.active{background:#3b4a82;border-color:#7d92d6;color:#e8ecf5}
+
+/* 업적 모달 */
+.achievements-list{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto;padding:4px 0}
+.achievement-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:#111827;border:1px solid #1e2d4a}
+.achievement-row.unlocked{border-color:#3b4a82;background:linear-gradient(135deg,#141d35,#1a2444)}
+.achievement-row.locked{opacity:.55}
+.ach-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center}
+.achievement-row strong{display:block;font-size:13px;color:#e8ecf5;margin-bottom:2px}
+.achievement-row small{display:block;font-size:11px;color:#8590ac}
+
+/* 승천 레벨 표시 (메인 메뉴) */
+.ascension-display{margin:8px 0;padding:10px 14px;border-radius:10px;background:#0e1630;border:1px solid #2a3a5c;font-size:13px;color:#c8d6f5;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.ascension-display.hidden{display:none}
+.asc-btn{padding:2px 10px;font-size:14px;min-width:0}
+.asc-mods{font-size:11px;color:#8590ac}
+
+/* 승천 해금 알림 (엔드 화면) */
+.ascension-unlock-box{margin:10px 0;padding:12px 16px;border-radius:10px;background:linear-gradient(135deg,#1b3050,#243568);border:1px solid #3b5fb8;font-size:13px;color:#c8e0ff;text-align:center}
+.ascension-unlock-box.hidden{display:none}
+
+/* 업적 버튼 */
+.menu-utility-actions{display:flex;justify-content:center;gap:8px;margin-top:6px}
+
+/* 난이도 별 */
+.diff-stars{font-size:13px;color:#ffd84a;letter-spacing:1px;vertical-align:middle}

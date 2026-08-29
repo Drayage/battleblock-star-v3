@@ -2,7 +2,7 @@
 // 한국어가 기본(원본). 영어·일본어 번역이 누락된 항목은 한국어 fallback.
 // 추가 번역은 해당 키 아래 { en, ja } 형태로 채우면 자동 반영.
 
-import { getLang } from './i18n.js?v=20260524-audio4';
+import { getLang } from './i18n.js?v=20260829-ascension1';
 
 // === 스킬 ===
 const SKILL = {

@@ -1,14 +1,14 @@
-import { Board } from './board.js?v=20260524-audio4';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio4';
-import { Deck } from './deck.js?v=20260524-audio4';
-import { AI } from './ai.js?v=20260524-audio4';
-import { Renderer } from './renderer.js?v=20260524-audio4';
-import { InputController } from './input.js?v=20260524-audio4';
-import { AudioManager } from './audio.js?v=20260524-audio4';
-import { t, getLang, setLang, onLangChange, applyDomTranslations, LANGS } from './i18n.js?v=20260524-audio4';
-import { tEnemyName, tKindLabel } from './i18n-data.js?v=20260524-audio4';
-import { SKILLS } from './skills.js?v=20260524-audio4';
-import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
+import { Board } from './board.js?v=20260829-ascension1';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260829-ascension1';
+import { Deck } from './deck.js?v=20260829-ascension1';
+import { AI } from './ai.js?v=20260829-ascension1';
+import { Renderer } from './renderer.js?v=20260829-ascension1';
+import { InputController } from './input.js?v=20260829-ascension1';
+import { AudioManager } from './audio.js?v=20260829-ascension1';
+import { t, getLang, setLang, onLangChange, applyDomTranslations, LANGS } from './i18n.js?v=20260829-ascension1';
+import { tEnemyName, tKindLabel } from './i18n-data.js?v=20260829-ascension1';
+import { SKILLS } from './skills.js?v=20260829-ascension1';
+import { CONSUMABLES } from './consumables.js?v=20260829-ascension1';
 import {
   RunState,
   RELICS,
@@ -28,8 +28,10 @@ import {
   shopItemKey,
   shouldShowEvent,
   setProgress,
-  abilityOf
-} from './progression.js?v=20260524-audio4';
+  abilityOf,
+  ACHIEVEMENTS,
+  ASCENSION_MODS
+} from './progression.js?v=20260829-ascension1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -37,6 +39,9 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
+const ACHIEVEMENT_KEY = 'bbs.achievements.v1';
+const ASCENSION_KEY = 'bbs.ascension.v1';
+const LIFETIME_KEY = 'bbs.lifetime.v1';
 
 // 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
 // 스킬/소모품 → SFX 카테고리 매핑. 신규 스킬 추가 시 여기에 등록한다.
@@ -253,6 +258,7 @@ class Game {
       this.showMap();
       this.autoSave();
     });
+    document.getElementById('achievementsBtn')?.addEventListener('click', () => this.showAchievementsModal());
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
     document.getElementById('shopDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
@@ -303,6 +309,7 @@ class Game {
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
+    this.refreshAscensionDisplay();
   }
 
   renderRecords() {
@@ -356,18 +363,24 @@ class Game {
     const wrap = document.getElementById('enemyChoices');
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
-    for (const enemy of makeEnemyChoices(this.run.round, this.run.relics)) {
+    const ascMod = this.currentAscMod();
+    for (const enemy of makeEnemyChoices(this.run.round, this.run.relics, ascMod)) {
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
-        ? `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond}<br>　└ 보상 ${enemy.challenge.reward.label}${enemy.challenge.reward.detail ? ` — ${enemy.challenge.reward.detail}` : ''}</small>`
+        ? (enemy.challenge.condOk
+          ? `<small class="challenge-tag">🏆 도전:<br>　🥇 대성공: ${enemy.challenge.cond} → ${enemy.challenge.reward.label}<br>　🥈 성공: ${enemy.challenge.condOk} → ${enemy.challenge.rewardOk?.label || ''}</small>`
+          : `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond}<br>　└ 보상 ${enemy.challenge.reward.label}${enemy.challenge.reward.detail ? ` — ${enemy.challenge.reward.detail}` : ''}</small>`)
         : '';
       const abilityDef = enemy.ability && enemy.ability !== 'overload' ? ENEMY_ABILITIES[enemy.ability] : null;
       const abilityHtml = abilityDef
         ? `<small class="ability-tag">⚔️ 능력: [${abilityDef.label}] ${abilityDef.desc}</small>`
         : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ 능력: [OVERLOAD] 게이지가 차면 무작위 디버프를 시전합니다.</small>` : '');
+      const tier = enemy.difficultyTier ?? 0;
+      const stars = '★'.repeat(Math.min(4, tier + 1)) + '☆'.repeat(Math.max(0, 4 - tier - 1));
+      const diffHtml = `<span class="diff-stars" title="난이도">${stars}</span>`;
       btn.innerHTML = `
-        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${tEnemyName(enemy.name)}</strong>
+        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${tEnemyName(enemy.name)} ${diffHtml}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${enemy.style}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
@@ -543,6 +556,7 @@ class Game {
       this.run.gold -= choice.price;
       this.run.deck.removeCard(choice.id);
       this.run.deck.refill();
+      this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
     }
     if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
@@ -577,6 +591,7 @@ class Game {
       this.run.gold -= choice.bet;
       const won = Math.random() < (choice.chance ?? 0.55);
       if (won) {
+        this.incrementLifetime('gambleWins', 1, 'lucky_gambler');
         this.run.gold += choice.reward ?? 60;
         if (tier === 'bronze') this.run.gambleNext = 'silver';
         else if (tier === 'silver') this.run.gambleNext = 'gold';
@@ -942,6 +957,7 @@ class Game {
         this.run.gold -= price;
         this.run.deck.removeCard(id);
         this.run.deck.refill();
+        this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
         done(true);
       },
       onSkip: () => skipped(false)
@@ -1379,9 +1395,12 @@ class Game {
       const st = this.challengeStatus();
       if (st && st.ok) {
         this.challengeRewarded = true;
-        const rewardDesc = this.grantChallengeReward(this.activeChallenge.reward);
-        this.pendingChallengeText = ` · 도전 성공! ${rewardDesc}`;
-        this.showToast(`🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
+        const isGreat = !st.grade || st.grade === 'great';
+        const reward = isGreat ? this.activeChallenge.reward : (this.activeChallenge.rewardOk || this.activeChallenge.reward);
+        const rewardDesc = this.grantChallengeReward(reward);
+        const gradeLabel = isGreat ? '대성공' : '성공';
+        this.pendingChallengeText = ` · 도전 ${gradeLabel}! ${rewardDesc}`;
+        this.showToast(`🏆 도전 ${gradeLabel}!  ${rewardDesc}`, 'challenge-ok');
         this.audio.playSfx('challengeWin');
       } else {
         this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
@@ -1389,6 +1408,7 @@ class Game {
         this.audio.playSfx('challengeFail');
       }
     }
+    this.checkBattleAchievements(this.enemyCard.type);
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
@@ -1479,12 +1499,31 @@ class Game {
 
   endRun(win) {
     this.clearBattleTimeouts();
+    const prevCleared = this.hasEverCleared();
     this.saveRecord(win);
     this.deleteSave(true);
     document.getElementById('endScreen').classList.toggle('run-clear', win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
     document.getElementById('endSummary').textContent = `${Math.min(this.run.round, 20)}라운드 · 골드 ${this.run.gold} · HP ${this.run.hpRows}줄`;
+    if (win) {
+      const lvl = this.getAscensionLevel();
+      this.checkRunAchievements(lvl);
+      const box = document.getElementById('ascensionUnlockBox');
+      if (box) {
+        if (!prevCleared) {
+          box.classList.remove('hidden');
+          box.textContent = '🔓 승천 레벨이 해금되었습니다! 메인 메뉴에서 선택하세요.';
+          setTimeout(() => box.classList.add('hidden'), 6000);
+        } else if (lvl < 5) {
+          box.classList.remove('hidden');
+          box.textContent = `🌟 A${lvl} 클리어! A${lvl + 1} 모드가 해금됩니다.`;
+          setTimeout(() => box.classList.add('hidden'), 4000);
+        } else {
+          box.classList.add('hidden');
+        }
+      }
+    }
   }
 
   saveRecord(win) {
@@ -1504,6 +1543,142 @@ class Game {
     } catch {
       return [];
     }
+  }
+
+  // ===== 업적 =====
+  loadAchievements() {
+    try { return new Set(JSON.parse(localStorage.getItem(ACHIEVEMENT_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+
+  saveAchievements(set) {
+    localStorage.setItem(ACHIEVEMENT_KEY, JSON.stringify([...set]));
+  }
+
+  unlockAchievement(id) {
+    const set = this.loadAchievements();
+    if (set.has(id)) return;
+    set.add(id);
+    this.saveAchievements(set);
+    const ach = ACHIEVEMENTS.find(a => a.id === id);
+    if (ach) {
+      const lang = getLang();
+      const name = lang === 'en' ? ach.en : lang === 'ja' ? ach.ja : ach.ko;
+      this.showToast(`🏅 ${lang === 'en' ? 'Achievement: ' : lang === 'ja' ? '実績解除: ' : '업적 해금: '}${ach.icon} ${name}`, 'elite', 3500);
+    }
+  }
+
+  checkRunAchievements(ascensionLevel) {
+    if (this.run.practiceMode) return;
+    this.unlockAchievement('first_clear');
+    if (this.run.gold >= 200) this.unlockAchievement('rich');
+    if (this.run.equippedSkills.length >= 3) this.unlockAchievement('skill_master');
+    if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
+    if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
+    if (ascensionLevel >= 3) this.unlockAchievement('ascension_3');
+    if (ascensionLevel >= 5) this.unlockAchievement('ascension_5');
+    const lt = this.loadLifetime();
+    lt.totalWins = (lt.totalWins || 0) + 1;
+    this.saveLifetime(lt);
+    if (lt.totalWins >= 3) this.unlockAchievement('three_wins');
+  }
+
+  checkBattleAchievements(enemyType) {
+    if (this.run?.practiceMode) return;
+    if (enemyType === 'boss') this.unlockAchievement('boss_kill');
+    if (enemyType === 'elite') {
+      const lt = this.loadLifetime();
+      lt.eliteKills = (lt.eliteKills || 0) + 1;
+      this.saveLifetime(lt);
+      if (lt.eliteKills >= 5) this.unlockAchievement('elite_killer');
+    }
+  }
+
+  // ===== 평생 통계 =====
+  loadLifetime() {
+    try { return JSON.parse(localStorage.getItem(LIFETIME_KEY) || '{}'); }
+    catch { return {}; }
+  }
+
+  saveLifetime(lt) {
+    localStorage.setItem(LIFETIME_KEY, JSON.stringify(lt));
+  }
+
+  incrementLifetime(key, threshold, achievementId) {
+    const lt = this.loadLifetime();
+    lt[key] = (lt[key] || 0) + 1;
+    this.saveLifetime(lt);
+    if (lt[key] >= threshold) this.unlockAchievement(achievementId);
+  }
+
+  // ===== 승천 =====
+  getAscensionLevel() {
+    const n = parseInt(localStorage.getItem(ASCENSION_KEY) || '0', 10);
+    return isNaN(n) ? 0 : Math.max(0, Math.min(5, n));
+  }
+
+  setAscensionLevel(n) {
+    localStorage.setItem(ASCENSION_KEY, String(Math.max(0, Math.min(5, n))));
+  }
+
+  hasEverCleared() {
+    return this.loadRecords().some(r => r.result === 'win');
+  }
+
+  currentAscMod() {
+    return ASCENSION_MODS[this.getAscensionLevel()] || ASCENSION_MODS[0];
+  }
+
+  refreshAscensionDisplay() {
+    const el = document.getElementById('ascensionDisplay');
+    if (!el) return;
+    if (!this.hasEverCleared()) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    const lvl = this.getAscensionLevel();
+    const mod = ASCENSION_MODS[lvl];
+    const lang = getLang();
+    const modName = lang === 'en' ? mod.en : lang === 'ja' ? mod.ja : mod.ko;
+    const downBtn = lvl > 0 ? `<button class="ghost asc-btn" data-asc="${lvl - 1}">◀</button>` : `<button class="ghost asc-btn" disabled>◀</button>`;
+    const upBtn = lvl < 5 ? `<button class="ghost asc-btn" data-asc="${lvl + 1}">▶</button>` : `<button class="ghost asc-btn" disabled>▶</button>`;
+    const mods = [];
+    if (mod.garbage > 0) mods.push(`${lang === 'ja' ? '敵開始ゴミ +' : lang === 'en' ? 'Enemy start garbage +' : '적 시작 쓰레기 +'}${mod.garbage}`);
+    if (mod.speedFactor < 1.0) mods.push(`${lang === 'ja' ? '敵速度 +' : lang === 'en' ? 'Enemy speed +' : '적 드롭 속도 +'}${Math.round((1 - mod.speedFactor) * 100)}%`);
+    el.innerHTML = `<span>${lang === 'ja' ? '昇天レベル' : lang === 'en' ? 'Ascension Level' : '승천 레벨'}: ${downBtn} <strong>${mod.label} ${modName}</strong> ${upBtn}</span>${mods.length ? `<small class="asc-mods">${mods.join(' · ')}</small>` : ''}`;
+    el.querySelectorAll('.asc-btn[data-asc]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.setAscensionLevel(parseInt(btn.dataset.asc, 10));
+        this.refreshAscensionDisplay();
+      });
+    });
+  }
+
+  showAchievementsModal() {
+    const unlocked = this.loadAchievements();
+    const lang = getLang();
+    const rows = ACHIEVEMENTS.map(a => {
+      const isUnlocked = unlocked.has(a.id);
+      const name = lang === 'en' ? a.en : lang === 'ja' ? a.ja : a.ko;
+      const desc = isUnlocked ? (lang === 'en' ? a.en_d : lang === 'ja' ? a.ja_d : a.ko_d) : '???';
+      return `<div class="achievement-row ${isUnlocked ? 'unlocked' : 'locked'}">
+        <span class="ach-icon">${isUnlocked ? a.icon : '🔒'}</span>
+        <div><strong>${name}</strong><small>${desc}</small></div>
+      </div>`;
+    }).join('');
+    const count = unlocked.size;
+    const total = ACHIEVEMENTS.length;
+    const title = `${lang === 'ja' ? '実績' : lang === 'en' ? 'Achievements' : '업적'} (${count}/${total})`;
+    let ov = document.getElementById('achievementsModal');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'achievementsModal';
+      ov.className = 'deck-modal';
+      ov.innerHTML = '<div class="deck-modal-inner"><button class="ghost wide" data-close="1">✕ 닫기</button><h2 id="achModalTitle"></h2><div id="achModalList" class="achievements-list"></div></div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e => { if (e.target === ov || e.target.dataset.close) ov.classList.remove('active'); });
+    }
+    ov.querySelector('#achModalTitle').textContent = title;
+    ov.querySelector('#achModalList').innerHTML = rows;
+    ov.classList.add('active');
   }
 
   runToState() {
@@ -1998,13 +2173,23 @@ class Game {
   challengeStatus() {
     const c = this.activeChallenge;
     if (!c) return null;
-    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: `${c.label}(${this.battleUsedHold ? '실패' : '유지'})` };
-    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
-    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
-    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, text: `${c.label}(${this.battleUsedCounterClockwise ? '실패' : '유지'})` };
-    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, text: `${c.label}(${this.battleUsedClockwise ? '실패' : '유지'})` };
-    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
-    if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
+    if (c.id === 'noHold') return { ok: !this.battleUsedHold, grade: 'great', text: `${c.label}(${this.battleUsedHold ? '실패' : '유지'})` };
+    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, grade: 'great', text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
+    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, grade: 'great', text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, grade: 'great', text: `${c.label}(${this.battleUsedCounterClockwise ? '실패' : '유지'})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, grade: 'great', text: `${c.label}(${this.battleUsedClockwise ? '실패' : '유지'})` };
+    if (c.id === 'timeAttack') {
+      const great = this.battleElapsedSec <= c.params.limit;
+      const ok = c.paramsOk ? this.battleElapsedSec <= c.paramsOk.limit : great;
+      const grade = great ? 'great' : ok ? 'ok' : null;
+      return { ok: !!grade, grade, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
+    }
+    if (c.id === 'clearLines') {
+      const great = this.battlePlayerClearedLines >= c.params.target;
+      const ok = c.paramsOk ? this.battlePlayerClearedLines >= c.paramsOk.target : great;
+      const grade = great ? 'great' : ok ? 'ok' : null;
+      return { ok: !!grade, grade, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
+    }
     return null;
   }
 
@@ -2272,6 +2457,6 @@ new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260524-audio4').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260829-ascension1').catch(() => {});
   });
 }

@@ -73,6 +73,10 @@ const STRINGS = {
   'screen.mainMenu': { ko: 'Main Menu', en: 'Main Menu', ja: 'メインメニュー' },
   'screen.audioHint': { ko: '🔊 화면 클릭 시 음악 시작', en: '🔊 Click anywhere to enable audio', ja: '🔊 画面をクリックして音楽開始' },
 
+  // ===== 업적 / 승천 =====
+  'menu.achievements': { ko: '업적', en: 'Achievements', ja: '実績' },
+  'menu.ascensionLevel': { ko: '승천 레벨', en: 'Ascension Level', ja: '昇天レベル' },
+
   // ===== 자주 쓰이는 동사·라벨 =====
   'common.on': { ko: 'ON', en: 'ON', ja: 'ON' },
   'common.off': { ko: 'OFF', en: 'OFF', ja: 'OFF' }

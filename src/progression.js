@@ -1,8 +1,8 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260524-audio4';
-import { Deck, shuffle } from './deck.js?v=20260524-audio4';
-import { SKILLS } from './skills.js?v=20260524-audio4';
-import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
-import { wrapDataMap } from "./i18n-data.js?v=20260524-audio4";
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260829-ascension1';
+import { Deck, shuffle } from './deck.js?v=20260829-ascension1';
+import { SKILLS } from './skills.js?v=20260829-ascension1';
+import { CONSUMABLES } from './consumables.js?v=20260829-ascension1';
+import { wrapDataMap } from "./i18n-data.js?v=20260829-ascension1";
 
 const RELICS_KO = {
   combo_amp: {
@@ -448,8 +448,8 @@ const GAMBLE_TIERS = {
   gold: { gtier: 'gold', tier: TIERS.GOLD, bet: 80, reward: 220, chance: 0.4, title: '골드 도박', desc: '80골드를 겁니다. 40% 확률로 220골드 + 연금술 핵(유물). 안 하면 이후 도박이 사라집니다.' }
 };
 
-export function makeBoss(round) {
-  const card = makeEnemy(round, true, BOSS);
+export function makeBoss(round, ascMod = null) {
+  const card = makeEnemy(round, true, BOSS, undefined, [], ascMod);
   card.type = 'boss';
   card.icon = '💀';
   card.ability = 'overload';
@@ -497,15 +497,41 @@ export function makeChallenge(round, exclude = [], ownedRelics = []) {
   const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'ccwOnly', 'timeAttack', 'clearLines'].filter(id => !exclude.includes(id));
   if (!ids.length) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
-  const params = id === 'timeAttack' ? { limit: 40 + round * 2 }
-    : id === 'clearLines' ? { target: Math.min(40, 14 + round) }
-      : {};
   const tpl = CHALLENGES[id];
+  if (id === 'cwOnly' || id === 'ccwOnly') {
+    const amount = 18 + round * 3;
+    return { id, label: tpl.label, cond: tpl.desc({}), params: {}, reward: { kind: 'gold', amount, label: `골드 +${amount}`, detail: '' } };
+  }
+  if (id === 'timeAttack') {
+    const limitGreat = 40 + round * 2;
+    const limitOk = Math.round(limitGreat * 1.5);
+    const rewardOkAmt = 18 + round * 2;
+    return {
+      id, label: tpl.label,
+      cond: tpl.desc({ limit: limitGreat }), params: { limit: limitGreat },
+      condOk: tpl.desc({ limit: limitOk }), paramsOk: { limit: limitOk },
+      reward: rollChallengeReward(round, ownedRelics),
+      rewardOk: { kind: 'gold', amount: rewardOkAmt, label: `골드 +${rewardOkAmt}`, detail: '' }
+    };
+  }
+  if (id === 'clearLines') {
+    const targetGreat = Math.min(40, 14 + round);
+    const targetOk = Math.max(4, Math.floor(targetGreat * 0.6));
+    const rewardOkAmt = 15 + round * 2;
+    return {
+      id, label: tpl.label,
+      cond: tpl.desc({ target: targetGreat }), params: { target: targetGreat },
+      condOk: tpl.desc({ target: targetOk }), paramsOk: { target: targetOk },
+      reward: rollChallengeReward(round, ownedRelics),
+      rewardOk: { kind: 'gold', amount: rewardOkAmt, label: `골드 +${rewardOkAmt}`, detail: '' }
+    };
+  }
+  const params = {};
   return { id, label: tpl.label, cond: tpl.desc(params), params, reward: rollChallengeReward(round, ownedRelics) };
 }
 
-export function makeEnemyChoices(round, ownedRelics = []) {
-  if (round === MAX_ROUND) return [makeBoss(round)];
+export function makeEnemyChoices(round, ownedRelics = [], ascMod = null) {
+  if (round === MAX_ROUND) return [makeBoss(round, ascMod)];
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
   const mirrorAllowed = Math.random() < 0.35;
@@ -520,12 +546,12 @@ export function makeEnemyChoices(round, ownedRelics = []) {
     const base = elite ? elitePool.shift() : normalPool.shift();
     const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round, usedChallengeIds, ownedRelics) : null;
     if (challenge) usedChallengeIds.push(challenge.id);
-    choices.push(makeEnemy(round, elite, base, challenge, ownedRelics));
+    choices.push(makeEnemy(round, elite, base, challenge, ownedRelics, ascMod));
   }
   return choices;
 }
 
-export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined, ownedRelics = []) {
+export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined, ownedRelics = [], ascMod = null) {
   const pool = elite ? ELITES : ENEMIES;
   const base = selectedBase || pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
@@ -537,8 +563,11 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
     ? base.openingRows || 13
     : DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 5) + tier * 2;
   const eliteRows = DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 3) + tier * 3;
-  const startingGarbage = (base.garbage || 0) + Math.floor(level / 7) + tier + (elite ? 1 + tier : 0);
-  const speed = Math.max(82, (base.speed || 430) - level * (elite ? 8 : 5) - tier * (elite ? 32 : 24));
+  const ascGarbage = ascMod?.garbage ?? 0;
+  const ascSpeedFactor = ascMod?.speedFactor ?? 1.0;
+  const startingGarbage = (base.garbage || 0) + Math.floor(level / 7) + tier + (elite ? 1 + tier : 0) + ascGarbage;
+  const rawSpeed = (base.speed || 430) - level * (elite ? 8 : 5) - tier * (elite ? 32 : 24);
+  const speed = Math.max(82, Math.round(rawSpeed * ascSpeedFactor));
   const baseSkill = base.aiSkill || {};
   const aiSkill = {
     mistakeRate: Math.max(0, (baseSkill.mistakeRate || 0) - level * 0.004 - tier * 0.012 - (elite ? 0.03 : 0)),
@@ -567,6 +596,7 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
     ability: round >= 4 || elite ? base.ability : null,
     mirror,
     challenge,
+    difficultyTier: tier,
     icon: enemyIcon(base, elite ? 'elite' : 'normal')
   };
 }
@@ -695,7 +725,7 @@ export function makeEventChoices(run, eventKey) {
   const sideChoices = [];
   const removable = removableDeckCards(run);
   if (removable.length) {
-    const id = removable[0];
+    const id = shuffle(removable)[0];
     choices.push({
       kind: 'removeCard',
       id,
@@ -878,3 +908,27 @@ export function isShopRound(round) {
 export function isRunComplete(run) {
   return run.round > MAX_ROUND;
 }
+
+export const ASCENSION_MODS = [
+  { level: 0, label: 'A0', ko: '기본', en: 'Normal', ja: '通常', garbage: 0, speedFactor: 1.0 },
+  { level: 1, label: 'A1', ko: '단련', en: 'Hardened', ja: '鍛錬', garbage: 1, speedFactor: 1.0 },
+  { level: 2, label: 'A2', ko: '격전', en: 'Intense', ja: '激戦', garbage: 1, speedFactor: 0.88 },
+  { level: 3, label: 'A3', ko: '폭풍', en: 'Storm', ja: '嵐', garbage: 2, speedFactor: 0.85 },
+  { level: 4, label: 'A4', ko: '지옥', en: 'Inferno', ja: '地獄', garbage: 2, speedFactor: 0.82 },
+  { level: 5, label: 'A5', ko: '초월', en: 'Ascended', ja: '超越', garbage: 3, speedFactor: 0.78 },
+];
+
+export const ACHIEVEMENTS = [
+  { id: 'first_clear', icon: '🏆', ko: '첫 클리어', en: 'First Clear', ja: '初クリア', ko_d: '게임을 처음으로 클리어했습니다', en_d: 'Clear the game for the first time', ja_d: '初めてゲームをクリアした' },
+  { id: 'three_wins', icon: '🥉', ko: '삼연승', en: 'Triple Win', ja: '三連勝', ko_d: '3회 클리어 (누적)', en_d: 'Clear 3 times (total)', ja_d: '3回クリア(累計)' },
+  { id: 'boss_kill', icon: '💀', ko: '보스 처치', en: 'Boss Slayer', ja: 'ボス討伐', ko_d: '최종 보스를 처치했습니다', en_d: 'Defeat the final boss', ja_d: 'ラストボスを倒した' },
+  { id: 'elite_killer', icon: '⚡', ko: '엘리트 사냥꾼', en: 'Elite Hunter', ja: 'エリートハンター', ko_d: '엘리트 5마리 처치 (누적)', en_d: 'Defeat 5 elites (total)', ja_d: 'エリート5体討伐(累計)' },
+  { id: 'rich', icon: '💰', ko: '부자', en: 'Rich', ja: '大富豪', ko_d: '골드 200 이상 보유하고 클리어', en_d: 'Clear with 200+ gold', ja_d: '200G以上持ってクリア' },
+  { id: 'skill_master', icon: '🎯', ko: '스킬 마스터', en: 'Skill Master', ja: 'スキルマスター', ko_d: '스킬 3개 장착하고 클리어', en_d: 'Clear with 3 skills equipped', ja_d: '3スキル装備してクリア' },
+  { id: 'relic_hunter', icon: '🧬', ko: '유물 사냥꾼', en: 'Relic Hunter', ja: '遺物ハンター', ko_d: '유물 5개 이상 보유하고 클리어', en_d: 'Clear with 5+ relics', ja_d: '遺物5個以上でクリア' },
+  { id: 'lucky_gambler', icon: '🎰', ko: '행운의 도박사', en: 'Lucky Gambler', ja: '幸運の賭博師', ko_d: '도박에서 승리', en_d: 'Win a gamble', ja_d: 'ギャンブルに勝利した' },
+  { id: 'deck_cleaner', icon: '✂️', ko: '덱 청소부', en: 'Deck Cleaner', ja: 'デッキ清掃員', ko_d: '카드 제거 5회 사용 (누적)', en_d: 'Remove cards 5 times (total)', ja_d: 'カード除去5回使用(累計)' },
+  { id: 'ascension_1', icon: '🌙', ko: '승천자', en: 'Ascendant', ja: '昇天者', ko_d: '승천 1단계 이상에서 클리어', en_d: 'Clear at Ascension 1+', ja_d: '昇天1以上でクリア' },
+  { id: 'ascension_3', icon: '⭐', ko: '별의 전사', en: 'Star Warrior', ja: '星の戦士', ko_d: '승천 3단계 이상에서 클리어', en_d: 'Clear at Ascension 3+', ja_d: '昇天3以上でクリア' },
+  { id: 'ascension_5', icon: '🌟', ko: '초월자', en: 'Transcended', ja: '超越者', ko_d: '승천 5단계에서 클리어', en_d: 'Clear at Ascension 5', ja_d: '昇天5でクリア' },
+];

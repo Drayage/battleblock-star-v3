@@ -1,4 +1,4 @@
-import { wrapDataMap } from './i18n-data.js?v=20260524-audio4';
+import { wrapDataMap } from './i18n-data.js?v=20260829-ascension1';
 
 const SKILLS_KO = {
   minor_purge: {
