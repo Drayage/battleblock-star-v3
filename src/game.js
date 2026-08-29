@@ -44,7 +44,8 @@ const ASCENSION_KEY = 'bbs.ascension.v1';     // 선택된 레벨
 const ASCENSION_MAX_KEY = 'bbs.ascension.max.v1'; // 최대 해금 레벨
 const LIFETIME_KEY = 'bbs.lifetime.v1';
 
-const SOLO_FALL_SPEEDS = [800, 666, 533, 400, 333, 266, 216, 183, 150, 133, 116, 100];
+// Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
+const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
 const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
 const SOLO_MODES = {
   sprint40:    { name: '40줄 스프린트', goalLines: 40,  timeLimit: 0,      speedRamp: true,  unit: 'time'  },
