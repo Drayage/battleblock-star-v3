@@ -999,6 +999,7 @@ class Game {
   }
 
   acquireConsumable(id, done = () => {}, skipped = done) {
+    this.trackSeenConsumable(id);
     const add = slot => {
       if (slot == null && this.run.consumables.length < 3) this.run.consumables.push(id);
       else if (slot != null) this.run.consumables[slot] = id;
@@ -1519,6 +1520,10 @@ class Game {
 
   endRun(win) {
     this.clearBattleTimeouts();
+    if (!this.run?.practiceMode) {
+      this.updateLifetimeSeen(this.run);
+      this.checkCompendiumAchievements();
+    }
     const prevCleared = this.hasEverCleared();
     this.saveRecord(win);
     this.deleteSave(true);
@@ -1641,6 +1646,60 @@ class Game {
     if (completedCount === Object.keys(SET_DEFINITIONS).length) {
       this.unlockAchievement('all_sets');
     }
+  }
+
+  updateLifetimeSeen(run) {
+    const lt = this.loadLifetime();
+    const sc = new Set(lt.seenCards || []);
+    const ss = new Set(lt.seenSkills || []);
+    const sr = new Set(lt.seenRelics || []);
+    const sCons = new Set(lt.seenCons || []);
+    for (const id of [...run.deck.draw, ...run.deck.discard, ...(run.deck.extraCards || [])]) sc.add(id);
+    for (const id of run.ownedSkills) ss.add(id);
+    for (const id of run.relics) sr.add(id);
+    for (const id of run.consumables) sCons.add(id);
+    lt.seenCards = [...sc];
+    lt.seenSkills = [...ss];
+    lt.seenRelics = [...sr];
+    lt.seenCons = [...sCons];
+    this.saveLifetime(lt);
+    return { sc, ss, sr, sCons };
+  }
+
+  trackSeenConsumable(id) {
+    if (this.run?.practiceMode || !id) return;
+    const lt = this.loadLifetime();
+    const s = new Set(lt.seenCons || []);
+    s.add(id);
+    lt.seenCons = [...s];
+    this.saveLifetime(lt);
+    this.checkCompendiumAchievements();
+  }
+
+  checkCompendiumAchievements() {
+    if (this.run?.practiceMode) return;
+    const lt = this.loadLifetime();
+    const playerCardIds = new Set(
+      Object.values(CARD_LIBRARY)
+        .filter(c => c.tier && c.rarity !== 'base' && c.rarity !== 'curse' && !c.exhaust)
+        .map(c => c.id)
+    );
+    const seenCards = new Set(lt.seenCards || []);
+    const seenSkills = new Set(lt.seenSkills || []);
+    const seenRelics = new Set(lt.seenRelics || []);
+    const seenCons = new Set(lt.seenCons || []);
+    const totalSkills = Object.keys(SKILLS).length;
+    const totalRelics = Object.keys(RELICS).length;
+    const totalCons = Object.keys(CONSUMABLES).length;
+    const cardsOk = [...playerCardIds].every(id => seenCards.has(id));
+    const skillsOk = seenSkills.size >= totalSkills;
+    const relicsOk = seenRelics.size >= totalRelics;
+    const consOk = seenCons.size >= totalCons;
+    if (cardsOk) this.unlockAchievement('compendium_cards');
+    if (skillsOk) this.unlockAchievement('compendium_skills');
+    if (relicsOk) this.unlockAchievement('compendium_relics');
+    if (consOk) this.unlockAchievement('compendium_cons');
+    if (cardsOk && skillsOk && relicsOk && consOk) this.unlockAchievement('compendium_all');
   }
 
   // ===== 평생 통계 =====

@@ -985,5 +985,11 @@ export const ACHIEVEMENTS = [
   { id: 'set_bounty',      icon: '💰', ko: '현상금 세트 완성', en: 'Bounty Set Complete',  ja: '懸賞金セット完成',   ko_d: '현상금 세트 7종 모두 보유', en_d: 'Collect all 7 Bounty cards',  ja_d: '懸賞金カード7種コンプリート' },
   { id: 'set_wardBlock',   icon: '🛡️', ko: '차단 세트 완성',   en: 'Ward Set Complete',    ja: '차단セット完成',     ko_d: '차단 세트 7종 모두 보유', en_d: 'Collect all 7 Ward cards',      ja_d: '차단カード7種コンプリート' },
   { id: 'set_comboCharge', icon: '🔗', ko: '콤보 세트 완성',   en: 'Combo Set Complete',   ja: 'コンボセット完成',   ko_d: '콤보 세트 7종 모두 보유', en_d: 'Collect all 7 Combo cards',     ja_d: 'コンボカード7種コンプリート' },
-  { id: 'all_sets',        icon: '📖', ko: '도감 완성',         en: 'Full Compendium',      ja: '図鑑完成',           ko_d: '모든 세트 완성 (8세트)', en_d: 'Complete all 8 block sets',      ja_d: '全8セットコンプリート' },
+  { id: 'all_sets',          icon: '📖', ko: '세트 도감 완성',     en: 'Set Compendium',       ja: 'セット図鑑完成',     ko_d: '모든 특수 블록 세트 완성 (8세트)', en_d: 'Complete all 8 block sets',   ja_d: '全8セット完成' },
+  // 카테고리별 도감
+  { id: 'compendium_skills', icon: '🎓', ko: '스킬 도감',          en: 'Skill Compendium',     ja: 'スキル図鑑',         ko_d: '모든 스킬 수집 (누적)', en_d: 'Collect all skills (lifetime)',    ja_d: '全スキル収集(累計)' },
+  { id: 'compendium_relics', icon: '🏺', ko: '유물 도감',          en: 'Relic Compendium',     ja: '遺物図鑑',           ko_d: '모든 유물 수집 (누적)', en_d: 'Collect all relics (lifetime)',    ja_d: '全遺物収集(累計)' },
+  { id: 'compendium_cons',   icon: '🎒', ko: '소모품 도감',        en: 'Item Compendium',      ja: 'アイテム図鑑',       ko_d: '모든 소모품 수집 (누적)', en_d: 'Collect all consumables (lifetime)', ja_d: '全アイテム収集(累計)' },
+  { id: 'compendium_cards',  icon: '📦', ko: '블록 도감',          en: 'Block Compendium',     ja: 'ブロック図鑑',       ko_d: '모든 특수 블록 카드 수집 (누적)', en_d: 'Collect all special block cards (lifetime)', ja_d: '全特殊ブロックカード収集(累計)' },
+  { id: 'compendium_all',    icon: '📚', ko: '대도감',             en: 'Grand Compendium',     ja: '大図鑑',             ko_d: '블록/스킬/유물/소모품 도감 모두 달성', en_d: 'Complete all 4 compendium achievements', ja_d: '4種類の図鑑全達成' },
 ];
