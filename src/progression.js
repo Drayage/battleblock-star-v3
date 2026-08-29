@@ -992,4 +992,16 @@ export const ACHIEVEMENTS = [
   { id: 'compendium_cons',   icon: '🎒', ko: '소모품 도감',        en: 'Item Compendium',      ja: 'アイテム図鑑',       ko_d: '모든 소모품 수집 (누적)', en_d: 'Collect all consumables (lifetime)', ja_d: '全アイテム収集(累計)' },
   { id: 'compendium_cards',  icon: '📦', ko: '블록 도감',          en: 'Block Compendium',     ja: 'ブロック図鑑',       ko_d: '모든 특수 블록 카드 수집 (누적)', en_d: 'Collect all special block cards (lifetime)', ja_d: '全特殊ブロックカード収集(累計)' },
   { id: 'compendium_all',    icon: '📚', ko: '대도감',             en: 'Grand Compendium',     ja: '大図鑑',             ko_d: '블록/스킬/유물/소모품 도감 모두 달성', en_d: 'Complete all 4 compendium achievements', ja_d: '4種類の図鑑全達成' },
+  // 전투 마일스톤
+  { id: 'atk_big',        icon: '💥', ko: '대포격',           en: 'Cannon Fire',      ja: '大砲撃',       ko_d: '한 번에 5줄 이상 공격', en_d: 'Send 5+ garbage in a single attack', ja_d: '一度に5列以上攻撃' },
+  { id: 'explode_big',    icon: '💣', ko: '대폭발',           en: 'Big Explosion',    ja: '大爆発',       ko_d: '폭발로 한 번에 20개 이상 블록 제거', en_d: 'Destroy 20+ cells in one explosion', ja_d: '爆発で一度に20個以上破壊' },
+  { id: 'mana_burst',     icon: '🔮', ko: '마나 폭발',        en: 'Mana Burst',       ja: 'マナバースト', ko_d: '한 번에 40 이상 마나 회복', en_d: 'Recover 40+ mana in a single turn', ja_d: '一度に40以上マナ回復' },
+  { id: 'tetris_clear',   icon: '⭐', ko: '테트리스',         en: 'Tetris!',          ja: 'テトリス',     ko_d: '한 번에 4줄 클리어', en_d: 'Clear 4 lines at once', ja_d: '一度に4列クリア' },
+  { id: 'coolant_master', icon: '❄️', ko: '냉각 장인',        en: 'Coolant Master',   ja: '冷却マスター', ko_d: '한 전투에서 적을 20초 이상 냉각', en_d: 'Slow the enemy for 20+ seconds in one battle', ja_d: '一戦闘で敵を20秒以上冷却' },
+  { id: 'bounty_hunter',  icon: '🏴', ko: '현상금 사냥꾼',    en: 'Bounty Hunter',    ja: '賞金稼ぎ',     ko_d: '한 전투에서 현상금으로 40골드 이상 획득', en_d: 'Earn 40+ bounty gold in one battle', ja_d: '一戦闘で懸賞金40G以上獲得' },
+  { id: 'shop_spender',   icon: '🛒', ko: '큰 손',            en: 'Big Spender',      ja: '大散財',       ko_d: '상점에서 한 런에 100골드 이상 지출', en_d: 'Spend 100+ gold at shops in one run', ja_d: 'ショップで一ランに100G以上消費' },
+  { id: 'ward_master',    icon: '🛡️', ko: '차단 장인',        en: 'Ward Master',      ja: '차단マスター', ko_d: '한 전투에서 쓰레기줄 8개 이상 차단', en_d: 'Block 8+ garbage rows in one battle', ja_d: '一戦闘でガベージ8行以上차단' },
+  { id: 'combo_master',   icon: '🔗', ko: '콤보 장인',        en: 'Combo Master',     ja: 'コンボマスター', ko_d: '10 콤보 이상 달성', en_d: 'Achieve 10+ combo', ja_d: '10コンボ以上達成' },
+  { id: 'deck_overload',  icon: '📤', ko: '덱 과부하',        en: 'Deck Overload',    ja: 'デッキ過負荷', ko_d: '카드 35장 이상으로 클리어', en_d: 'Clear with 35+ cards in deck', ja_d: 'カード35枚以上でクリア' },
+  { id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',        en: 'Deck Minimalist',  ja: 'デッキ最小', ko_d: '카드 10장 이하로 클리어', en_d: 'Clear with 10 or fewer cards in deck', ja_d: 'カード10枚以下でクリア' },
 ];

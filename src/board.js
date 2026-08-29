@@ -548,6 +548,7 @@ export class Board {
     const bombR = 1 + this.explodeRadiusBonus;
     const timeR = 2 + this.explodeRadiusBonus;
     let blastBonusAttack = 0;
+    let totalExplodedCells = 0;
     const mergeCols = src => {
       for (const [c, my] of src) if (!allCols.has(c) || my > allCols.get(c)) allCols.set(c, my);
     };
@@ -555,12 +556,14 @@ export class Board {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
       const { destroyed, cols } = this.explodeBombAt(x, targetY, bombR);
       blastBonusAttack += Math.min(1.5, destroyed * 0.05);
+      totalExplodedCells += destroyed;
       mergeCols(cols);
     }
     for (const { x, y } of timeBombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
       const { destroyed, cols } = this.explodeBombAt(x, targetY, timeR);
       blastBonusAttack += Math.min(1.5, destroyed * 0.05);
+      totalExplodedCells += destroyed;
       mergeCols(cols);
     }
     if (this.explodeRadiusBonus > 0) attack += blastBonusAttack;
@@ -577,6 +580,7 @@ export class Board {
       mana: Number(mana.toFixed(2)),
       bombRows,
       exploded: bombCells.length + timeBombCells.length > 0,
+      explodedCells: totalExplodedCells,
       purge,
       slow: coolantCells * GAME_TIMING.COOLANT_SLOW,
       gold,

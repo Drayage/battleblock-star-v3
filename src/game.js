@@ -343,6 +343,8 @@ class Game {
     document.getElementById('endScreen').classList.remove('run-clear');
     this.run = new RunState();
     this.run.practiceMode = this.practiceMode;
+    this.runShopSpent = 0;
+    this.runBattleTetris = false;
     const ascMod = this.currentAscMod();
     if (ascMod.playerStartHp != null) this.run.hpRows = ascMod.playerStartHp;
     for (let i = 0; i < (ascMod.startCurseCards ?? 0); i++) {
@@ -927,7 +929,9 @@ class Game {
       if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [], locked: [] };
       const stock = this.run.shopStock[shopKey];
       const key = shopItemKey(item);
-      this.run.gold -= priceOverride ?? this.effectivePrice(item, stock.dealKey === key);
+      const paidPrice = priceOverride ?? this.effectivePrice(item, stock.dealKey === key);
+      this.run.gold -= paidPrice;
+      this.runShopSpent = (this.runShopSpent || 0) + paidPrice;
       stock.locked = (stock.locked || []).filter(lockedKey => lockedKey !== key);
       if (this.run.relics.includes('warehouse_key')) {
         const idx = stock.items.findIndex(it => shopItemKey(it) === key);
@@ -1123,6 +1127,13 @@ class Game {
     this.battleUsedHardDrop = false;
     this.battleUsedCounterClockwise = false;
     this.battleUsedClockwise = false;
+    this.battleMaxSingleAttack = 0;
+    this.battleMaxExplodeCells = 0;
+    this.battleMaxManaGain = 0;
+    this.battleTotalSlow = 0;
+    this.battleBountyGold = 0;
+    this.battleWardCanceled = 0;
+    this.battleMaxCombo = 0;
     this.activeChallenge = enemyCard.challenge || null;
     this.challengeRewarded = false;
     this.paused = false;
@@ -1259,6 +1270,7 @@ class Game {
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (result.cleared > 0 && attacker === this.player) {
       this.battlePlayerClearedLines += result.cleared;
+      if (result.cleared >= 4) this.runBattleTetris = true;
       this.input.vibrate(`clear${Math.min(4, result.cleared)}`);
     }
     if (attacker === this.player) this.battlePlayerPieces++;
@@ -1281,6 +1293,7 @@ class Game {
         const wasSlowed = this.enemySlowTimer > 0;
         const slowAdd = this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
         this.enemySlowTimer += slowAdd;
+        this.battleTotalSlow += slowAdd;
         if (wasSlowed && this.run.relics.includes('frost_lock')) {
           this.enemyStunTimer += Math.floor(slowAdd * 0.5);
         }
@@ -1291,19 +1304,27 @@ class Game {
         const earned = Math.floor(this.bountyBank);
         if (earned > 0) {
           this.run.gold += earned;
+          this.battleBountyGold += earned;
           this.bountyBank -= earned;
         }
       }
+      if (result.explodedCells > 0) this.battleMaxExplodeCells = Math.max(this.battleMaxExplodeCells, result.explodedCells);
+      if (result.canceled > 0) this.battleWardCanceled += result.canceled;
+      if (result.cleared >= 1) this.battleMaxCombo = Math.max(this.battleMaxCombo, this.player.combo);
     }
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.instant?.dispelEnemy && attacker === this.player) this.dispelEnemyAbilities();
     if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
     const manaFactor = this.currentAscMod().manaFactor ?? 1.0;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
-      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35 * manaFactor);
+      const gain = result.mana * 0.35 * manaFactor;
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + gain);
+      this.battleMaxManaGain = Math.max(this.battleMaxManaGain, gain);
     }
     if (attacker === this.player && result.cleared > 0 && !this.player.held && this.run.relics.includes('hold_cache')) {
-      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5 * manaFactor);
+      const gain = result.mana * 0.5 * manaFactor;
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + gain);
+      this.battleMaxManaGain = Math.max(this.battleMaxManaGain, gain);
     }
     if (result.attack > 0) {
       // Heat and power scaling are shared battle pressure and apply to both sides.
@@ -1335,7 +1356,10 @@ class Game {
         attacker.attackPool += buffered;
         const toSend = Math.floor(attacker.attackPool);
         attacker.attackPool = Number((attacker.attackPool - toSend).toFixed(4));
-        if (toSend > 0) defender.receiveGarbage(toSend);
+        if (toSend > 0) {
+          defender.receiveGarbage(toSend);
+          if (attacker === this.player) this.battleMaxSingleAttack = Math.max(this.battleMaxSingleAttack, toSend);
+        }
       }
     }
     this.emitResolveSfx(result, attacker, defender);
@@ -1429,6 +1453,7 @@ class Game {
       }
     }
     this.checkBattleAchievements(this.enemyCard.type);
+    this.checkBattleMilestoneAchievements();
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
@@ -1631,6 +1656,32 @@ class Game {
       this.saveLifetime(lt);
       if (lt.eliteKills >= 5) this.unlockAchievement('elite_killer');
     }
+  }
+
+  checkBattleMilestoneAchievements() {
+    if (this.run?.practiceMode) return;
+    // 한 번에 큰 공격
+    if (this.battleMaxSingleAttack >= 5) this.unlockAchievement('atk_big');
+    // 폭발 대량 제거
+    if (this.battleMaxExplodeCells >= 20) this.unlockAchievement('explode_big');
+    // 마나 대량 회복
+    if (this.battleMaxManaGain >= 40) this.unlockAchievement('mana_burst');
+    // 한 전투 냉각 누적
+    if (this.battleTotalSlow >= 20000) this.unlockAchievement('coolant_master');
+    // 한 전투 현상금 골드
+    if (this.battleBountyGold >= 40) this.unlockAchievement('bounty_hunter');
+    // 차단 누적
+    if (this.battleWardCanceled >= 8) this.unlockAchievement('ward_master');
+    // 콤보
+    if (this.battleMaxCombo >= 10) this.unlockAchievement('combo_master');
+    // 테트리스 (한 번에 4줄 클리어) - 런 중 발생 여부
+    if (this.runBattleTetris) this.unlockAchievement('tetris_clear');
+    // 덱 크기 (승리 시)
+    const deckSize = this.run.deck.draw.length + this.run.deck.discard.length;
+    if (deckSize >= 35) this.unlockAchievement('deck_overload');
+    if (deckSize <= 10) this.unlockAchievement('deck_minimalist');
+    // 상점 지출 (런 전체 누적)
+    if ((this.runShopSpent || 0) >= 100) this.unlockAchievement('shop_spender');
   }
 
   checkSetAchievements() {
