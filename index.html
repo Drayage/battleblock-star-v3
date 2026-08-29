@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#070912">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Battle Block Star v3.0</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260829-solo1">
-  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260829-solo1">
-  <link rel="icon" href="./assets/icon-192.png?v=20260829-solo1">
-  <link rel="stylesheet" href="./src/styles.css?v=20260829-solo1">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260829-vs1">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260829-vs1">
+  <link rel="icon" href="./assets/icon-192.png?v=20260829-vs1">
+  <link rel="stylesheet" href="./src/styles.css?v=20260829-vs1">
 </head>
 <body>
   <div id="toastContainer"></div>
@@ -80,6 +80,7 @@
       <div class="menu-utility-actions">
         <button id="achievementsBtn" class="ghost" data-i18n="menu.achievements">업적</button>
         <button id="soloModesBtn" class="ghost hidden">싱글 모드</button>
+        <button id="vsModeBtn" class="ghost">VS 모드</button>
       </div>
       <div class="audio-toggles">
         <button id="bgmToggleBtn" class="ghost" data-label="음악" data-i18n-label="menu.music">음악</button>
@@ -252,6 +253,46 @@
       <button id="soloBackBtn" class="ghost">← 메인 메뉴</button>
     </section>
 
+    <section id="vsSelectScreen" class="screen">
+      <h2>VS 모드</h2>
+      <div class="vs-mode-grid">
+        <div class="vs-mode-card">
+          <h3>⚔️ 일반 배틀</h3>
+          <p>순수 테트리스 대전 · 카드 능력 없음</p>
+          <div class="vs-difficulty-row">
+            <span>난이도:</span>
+            <select class="vs-diff-select" data-mode="normal">
+              <option value="0">쉬움</option>
+              <option value="1" selected>보통</option>
+              <option value="2">어려움</option>
+            </select>
+          </div>
+          <button class="vs-start-btn" data-mode="normal">시작 (3전 2승)</button>
+          <div class="vs-record" id="rec-vs-normal"></div>
+        </div>
+        <div class="vs-mode-card">
+          <h3>🎲 랜덤 배틀</h3>
+          <p>랜덤 카드 능력 덱 · 카오스 배틀</p>
+          <div class="vs-difficulty-row">
+            <span>난이도:</span>
+            <select class="vs-diff-select" data-mode="random">
+              <option value="0">쉬움</option>
+              <option value="1" selected>보통</option>
+              <option value="2">어려움</option>
+            </select>
+          </div>
+          <button class="vs-start-btn" data-mode="random">시작 (3전 2승)</button>
+        </div>
+        <div class="vs-mode-card">
+          <h3>🏃 이어달리기</h3>
+          <p>무한 연속 배틀 · 판 사이 전환 없음</p>
+          <button class="vs-start-btn" data-mode="relay">시작</button>
+          <div class="vs-record" id="rec-vs-relay">기록 없음</div>
+        </div>
+      </div>
+      <button id="vsBackBtn" class="ghost">← 메인 메뉴</button>
+    </section>
+
     <section id="endScreen" class="screen">
       <h1 id="endTitle" data-i18n="screen.runComplete">Run Complete</h1>
       <p id="endSummary" class="subtitle"></p>
@@ -261,6 +302,6 @@
     </section>
   </main>
 
-  <script type="module" src="./src/game.js?v=20260829-solo1"></script>
+  <script type="module" src="./src/game.js?v=20260829-vs1"></script>
 </body>
 </html>

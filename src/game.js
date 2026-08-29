@@ -1,5 +1,5 @@
 import { Board } from './board.js?v=20260829-ascension1';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, SET_LABELS, TYPES } from './constants.js?v=20260829-ascension1';
+import { ABILITY_GLYPH, ABILITY_LIBRARY, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, SET_LABELS, TYPES } from './constants.js?v=20260829-ascension1';
 import { Deck } from './deck.js?v=20260829-ascension1';
 import { AI } from './ai.js?v=20260829-ascension1';
 import { Renderer } from './renderer.js?v=20260829-ascension1';
@@ -167,6 +167,8 @@ class Game {
     this.run = new RunState();
     this.solo = null;
     this.soloPaused = false;
+    this.vs = null;
+    this._vsGameEndHandled = false;
     this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
     this.player = null;
@@ -295,6 +297,16 @@ class Game {
       this.solo = null;
       this.player = null;
       this.showSoloSelect();
+    });
+    document.getElementById('vsModeBtn')?.addEventListener('click', () => this.showVsSelect());
+    document.getElementById('vsBackBtn')?.addEventListener('click', () => { this.show('menu'); });
+    document.querySelectorAll('.vs-start-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        const diffSel = document.querySelector(`.vs-diff-select[data-mode="${mode}"]`);
+        const diff = diffSel ? parseInt(diffSel.value, 10) : 1;
+        this.startVsMode(mode, diff);
+      });
     });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
@@ -1667,6 +1679,13 @@ class Game {
   }
 
   winBattle() {
+    if (this.vs) {
+      if (!this._vsGameEndHandled) {
+        this._vsGameEndHandled = true;
+        this._handleVsGameEnd(true);
+      }
+      return;
+    }
     this.pendingChallengeText = '';
     if (this.activeChallenge && !this.challengeRewarded) {
       const st = this.challengeStatus();
@@ -1778,6 +1797,13 @@ class Game {
   }
 
   endRun(win) {
+    if (this.vs) {
+      if (!win && !this._vsGameEndHandled) {
+        this._vsGameEndHandled = true;
+        this._handleVsGameEnd(false);
+      }
+      return;
+    }
     this.clearBattleTimeouts();
     if (!this.run?.practiceMode) {
       this.updateLifetimeSeen(this.run);
@@ -2164,6 +2190,7 @@ class Game {
   }
 
   autoSave() {
+    if (this.vs) return; // VS mode doesn't use the save system
     this.saveGame(true);
   }
 
@@ -2868,6 +2895,262 @@ class Game {
     this.castBossDebuff();
   }
 
+  // ===== VS 모드 =====
+
+  showVsSelect() {
+    this.show('vsSelectScreen');
+    const relayBest = localStorage.getItem('bbs.vs.relay.record');
+    const el = document.getElementById('rec-vs-relay');
+    if (el) el.textContent = relayBest ? `최고: ${relayBest}킬` : '기록 없음';
+  }
+
+  startVsMode(mode, difficulty = 1) {
+    this.vs = { mode, difficulty, wins: [0, 0], game: 1, relayKills: 0, ended: false };
+    this._vsGameEndHandled = false;
+    this._startVsGame();
+  }
+
+  _makeVsDummyRun() {
+    return {
+      relics: [], skills: [], consumables: [], equippedSkills: [],
+      ownedSkills: [], gold: 0, round: 1, hpRows: 20,
+      deckCount: () => 21, persistentGrid: null, practiceMode: false
+    };
+  }
+
+  _startVsGame() {
+    this.clearBattleTimeouts();
+    this.vs.ended = false;
+    this._vsGameEndHandled = false;
+    const { mode, difficulty } = this.vs;
+
+    // Fake enemy card (no roguelike-specific fields needed)
+    const speeds = [280, 200, 140];
+    this.enemyCard = {
+      type: 'normal', name: 'VS 배틀', aiProfile: 'balanced',
+      speed: speeds[difficulty] ?? 200, mirror: false, ability: null,
+      rewardGold: 0, rewardPool: 'normal', startingRows: 20,
+      startingGarbage: 0, vsMode: true
+    };
+
+    // Build decks
+    const seed = Date.now();
+    const playerDeck = mode === 'random' ? this.makeRandomDeck(seed) : new Deck();
+    const enemyDeck  = mode === 'random' ? this.makeRandomDeck((seed ^ 0xdeadbeef) >>> 0) : new Deck();
+
+    this.player = new Board({ rows: 20, deck: playerDeck });
+    this.player.delaysGarbageOnClear = true;
+    this.player.onGarbageLanded = () => this.input.vibrate('garbage');
+    this.enemy = new Board({ rows: 20, deck: enemyDeck });
+    this.enemy.delaysGarbageOnClear = false;
+
+    this.ai = new AI('balanced', {}, difficulty);
+
+    // Reset all battle state
+    this.fallTimer = 0; this.lockTimer = 0; this.lockResets = 0; this.groundTouched = false;
+    this.enemyTimer = 0; this.enemyActionStall = 0; this.enemyAbilityTimer = 0;
+    this.enemyAbilitySuppressTimer = 0; this.gaugeStallTimer = 0; this.playerGaugeRushTimer = 0;
+    this.enemySlowTimer = 0; this.enemyStunTimer = 0; this.playerSlowTimer = 0;
+    this.battleClearedLines = 0; this.battlePlayerClearedLines = 0;
+    this.battlePlayerPieces = 0; this.battlePlayerAttacks = 0;
+    this.battleEnemyPieces = 0; this.battleEnemyAttacks = 0; this.battleElapsedSec = 0;
+    this.aiFocusActivations = 0; this.aiFocusInEpisode = false;
+    this.battleEndDelay = 0; this.battleEndResult = null;
+    this.playerFreezeTimer = 0; this.playerFogTimer = 0; this.playerHyperTimer = 0;
+    this.playerInvertTimer = 0; this.enemyForceDropTimer = 0;
+    this.bossOverloadCharge = 0; this.bossRhythmSent = 0; this.bossRhythmRestTimer = 0;
+    this.enemyDebuffs = {}; this.playerDebuffs = {};
+    this.battleUsedHold = false; this.battleUsedSkill = false; this.battleUsedHardDrop = false;
+    this.battleUsedCounterClockwise = false; this.battleUsedClockwise = false;
+    this.battleMaxSingleAttack = 0; this.battleMaxExplodeCells = 0; this.battleMaxManaGain = 0;
+    this.battleTotalSlow = 0; this.battleBountyGold = 0; this.battleWardCanceled = 0;
+    this.battleMaxCombo = 0; this.activeChallenge = null; this.challengeRewarded = false;
+    this.paused = false; this.autoSaveTimer = 0; this.skillCooldowns = {};
+    this.message = 'VS 배틀'; this.alertText = ''; this.alertTimer = 0;
+    this.battleFirstClearUsed = false; this.bountyBank = 0;
+
+    this.run = this._makeVsDummyRun();
+
+    const modeName = { normal: '일반 배틀', random: '랜덤 배틀', relay: '이어달리기' }[mode] || 'VS';
+    const seriesLabel = mode === 'relay' ? `${this.vs.relayKills}킬` : `게임 ${this.vs.game} · ${this.vs.wins[0]}:${this.vs.wins[1]}`;
+    document.getElementById('battleTitle').textContent = 'VS 모드';
+    document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
+    this.renderTouchSlots();
+    this.renderer.resize(this.player.rows, this.enemy.rows);
+    this.show('gameScreen');
+  }
+
+  makePureDeck() {
+    // Standard 7-bag × 3 deck, base cards have no abilities (abilityId: 'none')
+    return new Deck();
+  }
+
+  makeRandomDeck(seed) {
+    const SHAPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+    const allCards = Object.values(CARD_LIBRARY);
+    let rng = (seed >>> 0);
+    const rand = () => {
+      rng = ((Math.imul(rng, 1664525) + 1013904223) >>> 0);
+      return rng / 0x100000000;
+    };
+    const cards = [];
+    for (let r = 0; r < 3; r++) {
+      for (const s of SHAPES) {
+        const baseCard = CARD_LIBRARY[s];
+        const donor = allCards[Math.floor(rand() * allCards.length)];
+        const ability = ABILITY_LIBRARY[donor.abilityId] || ABILITY_LIBRARY.none;
+        cards.push({
+          id: `rnd_${s}_${r}`,
+          name: `랜덤 ${s}`,
+          shapeId: s,
+          shapeName: baseCard.shapeName,
+          abilityId: ability.id,
+          abilityName: ability.name,
+          cellCount: baseCard.cellCount,
+          shape: baseCard.shape,
+          cellAttack: ability.cellAttack,
+          traits: [...ability.traits],
+          onPlace: ability.onPlace ? { ...ability.onPlace } : null,
+          penalty: !!ability.penalty,
+          fuse: ability.fuse || 0,
+          exhaust: false,
+          rarity: 'base',
+          tier: 'bronze'
+        });
+      }
+    }
+    return new VsDeck(cards);
+  }
+
+  _handleVsGameEnd(playerWon) {
+    if (!this.vs) return;
+    if (playerWon) this.vs.wins[0]++;
+    else this.vs.wins[1]++;
+
+    if (this.vs.mode === 'relay') {
+      if (playerWon) {
+        this.vs.relayKills++;
+        if (this.vs.relayKills % 3 === 0) this._relayDrop();
+        setTimeout(() => this._startNextRelayEnemy(), 800);
+      } else {
+        this.vs.ended = true;
+        const best = parseInt(localStorage.getItem('bbs.vs.relay.record') || '0', 10);
+        if (this.vs.relayKills > best) {
+          localStorage.setItem('bbs.vs.relay.record', String(this.vs.relayKills));
+        }
+        this._showVsResult(false);
+      }
+      return;
+    }
+
+    // Series mode (best-of-3)
+    const [pw, ew] = this.vs.wins;
+    if (pw >= 2 || ew >= 2) {
+      this.vs.ended = true;
+      this._showVsResult(pw >= 2);
+    } else {
+      this.vs.game++;
+      this._showVsInterGame(playerWon);
+    }
+  }
+
+  _relayDrop() {
+    const allRelicIds = Object.keys(RELICS);
+    const allConsIds = Object.keys(CONSUMABLES);
+    const pool = [
+      ...allRelicIds.map(r => ({ type: 'relic', id: r })),
+      ...allConsIds.map(c => ({ type: 'cons', id: c }))
+    ];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    if (pick.type === 'relic' && !this.run.relics.includes(pick.id)) {
+      this.run.relics.push(pick.id);
+      this.flashAlert(`유물 획득: ${RELICS[pick.id]?.name || pick.id}`);
+    } else if (pick.type === 'cons') {
+      if (this.run.consumables.length < 3) {
+        this.run.consumables.push(pick.id);
+        this.renderTouchSlots();
+        this.flashAlert(`소모품 획득: ${CONSUMABLES[pick.id]?.name || pick.id}`);
+      } else {
+        // Try relic instead
+        const relicId = allRelicIds.find(r => !this.run.relics.includes(r));
+        if (relicId) {
+          this.run.relics.push(relicId);
+          this.flashAlert(`유물 획득: ${RELICS[relicId]?.name || relicId}`);
+        }
+      }
+    }
+  }
+
+  _startNextRelayEnemy() {
+    if (!this.vs || this.vs.ended) return;
+    const { difficulty } = this.vs;
+    const speeds = [280, 200, 140];
+    this.enemyCard.speed = speeds[difficulty] ?? 200;
+    this.enemy = new Board({ rows: 20, deck: new Deck() });
+    this.enemy.delaysGarbageOnClear = false;
+    this.ai = new AI('balanced', {}, difficulty);
+    this._vsGameEndHandled = false;
+    this.battleEndResult = null;
+    this.battleEndDelay = 0;
+    this.enemyTimer = 0; this.enemyActionStall = 0; this.enemyAbilityTimer = 0;
+    this.enemyAbilitySuppressTimer = 0; this.enemySlowTimer = 0; this.enemyStunTimer = 0;
+    this.enemyForceDropTimer = 0; this.bossOverloadCharge = 0;
+    this.bossRhythmSent = 0; this.bossRhythmRestTimer = 0;
+    this.enemyDebuffs = {}; this.battleEnemyPieces = 0; this.battleEnemyAttacks = 0;
+    this.aiFocusActivations = 0; this.aiFocusInEpisode = false;
+    this.message = `${this.vs.relayKills}킬! 다음 적 등장`;
+    const modeName = '이어달리기';
+    const seriesLabel = `${this.vs.relayKills}킬`;
+    document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
+    this.renderer.resize(this.player.rows, this.enemy.rows);
+  }
+
+  _showVsInterGame(playerWon) {
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>라운드 ${this.vs.game - 1} — ${playerWon ? '승리 🎉' : '패배 💀'}</h3>
+        <p style="color:#d7e5ff;font-size:22px;margin:10px 0">${this.vs.wins[0]} : ${this.vs.wins[1]}</p>
+        <button class="ghost" id="vsNextGameBtn">다음 게임 →</button>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('vsNextGameBtn').addEventListener('click', () => {
+      modal.remove();
+      this._startVsGame();
+    });
+  }
+
+  _showVsResult(playerWon) {
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    const label = this.vs.mode === 'relay'
+      ? `이어달리기 종료 · ${this.vs.relayKills}킬`
+      : `시리즈 ${playerWon ? '승리' : '패배'} (${this.vs.wins[0]}:${this.vs.wins[1]})`;
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>${playerWon ? '🏆 승리!' : '💀 패배'}</h3>
+        <p style="color:#d7e5ff;margin:8px 0">${label}</p>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="ghost" id="vsRetryBtn">다시 하기</button>
+          <button class="ghost" id="vsMenuBtn">VS 메뉴</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('vsRetryBtn').addEventListener('click', () => {
+      modal.remove();
+      this.startVsMode(this.vs.mode, this.vs.difficulty);
+    });
+    document.getElementById('vsMenuBtn').addEventListener('click', () => {
+      modal.remove();
+      this.vs = null;
+      this.player = null;
+      this.enemy = null;
+      this.run = new RunState();
+      this.showVsSelect();
+    });
+  }
+
   castBossDebuff() {
     const name = tEnemyName(this.enemyCard?.name);
     const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
@@ -2897,10 +3180,51 @@ class Game {
   }
 }
 
+// VsDeck: wraps pre-built card objects for VS/random modes
+class VsDeck {
+  constructor(cardObjects) {
+    this._all = [...cardObjects];
+    this._byId = {};
+    for (const c of cardObjects) this._byId[c.id] = c;
+    this.draw = [...cardObjects.map(c => c.id)];
+    this.discard = [];
+    this.extraCards = [];
+    this.removedBase = [];
+    this._vshuffle(this.draw);
+  }
+  _vshuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+  refill() {
+    this.draw = [...this._all.map(c => c.id)];
+    this.discard = [];
+    this._vshuffle(this.draw);
+  }
+  beginBattle() { this.battleExhausted = new Set(); }
+  size() { return this.draw.length + this.discard.length; }
+  next() {
+    if (!this.draw.length) this.refill();
+    const id = this.draw.shift();
+    this.discard.push(id);
+    return this._byId[id];
+  }
+  preview(n = 3) {
+    while (this.draw.length < n) this.refill();
+    return this.draw.slice(0, n).map(id => this._byId[id]);
+  }
+  addCard() {}
+  removeCard() { return false; }
+  pollute() {}
+  toState() { return { extraCards: [], removedBase: [], draw: [...this.draw], discard: [...this.discard] }; }
+}
+
 new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260829-ascension1').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260829-vs1').catch(() => {});
   });
 }
