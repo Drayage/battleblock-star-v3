@@ -954,11 +954,11 @@ export const ASCENSION_MODS = [
   { level:  9, label: 'A9',  ko: '절망',   en: 'Despair',    ja: '絶望',
     garbage: 5, speedFactor: 0.72, eliteChanceBonus: 0.40,
     playerFallFactor: 0.72, manaFactor: 0.50, playerStartHp: 16,
-    enemyAttackFactor: 1.60, rewardTierPenalty: 2, startCurseCards: 3 },
+    enemyAttackFactor: 1.60, rewardTierPenalty: 1, startCurseCards: 3 },
   { level: 10, label: 'A10', ko: '신화',   en: 'Mythic',     ja: '神話',
     garbage: 6, speedFactor: 0.68, eliteChanceBonus: 0.50,
     playerFallFactor: 0.68, manaFactor: 0.40, playerStartHp: 15,
-    enemyAttackFactor: 1.80, rewardTierPenalty: 2, startCurseCards: 4 },
+    enemyAttackFactor: 1.80, rewardTierPenalty: 1, startCurseCards: 4 },
 ];
 
 export const ACHIEVEMENTS = [
@@ -996,7 +996,7 @@ export const ACHIEVEMENTS = [
   { id: 'atk_big',        icon: '💥', ko: '대포격',           en: 'Cannon Fire',      ja: '大砲撃',       ko_d: '한 번에 5줄 이상 공격', en_d: 'Send 5+ garbage in a single attack', ja_d: '一度に5列以上攻撃' },
   { id: 'explode_big',    icon: '💣', ko: '대폭발',           en: 'Big Explosion',    ja: '大爆発',       ko_d: '폭발로 한 번에 20개 이상 블록 제거', en_d: 'Destroy 20+ cells in one explosion', ja_d: '爆発で一度に20個以上破壊' },
   { id: 'mana_burst',     icon: '🔮', ko: '마나 폭발',        en: 'Mana Burst',       ja: 'マナバースト', ko_d: '한 번에 40 이상 마나 회복', en_d: 'Recover 40+ mana in a single turn', ja_d: '一度に40以上マナ回復' },
-  { id: 'tetris_clear',   icon: '⭐', ko: '테트리스',         en: 'Tetris!',          ja: 'テトリス',     ko_d: '한 번에 4줄 클리어', en_d: 'Clear 4 lines at once', ja_d: '一度に4列クリア' },
+  { id: 'garbage_nuke',   icon: '🧹', ko: '쓰레기 대청소',    en: 'Garbage Purge',    ja: 'ゴミ大掃除',   ko_d: '한 번에 쓰레기 8줄 이상 제거 (클렌즈 포함)', en_d: 'Remove 8+ garbage rows at once (including cleanse)', ja_d: '一度にゴミ8行以上消去(クレンズ含む)' },
   { id: 'coolant_master', icon: '❄️', ko: '냉각 장인',        en: 'Coolant Master',   ja: '冷却マスター', ko_d: '한 전투에서 적을 20초 이상 냉각', en_d: 'Slow the enemy for 20+ seconds in one battle', ja_d: '一戦闘で敵を20秒以上冷却' },
   { id: 'bounty_hunter',  icon: '🏴', ko: '현상금 사냥꾼',    en: 'Bounty Hunter',    ja: '賞金稼ぎ',     ko_d: '한 전투에서 현상금으로 40골드 이상 획득', en_d: 'Earn 40+ bounty gold in one battle', ja_d: '一戦闘で懸賞金40G以上獲得' },
   { id: 'shop_spender',   icon: '🛒', ko: '큰 손',            en: 'Big Spender',      ja: '大散財',       ko_d: '상점에서 한 런에 100골드 이상 지출', en_d: 'Spend 100+ gold at shops in one run', ja_d: 'ショップで一ランに100G以上消費' },

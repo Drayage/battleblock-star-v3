@@ -346,6 +346,7 @@ class Game {
     this.runShopSpent = 0;
     this.runBattleTetris = false;
     this.runLClear = false;
+    this.runGarbageNuke = false;
     this.runEliteKills = 0;
     this.runConsUsed = 0;
     this.runMaxGold = 0;
@@ -1275,8 +1276,10 @@ class Game {
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (result.cleared > 0 && attacker === this.player) {
       this.battlePlayerClearedLines += result.cleared;
-      if (result.cleared >= 4) this.runBattleTetris = true;
       if (result.placedShapeId === 'L') this.runLClear = true;
+      // 한 번에 쓰레기 8줄 이상 제거 (직접 클리어 + 클렌즈 onPlace 포함)
+      const totalGarbage = (result.garbageCleared || 0) + (result.instant?.purgedRows || 0);
+      if (totalGarbage >= 8) this.runGarbageNuke = true;
       this.input.vibrate(`clear${Math.min(4, result.cleared)}`);
     }
     if (attacker === this.player) this.battlePlayerPieces++;
@@ -1701,8 +1704,8 @@ class Game {
     if (this.battleWardCanceled >= 8) this.unlockAchievement('ward_master');
     // 콤보
     if (this.battleMaxCombo >= 10) this.unlockAchievement('combo_master');
-    // 테트리스 (한 번에 4줄 클리어) - 런 중 발생 여부
-    if (this.runBattleTetris) this.unlockAchievement('tetris_clear');
+    // 한 번에 쓰레기 8줄 이상 제거
+    if (this.runGarbageNuke) this.unlockAchievement('garbage_nuke');
     // 덱 크기 (승리 시)
     const deckSize = this.run.deck.draw.length + this.run.deck.discard.length;
     if (deckSize >= 35) this.unlockAchievement('deck_overload');

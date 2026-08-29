@@ -539,6 +539,7 @@ export class Board {
       chargeGained += row.filter(c => c?.traits.includes('comboCharge')).length;
     }
 
+    const garbageRowsCleared = rows.filter(r => this.grid[r]?.some(c => c?.traits?.includes('garbage'))).length;
     const clearSet = new Set(rows);
     const kept = this.grid.filter((_, r) => !clearSet.has(r));
     while (kept.length < this.rows) kept.unshift(emptyRow());
@@ -569,14 +570,16 @@ export class Board {
     }
     if (this.explodeRadiusBonus > 0) attack += blastBonusAttack;
     if (allCols.size) this.queueExplosionDrops(allCols);
+    let purgedRowsCount = 0;
     if (purgeCells > 0) {
       // 클렌즈 칸당 가비지 1줄 제거.
-      const purgedRows = this.purgeGarbageRows(purgeCells);
-      if (this.sanctuaryActive && purgedRows > 0) attack += purgedRows * 0.5;
+      purgedRowsCount = this.purgeGarbageRows(purgeCells);
+      if (this.sanctuaryActive && purgedRowsCount > 0) attack += purgedRowsCount * 0.5;
     }
     return {
       cleared: rows.length,
       fullCleared: fullRows.size,
+      garbageCleared: garbageRowsCleared + purgedRowsCount,
       attack: Number(attack.toFixed(2)),
       mana: Number(mana.toFixed(2)),
       bombRows,
