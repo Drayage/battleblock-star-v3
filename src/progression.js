@@ -958,7 +958,7 @@ export const ASCENSION_MODS = [
   { level: 10, label: 'A10', ko: '신화',   en: 'Mythic',     ja: '神話',
     garbage: 6, speedFactor: 0.68, eliteChanceBonus: 0.50,
     playerFallFactor: 0.68, manaFactor: 0.40, playerStartHp: 15,
-    enemyAttackFactor: 1.80, rewardTierPenalty: 1, startCurseCards: 4 },
+    enemyAttackFactor: 1.80, rewardTierPenalty: 1, startCurseCards: 4, coolantFactor: 0.5, purgeFactor: 0.5 },
 ];
 
 export const ACHIEVEMENTS = [

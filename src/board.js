@@ -456,7 +456,8 @@ export class Board {
       labels.push(`MP +${effect.mana}`);
     }
     if (effect.purgeGarbageRows) {
-      result.purgedRows = this.purgeGarbageRows(effect.purgeGarbageRows);
+      const scaledPurge = Math.max(1, Math.floor(effect.purgeGarbageRows * (this.purgeFactor ?? 1.0)));
+      result.purgedRows = this.purgeGarbageRows(scaledPurge);
       if (result.purgedRows > 0) labels.push(`GARBAGE -${result.purgedRows}`);
       else labels.push('PURGE READY');
       if (this.sanctuaryActive && result.purgedRows > 0) result.attack = Number((result.attack + result.purgedRows * 0.5).toFixed(2));
@@ -573,7 +574,8 @@ export class Board {
     let purgedRowsCount = 0;
     if (purgeCells > 0) {
       // 클렌즈 칸당 가비지 1줄 제거.
-      purgedRowsCount = this.purgeGarbageRows(purgeCells);
+      const scaledPurgeCells = Math.max(1, Math.floor(purgeCells * (this.purgeFactor ?? 1.0)));
+      purgedRowsCount = this.purgeGarbageRows(scaledPurgeCells);
       if (this.sanctuaryActive && purgedRowsCount > 0) attack += purgedRowsCount * 0.5;
     }
     return {

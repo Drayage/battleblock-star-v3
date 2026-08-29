@@ -1071,6 +1071,8 @@ class Game {
     this.run.deck.beginBattle();
     this.run.deck.exhaustImmune = this.run.relics.includes('preservation_seal');
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
+    const ascMod = this.currentAscMod();
+    if (ascMod.purgeFactor != null) this.player.purgeFactor = ascMod.purgeFactor;
     const enemyDeck = enemyCard.mirror ? new Deck([...this.run.deck.extraCards]) : new Deck(enemyCard.deckExtras || []);
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: enemyDeck });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
@@ -1300,7 +1302,8 @@ class Game {
     if (attacker === this.player) {
       if (result.slow) {
         const wasSlowed = this.enemySlowTimer > 0;
-        const slowAdd = this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
+        const coolantFactor = this.currentAscMod().coolantFactor ?? 1.0;
+        const slowAdd = (this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow) * coolantFactor;
         this.enemySlowTimer += slowAdd;
         this.battleTotalSlow += slowAdd;
         if (wasSlowed && this.run.relics.includes('frost_lock')) {
@@ -1852,6 +1855,8 @@ class Game {
     if (mod.playerStartHp != null) mods.push(`시작 체력 ${mod.playerStartHp}줄`);
     if (mod.enemyAttackFactor > 1.0) mods.push(`적 공격력 +${Math.round((mod.enemyAttackFactor - 1) * 100)}%`);
     if (mod.goldFactor != null && mod.goldFactor < 1.0) mods.push(`골드 획득 -${Math.round((1 - mod.goldFactor) * 100)}%`);
+    if (mod.coolantFactor != null && mod.coolantFactor < 1.0) mods.push(`냉각 효과 -${Math.round((1 - mod.coolantFactor) * 100)}%`);
+    if (mod.purgeFactor != null && mod.purgeFactor < 1.0) mods.push(`클렌즈 효과 -${Math.round((1 - mod.purgeFactor) * 100)}%`);
     if (mod.rewardTierPenalty > 0) mods.push(`보상 티어 -${mod.rewardTierPenalty}`);
     if (mod.startCurseCards > 0) mods.push(`시작 저주카드 ${mod.startCurseCards}장`);
     const lockHint = lvl >= max && lvl < 10 ? `<small class="asc-lock">🔒 ${lang === 'en' ? 'Clear to unlock next' : '클리어하면 다음 단계 해금'}</small>` : '';
