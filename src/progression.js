@@ -976,4 +976,14 @@ export const ACHIEVEMENTS = [
   { id: 'ascension_5', icon: '🌟', ko: '초월자', en: 'Transcended', ja: '超越者', ko_d: '승천 A5 이상에서 클리어', en_d: 'Clear at Ascension A5+', ja_d: '昇天A5以上でクリア' },
   { id: 'ascension_8', icon: '💎', ko: '심연의 정복자', en: 'Abyss Conqueror', ja: '深淵の征服者', ko_d: '승천 A8 이상에서 클리어', en_d: 'Clear at Ascension A8+', ja_d: '昇天A8以上でクリア' },
   { id: 'ascension_10', icon: '👑', ko: '신화의 왕', en: 'Mythic King', ja: '神話の王', ko_d: '승천 A10(신화)에서 클리어', en_d: 'Clear at Ascension A10 (Mythic)', ja_d: '昇天A10(神話)でクリア' },
+  // 세트 도감
+  { id: 'set_highPower',   icon: '⚡', ko: '파워 세트 완성',   en: 'Power Set Complete',   ja: 'パワーセット完成',   ko_d: '파워 세트 7종 모두 보유', en_d: 'Collect all 7 Power cards',     ja_d: 'パワーカード7種コンプリート' },
+  { id: 'set_bomb',        icon: '💣', ko: '봄브 세트 완성',   en: 'Bomb Set Complete',    ja: 'ボムセット完成',     ko_d: '봄브 세트 7종 모두 보유', en_d: 'Collect all 7 Bomb cards',      ja_d: 'ボムカード7種コンプリート' },
+  { id: 'set_manaBonus',   icon: '🔮', ko: '마나 세트 완성',   en: 'Mana Set Complete',    ja: 'マナセット完成',     ko_d: '마나 세트 7종 모두 보유', en_d: 'Collect all 7 Mana cards',      ja_d: 'マナカード7種コンプリート' },
+  { id: 'set_purgeGarbage',icon: '🧼', ko: '클렌즈 세트 완성', en: 'Cleanse Set Complete', ja: 'クレンズセット完成', ko_d: '클렌즈 세트 7종 모두 보유', en_d: 'Collect all 7 Cleanse cards',  ja_d: 'クレンズカード7種コンプリート' },
+  { id: 'set_coolant',     icon: '❄️', ko: '냉각 세트 완성',   en: 'Coolant Set Complete', ja: '冷却セット完成',     ko_d: '냉각 세트 7종 모두 보유', en_d: 'Collect all 7 Coolant cards',   ja_d: '冷却カード7種コンプリート' },
+  { id: 'set_bounty',      icon: '💰', ko: '현상금 세트 완성', en: 'Bounty Set Complete',  ja: '懸賞金セット完成',   ko_d: '현상금 세트 7종 모두 보유', en_d: 'Collect all 7 Bounty cards',  ja_d: '懸賞金カード7種コンプリート' },
+  { id: 'set_wardBlock',   icon: '🛡️', ko: '차단 세트 완성',   en: 'Ward Set Complete',    ja: '차단セット完成',     ko_d: '차단 세트 7종 모두 보유', en_d: 'Collect all 7 Ward cards',      ja_d: '차단カード7種コンプリート' },
+  { id: 'set_comboCharge', icon: '🔗', ko: '콤보 세트 완성',   en: 'Combo Set Complete',   ja: 'コンボセット完成',   ko_d: '콤보 세트 7종 모두 보유', en_d: 'Collect all 7 Combo cards',     ja_d: 'コンボカード7種コンプリート' },
+  { id: 'all_sets',        icon: '📖', ko: '도감 완성',         en: 'Full Compendium',      ja: '図鑑完成',           ko_d: '모든 세트 완성 (8세트)', en_d: 'Complete all 8 block sets',      ja_d: '全8セットコンプリート' },
 ];

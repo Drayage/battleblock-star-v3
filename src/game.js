@@ -1,5 +1,5 @@
 import { Board } from './board.js?v=20260829-ascension1';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260829-ascension1';
+import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, SET_LABELS, TYPES } from './constants.js?v=20260829-ascension1';
 import { Deck } from './deck.js?v=20260829-ascension1';
 import { AI } from './ai.js?v=20260829-ascension1';
 import { Renderer } from './renderer.js?v=20260829-ascension1';
@@ -1438,6 +1438,7 @@ class Game {
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
+    this.checkSetAchievements();
     this.showRewards(makeRewards(this.enemyCard.rewardPool, this.currentAscMod().rewardTierPenalty ?? 0), relicId);
     this.autoSave();
   }
@@ -1624,6 +1625,21 @@ class Game {
       lt.eliteKills = (lt.eliteKills || 0) + 1;
       this.saveLifetime(lt);
       if (lt.eliteKills >= 5) this.unlockAchievement('elite_killer');
+    }
+  }
+
+  checkSetAchievements() {
+    if (this.run?.practiceMode) return;
+    const allCards = new Set([...this.run.deck.draw, ...this.run.deck.discard]);
+    let completedCount = 0;
+    for (const [setId, setDef] of Object.entries(SET_DEFINITIONS)) {
+      if (Object.values(setDef).every(id => allCards.has(id))) {
+        completedCount++;
+        this.unlockAchievement(`set_${setId}`);
+      }
+    }
+    if (completedCount === Object.keys(SET_DEFINITIONS).length) {
+      this.unlockAchievement('all_sets');
     }
   }
 
