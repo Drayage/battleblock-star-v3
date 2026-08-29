@@ -426,6 +426,7 @@ export class Board {
     }
     this.applyReadyGarbage();
     this.lastAttack = result.attack;
+    result.placedShapeId = placedCard?.shapeId ?? null;
     if (this._glassBrokeThisPlace) {
       result.glassBroken = this._glassBrokeThisPlace;
       this._glassBrokeThisPlace = 0;

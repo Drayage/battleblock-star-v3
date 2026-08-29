@@ -1004,4 +1004,12 @@ export const ACHIEVEMENTS = [
   { id: 'combo_master',   icon: '🔗', ko: '콤보 장인',        en: 'Combo Master',     ja: 'コンボマスター', ko_d: '10 콤보 이상 달성', en_d: 'Achieve 10+ combo', ja_d: '10コンボ以上達成' },
   { id: 'deck_overload',  icon: '📤', ko: '덱 과부하',        en: 'Deck Overload',    ja: 'デッキ過負荷', ko_d: '카드 35장 이상으로 클리어', en_d: 'Clear with 35+ cards in deck', ja_d: 'カード35枚以上でクリア' },
   { id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',        en: 'Deck Minimalist',  ja: 'デッキ最小', ko_d: '카드 10장 이하로 클리어', en_d: 'Clear with 10 or fewer cards in deck', ja_d: 'カード10枚以下でクリア' },
+  // 런 달성 업적
+  { id: 'elite_hunter',   icon: '🎯', ko: '엘리트 청소부',     en: 'Elite Cleaner',    ja: 'エリート退治', ko_d: '한 런에서 엘리트 3마리 처치', en_d: 'Defeat 3 elites in one run', ja_d: '一ランでエリート3体討伐' },
+  { id: 'long_battle',    icon: '⏱️', ko: '장기전',            en: 'Long Battle',      ja: '長期戦',       ko_d: '한 전투에서 적이 100개 피스를 놓을 때까지 버티고 승리', en_d: 'Win while the enemy places 100+ pieces in one battle', ja_d: '敵が100ピース置くまで耐えて勝利' },
+  { id: 'l_clear',        icon: '🔷', ko: 'L 블록 달인',       en: 'L-Block Expert',   ja: 'Lブロック達人', ko_d: 'L 모양 블록으로 줄 클리어', en_d: 'Clear a line with an L-shaped block', ja_d: 'L型ブロックでライン消去' },
+  { id: 'mono_deck',      icon: '🔩', ko: '한 우물만 파기',    en: 'Mono Build',       ja: '一点特化',     ko_d: '덱에 같은 모양 블록이 10개 이상 있는 상태로 클리어', en_d: 'Clear with 10+ of the same shape in deck', ja_d: '同一形状10枚以上でクリア' },
+  { id: 'gold_500',       icon: '💎', ko: '황금 부자',         en: 'Gold Hoarder',     ja: '黄金持ち',     ko_d: '한 런에서 500골드 이상 보유', en_d: 'Hold 500+ gold in one run', ja_d: '一ランで500G以上保有' },
+  { id: 'win_streak_10',  icon: '🔥', ko: '10연승',            en: '10-Win Streak',    ja: '10連勝',       ko_d: '연속으로 10회 클리어', en_d: 'Clear 10 times in a row', ja_d: '連続10回クリア' },
+  { id: 'cons_user',      icon: '🎒', ko: '소모품 애호가',     en: 'Item User',        ja: 'アイテム愛用者', ko_d: '한 런에서 소모품 5개 이상 사용', en_d: 'Use 5+ consumables in one run', ja_d: '一ランでアイテム5個以上使用' },
 ];

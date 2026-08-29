@@ -345,6 +345,10 @@ class Game {
     this.run.practiceMode = this.practiceMode;
     this.runShopSpent = 0;
     this.runBattleTetris = false;
+    this.runLClear = false;
+    this.runEliteKills = 0;
+    this.runConsUsed = 0;
+    this.runMaxGold = 0;
     const ascMod = this.currentAscMod();
     if (ascMod.playerStartHp != null) this.run.hpRows = ascMod.playerStartHp;
     for (let i = 0; i < (ascMod.startCurseCards ?? 0); i++) {
@@ -1257,6 +1261,7 @@ class Game {
     const item = CONSUMABLES[id];
     if (!item) return;
     this.run.consumables.splice(index, 1);
+    this.runConsUsed = (this.runConsUsed || 0) + 1;
     this.message = item.use({ game: this, player: this.player, enemy: this.enemy });
     this.audio.playSfx(CONSUMABLE_SFX[id] || 'mana');
     if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
@@ -1271,6 +1276,7 @@ class Game {
     if (result.cleared > 0 && attacker === this.player) {
       this.battlePlayerClearedLines += result.cleared;
       if (result.cleared >= 4) this.runBattleTetris = true;
+      if (result.placedShapeId === 'L') this.runLClear = true;
       this.input.vibrate(`clear${Math.min(4, result.cleared)}`);
     }
     if (attacker === this.player) this.battlePlayerPieces++;
@@ -1456,6 +1462,7 @@ class Game {
     this.checkBattleMilestoneAchievements();
     const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
+    this.runMaxGold = Math.max(this.runMaxGold || 0, this.run.gold);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     if (relicId) {
       const r = RELICS[relicId];
@@ -1556,6 +1563,11 @@ class Game {
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
     document.getElementById('endSummary').textContent = `${Math.min(this.run.round, 20)}라운드 · 골드 ${this.run.gold} · HP ${this.run.hpRows}줄`;
+    if (!win && !this.run?.practiceMode) {
+      const lt = this.loadLifetime();
+      lt.winStreak = 0;
+      this.saveLifetime(lt);
+    }
     if (win) {
       const lvl = this.getAscensionLevel();
       this.checkRunAchievements(lvl);
@@ -1634,8 +1646,20 @@ class Game {
     if (this.run.practiceMode) return;
     this.unlockAchievement('first_clear');
     if (this.run.gold >= 200) this.unlockAchievement('rich');
+    if ((this.runMaxGold || 0) >= 500) this.unlockAchievement('gold_500');
     if (this.run.equippedSkills.length >= 3) this.unlockAchievement('skill_master');
     if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
+    if ((this.runEliteKills || 0) >= 3) this.unlockAchievement('elite_hunter');
+    if (this.runLClear) this.unlockAchievement('l_clear');
+    if ((this.runConsUsed || 0) >= 5) this.unlockAchievement('cons_user');
+    // 한 종류 10개: 덱의 카드 shapeId 카운트
+    const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
+    const shapeCounts = {};
+    for (const id of allCards) {
+      const card = CARD_LIBRARY?.[id];
+      if (card?.shapeId) shapeCounts[card.shapeId] = (shapeCounts[card.shapeId] || 0) + 1;
+    }
+    if (Object.values(shapeCounts).some(n => n >= 10)) this.unlockAchievement('mono_deck');
     if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
     if (ascensionLevel >= 3) this.unlockAchievement('ascension_3');
     if (ascensionLevel >= 5) this.unlockAchievement('ascension_5');
@@ -1643,14 +1667,17 @@ class Game {
     if (ascensionLevel >= 10) this.unlockAchievement('ascension_10');
     const lt = this.loadLifetime();
     lt.totalWins = (lt.totalWins || 0) + 1;
+    lt.winStreak = (lt.winStreak || 0) + 1;
     this.saveLifetime(lt);
     if (lt.totalWins >= 3) this.unlockAchievement('three_wins');
+    if (lt.winStreak >= 10) this.unlockAchievement('win_streak_10');
   }
 
   checkBattleAchievements(enemyType) {
     if (this.run?.practiceMode) return;
     if (enemyType === 'boss') this.unlockAchievement('boss_kill');
     if (enemyType === 'elite') {
+      this.runEliteKills = (this.runEliteKills || 0) + 1;
       const lt = this.loadLifetime();
       lt.eliteKills = (lt.eliteKills || 0) + 1;
       this.saveLifetime(lt);
@@ -1680,6 +1707,8 @@ class Game {
     const deckSize = this.run.deck.draw.length + this.run.deck.discard.length;
     if (deckSize >= 35) this.unlockAchievement('deck_overload');
     if (deckSize <= 10) this.unlockAchievement('deck_minimalist');
+    // 장기전: 적이 100개 이상 피스를 놓은 전투에서 승리
+    if (this.battleEnemyPieces >= 100) this.unlockAchievement('long_battle');
     // 상점 지출 (런 전체 누적)
     if ((this.runShopSpent || 0) >= 100) this.unlockAchievement('shop_spender');
   }
