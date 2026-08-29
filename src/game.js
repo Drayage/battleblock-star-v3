@@ -376,8 +376,12 @@ class Game {
       const abilityHtml = abilityDef
         ? `<small class="ability-tag">⚔️ 능력: [${abilityDef.label}] ${abilityDef.desc}</small>`
         : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ 능력: [OVERLOAD] 게이지가 차면 무작위 디버프를 시전합니다.</small>` : '');
-      const tier = enemy.difficultyTier ?? 0;
-      const stars = '★'.repeat(Math.min(4, tier + 1)) + '☆'.repeat(Math.max(0, 4 - tier - 1));
+      const speedScore = Math.max(0, Math.min(1, (430 - enemy.speed) / 348));
+      const garbageScore = Math.max(0, Math.min(1, enemy.startingGarbage / 8));
+      const hpScore = Math.max(0, Math.min(1, (enemy.startingRows - 10) / 18));
+      const diffScore = speedScore * 0.45 + garbageScore * 0.35 + hpScore * 0.2;
+      const starCount = Math.max(1, Math.min(4, Math.ceil(diffScore * 4)));
+      const stars = '★'.repeat(starCount) + '☆'.repeat(4 - starCount);
       const diffHtml = `<span class="diff-stars" title="난이도">${stars}</span>`;
       btn.innerHTML = `
         <strong>${enemy.icon ? `${enemy.icon} ` : ''}${tEnemyName(enemy.name)} ${diffHtml}</strong>
