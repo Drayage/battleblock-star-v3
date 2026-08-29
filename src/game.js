@@ -44,6 +44,17 @@ const ASCENSION_KEY = 'bbs.ascension.v1';     // 선택된 레벨
 const ASCENSION_MAX_KEY = 'bbs.ascension.max.v1'; // 최대 해금 레벨
 const LIFETIME_KEY = 'bbs.lifetime.v1';
 
+const SOLO_FALL_SPEEDS = [800, 666, 533, 400, 333, 266, 216, 183, 150, 133, 116, 100];
+const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
+const SOLO_MODES = {
+  sprint40:    { name: '40줄 스프린트', goalLines: 40,  timeLimit: 0,      speedRamp: true,  unit: 'time'  },
+  timeatk2:   { name: '타임어택 2분',  goalLines: 0,   timeLimit: 120000, speedRamp: true,  unit: 'lines' },
+  timeatk3:   { name: '타임어택 3분',  goalLines: 0,   timeLimit: 180000, speedRamp: true,  unit: 'lines' },
+  marathon150: { name: '마라톤 150줄', goalLines: 150, timeLimit: 0,      speedRamp: true,  unit: 'time'  },
+  marathon300: { name: '마라톤 300줄', goalLines: 300, timeLimit: 0,      speedRamp: true,  unit: 'time'  },
+  endless:    { name: '엔드리스',     goalLines: 0,   timeLimit: 0,      speedRamp: false, unit: 'lines' },
+};
+
 // 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
 // 스킬/소모품 → SFX 카테고리 매핑. 신규 스킬 추가 시 여기에 등록한다.
 const SKILL_SFX = {
@@ -153,6 +164,8 @@ class Game {
     this.input = new InputController(this);
     this.audio = new AudioManager();
     this.run = new RunState();
+    this.solo = null;
+    this.soloPaused = false;
     this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
     this.player = null;
@@ -260,12 +273,35 @@ class Game {
       this.autoSave();
     });
     document.getElementById('achievementsBtn')?.addEventListener('click', () => this.showAchievementsModal());
+    document.getElementById('soloModesBtn')?.addEventListener('click', () => this.showSoloSelect());
+    document.getElementById('soloBackBtn')?.addEventListener('click', () => {
+      this.solo = null;
+      document.getElementById('gameScreen').classList.remove('solo-active');
+      if (!this.run) this.run = new RunState();
+      this.refreshMenu();
+      this.show('menu');
+    });
+    document.querySelectorAll('.solo-start-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        const startLevel = mode === 'endless' ? parseInt(document.getElementById('endlessSpeedSelect')?.value || '0', 10) : 0;
+        this.startSoloMode(mode, startLevel);
+      });
+    });
+    document.getElementById('soloQuitBtn')?.addEventListener('click', () => {
+      if (!this.solo) return;
+      document.getElementById('gameScreen').classList.remove('solo-active');
+      this.solo = null;
+      this.player = null;
+      this.showSoloSelect();
+    });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
     document.getElementById('shopDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
     document.getElementById('eventDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
+      else if (this.solo && this.player) this.renderer.resizeSolo(this.player.rows);
     });
   }
 
@@ -303,14 +339,18 @@ class Game {
   }
 
   refreshMenu() {
-    document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
-    document.getElementById('menuGold').textContent = this.run.gold;
-    document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
-    document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
+    if (this.run) {
+      document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
+      document.getElementById('menuGold').textContent = this.run.gold;
+      document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
+      document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
+    }
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
     this.refreshAscensionDisplay();
+    const soloBtn = document.getElementById('soloModesBtn');
+    if (soloBtn) soloBtn.classList.toggle('hidden', !this.hasEverCleared());
   }
 
   renderRecords() {
@@ -1189,8 +1229,179 @@ class Game {
     return this.screen === 'gameScreen' && this.player && this.enemy;
   }
 
+  inSolo() { return this.screen === 'gameScreen' && !!this.solo && !this.solo.ended; }
+
+  showSoloSelect() {
+    this.show('soloSelectScreen');
+    this.refreshSoloRecords();
+  }
+
+  refreshSoloRecords() {
+    let records = {};
+    try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    for (const [key, cfg] of Object.entries(SOLO_MODES)) {
+      const el = document.getElementById(`rec-${key}`);
+      if (!el) continue;
+      const rec = records[key];
+      if (!rec) { el.textContent = '기록 없음'; continue; }
+      if (cfg.unit === 'time') {
+        if (rec.topOut) { el.textContent = `미완료 · ${rec.value}줄`; continue; }
+        const ms = rec.value;
+        const min = Math.floor(ms / 60000);
+        const sec = Math.floor((ms % 60000) / 1000);
+        const cs = Math.floor((ms % 1000) / 10);
+        el.textContent = `최고: ${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+      } else {
+        el.textContent = `최고: ${rec.value}줄`;
+      }
+    }
+  }
+
+  startSoloMode(modeKey, startLevel = 0) {
+    const modeConfig = SOLO_MODES[modeKey];
+    if (!modeConfig) return;
+    this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, ended: false, topOut: false };
+    this.player = new Board({ rows: 20, deck: new Deck() });
+    this.fallTimer = 0;
+    this.lockTimer = 0;
+    this.lockResets = 0;
+    this.groundTouched = false;
+    this.soloPaused = false;
+    document.getElementById('soloModeName').textContent = modeConfig.name;
+    document.getElementById('gameScreen').classList.add('solo-active');
+    this.show('gameScreen');
+    this.renderer.resizeSolo(20);
+    this.updateSoloStats();
+  }
+
+  updateSoloStats() {
+    if (!this.solo) return;
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    const isCountdown = modeConfig.timeLimit > 0;
+    const displayMs = isCountdown ? Math.max(0, modeConfig.timeLimit - this.solo.elapsed) : this.solo.elapsed;
+    const min = Math.floor(displayMs / 60000);
+    const sec = Math.floor((displayMs % 60000) / 1000);
+    const cs = Math.floor((displayMs % 1000) / 10);
+    const timeStr = `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    const linesStr = modeConfig.goalLines > 0
+      ? `${this.solo.linesCleared} / ${modeConfig.goalLines}줄`
+      : `${this.solo.linesCleared}줄`;
+    const lvlStr = modeConfig.speedRamp ? ` · Lv.${this.solo.level + 1}` : '';
+    document.getElementById('soloStats').textContent = `${timeStr} · ${linesStr}${lvlStr}`;
+  }
+
+  updateSolo(dt, now) {
+    if (this.soloPaused) {
+      this.renderer.drawSolo(this.player, this.solo, SOLO_MODES[this.solo.mode]);
+      return;
+    }
+    this.solo.elapsed += dt;
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    if (modeConfig.timeLimit > 0 && this.solo.elapsed >= modeConfig.timeLimit) {
+      return this.finishSolo(false);
+    }
+    this.input.update(now);
+    this.player.flash = Math.max(0, this.player.flash - dt);
+    this.player.tickEffects(dt);
+    this.player.comboBreakFlash = Math.max(0, this.player.comboBreakFlash - dt);
+    this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
+    this.updatePlayerGravity(dt);
+    if (this.player.defeated) return this.finishSolo(true);
+    this.updateSoloStats();
+    this.renderer.drawSolo(this.player, this.solo, modeConfig);
+  }
+
+  resolveSolo(result) {
+    if (!result || !this.solo || this.solo.ended) return;
+    this.emitPlaceSfx(result);
+    if (result.cleared > 0) {
+      this.solo.linesCleared += result.cleared;
+      const modeConfig = SOLO_MODES[this.solo.mode];
+      if (modeConfig.speedRamp) {
+        this.solo.level = Math.min(SOLO_FALL_SPEEDS.length - 1, Math.floor(this.solo.linesCleared / 10));
+      }
+      if (modeConfig.goalLines > 0 && this.solo.linesCleared >= modeConfig.goalLines) {
+        this.solo.linesCleared = modeConfig.goalLines;
+        return this.finishSolo(false);
+      }
+    }
+    if (this.player.defeated) this.finishSolo(true);
+  }
+
+  finishSolo(topOut = false) {
+    if (!this.solo || this.solo.ended) return;
+    this.solo.ended = true;
+    this.solo.topOut = topOut;
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    let records = {};
+    try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    const existing = records[this.solo.mode];
+    let isBest = false;
+    if (modeConfig.unit === 'time') {
+      if (!topOut) {
+        if (!existing || existing.topOut || existing.value > this.solo.elapsed) {
+          records[this.solo.mode] = { value: this.solo.elapsed, topOut: false };
+          isBest = true;
+        }
+      } else if (!existing || (existing.topOut && existing.value < this.solo.linesCleared)) {
+        records[this.solo.mode] = { value: this.solo.linesCleared, topOut: true };
+      }
+    } else {
+      if (!existing || existing.value < this.solo.linesCleared) {
+        records[this.solo.mode] = { value: this.solo.linesCleared, topOut };
+        isBest = true;
+      }
+    }
+    try { localStorage.setItem(SOLO_RECORD_KEY, JSON.stringify(records)); } catch {}
+    // draw final frame with end overlay
+    this.renderer.drawSolo(this.player, this.solo, modeConfig, true);
+    // show result overlay after short delay
+    setTimeout(() => this.showSoloResult(isBest), 800);
+  }
+
+  showSoloResult(isBest = false) {
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    const topOut = this.solo.topOut;
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    const timeStr = (() => {
+      const ms = this.solo.elapsed;
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const cs = Math.floor((ms % 1000) / 10);
+      return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    })();
+    const resultLine = topOut
+      ? `게임 오버 · ${this.solo.linesCleared}줄 클리어`
+      : modeConfig.unit === 'time'
+        ? `${modeConfig.name} 클리어! · ${timeStr}`
+        : `${modeConfig.name} 종료 · ${this.solo.linesCleared}줄`;
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>${topOut ? '💀 게임 오버' : '🎉 ' + (isBest ? '신기록!' : '완료!')}</h3>
+        <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
+        ${isBest ? '<p style="color:#ffe082;font-size:13px">✨ 개인 최고 기록!</p>' : ''}
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="ghost" id="soloRetryBtn">다시 하기</button>
+          <button class="ghost" id="soloMenuBtn">모드 선택</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('soloRetryBtn').addEventListener('click', () => {
+      modal.remove();
+      this.startSoloMode(this.solo.mode, this.solo.startLevel);
+    });
+    document.getElementById('soloMenuBtn').addEventListener('click', () => {
+      modal.remove();
+      document.getElementById('gameScreen').classList.remove('solo-active');
+      this.solo = null;
+      this.player = null;
+      this.showSoloSelect();
+    });
+  }
+
   action(action) {
-    if (!this.inBattle()) return;
+    if (!this.inBattle() && !this.inSolo()) return;
     if (action === 'pause') return this.togglePause();
     if (this.paused) return;
     if (this.playerInvertTimer > 0) {
@@ -1206,7 +1417,15 @@ class Game {
     if (action === 'rotate') { if (this.groundAdjust(() => this.player.rotate(1))) this.audio.playSfx('rotate'); this.battleUsedClockwise = true; }
     if (action === 'ccw') { if (this.groundAdjust(() => this.player.rotate(-1))) this.audio.playSfx('rotate'); this.battleUsedCounterClockwise = true; }
     if (action === 'hold') { if (this.player.hold()) { this.battleUsedHold = true; this.audio.playSfx('hold'); } }
-    if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.input.vibrate('harddrop'); this.audio.playSfx('hardDrop'); this.resolve(this.player.hardDrop(), this.player); }
+    if (action === 'hard') {
+      if (!this.solo && this.playerSlowTimer > 0) return;
+      if (!this.solo) this.battleUsedHardDrop = true;
+      this.input.vibrate('harddrop');
+      this.audio.playSfx('hardDrop');
+      const result = this.player.hardDrop();
+      if (this.solo) this.resolveSolo(result);
+      else this.resolve(result, this.player);
+    }
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
   }
@@ -1232,6 +1451,7 @@ class Game {
   }
 
   currentFallInterval() {
+    if (this.solo) return SOLO_FALL_SPEEDS[this.solo.level] ?? 800;
     const base = GAME_TIMING.PLAYER_FALL_INTERVAL * (this.currentAscMod().playerFallFactor ?? 1.0);
     if (this.playerHyperTimer > 0) return base * 0.12;
     return base;
@@ -2176,6 +2396,7 @@ class Game {
     const dt = Math.min(50, now - (this.last || now));
     this.last = now;
     if (this.inBattle()) this.updateBattle(dt, now);
+    else if (this.inSolo()) this.updateSolo(dt, now);
     else this.input?.update(now);
     requestAnimationFrame(t => this.loop(t));
   }
@@ -2572,7 +2793,9 @@ class Game {
         this.lockTimer = 0;
         this.lockResets = 0;
         this.groundTouched = false;
-        this.resolve(this.player.lock(), this.player);
+        const lockResult = this.player.lock();
+        if (this.solo) this.resolveSolo(lockResult);
+        else this.resolve(lockResult, this.player);
         return;
       }
       this.lockTimer += dt;
@@ -2580,7 +2803,9 @@ class Game {
         this.lockTimer = 0;
         this.lockResets = 0;
         this.groundTouched = false;
-        this.resolve(this.player.lock(), this.player);
+        const lockResult = this.player.lock();
+        if (this.solo) this.resolveSolo(lockResult);
+        else this.resolve(lockResult, this.player);
       }
       return;
     }
