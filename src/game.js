@@ -376,12 +376,17 @@ class Game {
       const abilityHtml = abilityDef
         ? `<small class="ability-tag">⚔️ 능력: [${abilityDef.label}] ${abilityDef.desc}</small>`
         : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ 능력: [OVERLOAD] 게이지가 차면 무작위 디버프를 시전합니다.</small>` : '');
-      const speedScore = Math.max(0, Math.min(1, (430 - enemy.speed) / 348));
-      const hpScore = Math.max(0, Math.min(1, (enemy.startingRows - 10) / 18));
-      const eliteBonus = enemy.type === 'elite' ? 0.15 : enemy.type === 'boss' ? 0.3 : 0;
-      const diffScore = speedScore * 0.6 + hpScore * 0.4 + eliteBonus;
-      const starCount = Math.max(1, Math.min(4, Math.ceil(diffScore * 4)));
-      const stars = '★'.repeat(starCount) + '☆'.repeat(4 - starCount);
+      let starCount;
+      if (enemy.type === 'boss') {
+        starCount = 5;
+      } else {
+        const speedScore = Math.max(0, Math.min(1, (430 - enemy.speed) / 348));
+        const hpScore = Math.max(0, Math.min(1, (enemy.startingRows - 10) / 18));
+        const eliteBonus = enemy.type === 'elite' ? 0.2 : 0;
+        const diffScore = speedScore * 0.6 + hpScore * 0.4 + eliteBonus;
+        starCount = Math.max(1, Math.min(4, Math.ceil(diffScore * 4)));
+      }
+      const stars = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
       const diffHtml = `<span class="diff-stars" title="난이도">${stars}</span>`;
       btn.innerHTML = `
         <strong>${enemy.icon ? `${enemy.icon} ` : ''}${tEnemyName(enemy.name)} ${diffHtml}</strong>
