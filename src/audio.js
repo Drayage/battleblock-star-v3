@@ -1,6 +1,6 @@
 // BGM과 SFX를 묶어서 게임 씬에 따라 자동 전환하는 코디네이터.
 // 브라우저 자동재생 정책 때문에 첫 사용자 입력 전에는 AudioContext를 만들지 않는다.
-import { BGMPlayer, PRESETS as BGM_PRESETS } from './music.js?v=20260830-vs15';
+import { BGMPlayer, PRESETS as BGM_PRESETS } from './music.js?v=20260830-vs16';
 import { SFXPlayer } from './sfx.js?v=20260829-ascension1';
 
 const STORAGE_KEY = 'bbs_audio_v1';
@@ -69,7 +69,7 @@ export class AudioManager {
     // 씬 전환 시 잔여 SFX(승리/패배 등) 즉시 중단해서 새 씬으로 끌고가지 않음.
     this.sfx?.stopAll();
     if (!this.bgmEnabled || !scene) { this.bgm.stop(); return; }
-    this.bgm.play(scene);
+    this.bgm.play(scene, 350, true);
   }
 
   // 현재 씬에서 강도만 바꾼다(예: battle → battleTense). null 주면 원래 씬으로.

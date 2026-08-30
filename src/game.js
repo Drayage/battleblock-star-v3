@@ -89,10 +89,18 @@ const META_UPGRADES = [
 // Standard block guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
 const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
-const SOLO_MUSIC_BASE = { sprint40: 'soloMarathon', marathon150: 'soloMarathon', marathon300: 'soloMarathon', timeatk2: 'soloTimeAtk', timeatk3: 'soloTimeAtk', endless: 'soloEndless' };
-function getSoloMusicPreset(modeKey, level) {
+const SOLO_MUSIC_BASE = { sprint40: 'soloSprint', marathon150: 'soloMarathon', marathon300: 'soloMarathon', timeatk2: 'soloTimeAtk', timeatk3: 'soloTimeAtk', endless: 'soloEndless' };
+// sprint40은 10줄마다 4단계, 나머지는 절대 레벨 기준
+function getSoloMusicPreset(modeKey, level, linesCleared = 0) {
   const base = SOLO_MUSIC_BASE[modeKey];
   if (!base) return null;
+  if (modeKey === 'sprint40') {
+    const rel = Math.floor(linesCleared / 10);
+    if (rel >= 3) return base + 'Max';
+    if (rel >= 2) return base + 'Fast';
+    if (rel >= 1) return base + 'Mid';
+    return base;
+  }
   if (level >= 9) return base + 'Max';
   if (level >= 6) return base + 'Fast';
   if (level >= 3) return base + 'Mid';
@@ -381,7 +389,10 @@ class Game {
     document.querySelectorAll('.solo-start-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;
-        const startLevel = mode === 'endless' ? parseInt(document.getElementById('endlessSpeedSelect')?.value || '0', 10) : 0;
+        let startLevel = 0;
+        if (mode === 'endless') startLevel = parseInt(document.getElementById('endlessSpeedSelect')?.value || '0', 10);
+        else if (mode === 'sprint40') startLevel = 4;
+        else if (mode === 'timeatk2' || mode === 'timeatk3') startLevel = 3;
         this.startSoloMode(mode, startLevel);
       });
     });
@@ -436,6 +447,7 @@ class Game {
     if (id === 'menu') return this.audio.setScene('title');
     if (id === 'mapScreen') return this.audio.setScene('select');
     if (id === 'eventScreen') return this.audio.setScene('select');
+    if (id === 'soloSelectScreen') return this.audio.setScene('select');
     if (id === 'shopScreen') return this.audio.setScene('shop');
     if (id === 'endScreen') return this.audio.setScene(this.lastRunResult === 'win' ? 'clear' : 'gameover');
     if (id === 'gameScreen') {
@@ -1813,7 +1825,7 @@ class Game {
     document.getElementById('gameScreen').classList.add('solo-active');
     this.show('gameScreen');
     this.renderer.resizeSolo(20);
-    const soloPreset = getSoloMusicPreset(modeKey, startLevel);
+    const soloPreset = getSoloMusicPreset(modeKey, startLevel, 0);
     if (soloPreset) this.audio.setScene(soloPreset);
     this.updateSoloStats();
   }
@@ -1859,15 +1871,21 @@ class Game {
   resolveSolo(result) {
     if (!result || !this.solo || this.solo.ended) return;
     this.emitPlaceSfx(result);
+    const c = result.cleared || 0;
+    if (c >= 4) this.audio.playSfx('clear4');
+    else if (c === 3) this.audio.playSfx('clear3');
+    else if (c === 2) this.audio.playSfx('clear2');
+    else if (c >= 1) this.audio.playSfx('clear1');
+    if (this.player?.combo >= 2 && c > 0) this.audio.playSfx('combo', this.player.combo);
     this.solo.score = (this.solo.score || 0) + (result.attack || 0);
     if (result.cleared > 0) {
       this.solo.linesCleared += result.cleared;
       const modeConfig = SOLO_MODES[this.solo.mode];
       if (modeConfig.speedRamp) {
         const prevLevel = this.solo.level;
-        this.solo.level = Math.min(SOLO_FALL_SPEEDS.length - 1, Math.floor(this.solo.linesCleared / 10));
+        this.solo.level = Math.min(SOLO_FALL_SPEEDS.length - 1, this.solo.startLevel + Math.floor(this.solo.linesCleared / 10));
         if (this.solo.level !== prevLevel) {
-          const sp = getSoloMusicPreset(this.solo.mode, this.solo.level);
+          const sp = getSoloMusicPreset(this.solo.mode, this.solo.level, this.solo.linesCleared);
           if (sp) this.audio.setIntensity(sp);
         }
       }
@@ -1883,6 +1901,7 @@ class Game {
     if (!this.solo || this.solo.ended) return;
     this.solo.ended = true;
     this.solo.topOut = topOut;
+    this.audio.playSfx(topOut ? 'defeat' : 'victory');
     const modeConfig = SOLO_MODES[this.solo.mode];
     const date = new Date().toISOString().slice(0, 10);
     let records = {};
