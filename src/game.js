@@ -682,43 +682,177 @@ class Game {
   openTutorial() {
     const overlay = document.getElementById('tutorialOverlay');
     if (!overlay) return;
-    const ART = [
-      // slide 1 — controls
-      '  ← [블록] →\n    ↓\n  [Z/↑] 회전\n[Space] 하드드롭\n[Shift] 홀드',
-      // slide 2 — line clear
-      '████████████  ← clear!\n  ██  ████\n ████  ██\n[combo] x2 → +가비지',
-      // slide 3 — deck
-      '┌──────────┐  ┌──────────┐  ┌──────────┐\n│ CARD [1] │  │ CARD [2] │  │ CARD [3] │\n│ 공격      │  │ 방어      │  │ 강화      │\n└──────────┘  └──────────┘  └──────────┘',
-      // slide 4 — VS battle
-      '  내 HP ██████░░░░  상대 HP ████░░░░░░\n\n  줄 제거 → 가비지 발사 →→→\n\n  상대 HP 0 = 승리!',
-      // slide 5 — solo mode
-      '마라톤   Sprint40  타임어택  엔드리스\n150/300줄  40줄      ⏱최대     ∞\n  빠르게↑   최속↑     점수↑     레벨↑',
+
+    // ── Mini interactive tetris board ──
+    const COLS = 8, ROWS = 13, CELL = 26;
+    const COLORS = {
+      I:'#00cfcf', O:'#d4af00', T:'#aa44ee', L:'#e07800', J:'#2255ff', S:'#22b022', Z:'#cc2222',
+      ghost:'rgba(200,220,255,0.13)', fill:'#334466'
+    };
+    const SHAPES = {
+      I:[[[0,1],[1,1],[2,1],[3,1]],[[2,0],[2,1],[2,2],[2,3]]],
+      O:[[[1,0],[2,0],[1,1],[2,1]]],
+      T:[[[1,0],[0,1],[1,1],[2,1]],[[1,0],[1,1],[2,1],[1,2]],[[0,1],[1,1],[2,1],[1,2]],[[1,0],[0,1],[1,1],[1,2]]],
+      L:[[[2,0],[0,1],[1,1],[2,1]],[[1,0],[1,1],[1,2],[2,2]],[[0,1],[1,1],[2,1],[0,2]],[[0,0],[1,0],[1,1],[1,2]]],
+      J:[[[0,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[1,1],[1,2]],[[0,1],[1,1],[2,1],[2,2]],[[1,0],[1,1],[0,2],[1,2]]],
+      S:[[[1,0],[2,0],[0,1],[1,1]],[[1,0],[1,1],[2,1],[2,2]]],
+      Z:[[[0,0],[1,0],[1,1],[2,1]],[[2,0],[1,1],[2,1],[1,2]]]
+    };
+    let board, piece, holdPiece, holdUsed, stepIndex, stepDone, actionCount;
+
+    const cells = (type, rot, x, y) => SHAPES[type][rot % SHAPES[type].length].map(([cx,cy])=>[x+cx,y+cy]);
+    const valid = (type, rot, x, y) => cells(type,rot,x,y).every(([cx,cy])=>cx>=0&&cx<COLS&&cy>=0&&cy<ROWS&&!board[cy]?.[cx]);
+    const ghostY = (type, rot, x, y) => { let g=y; while(valid(type,rot,x,g+1))g++; return g; };
+    const spawn = (type, sx=2) => { piece={type,x:sx,y:0,rot:0}; holdUsed=false; };
+    const lock = () => {
+      if (!piece) return 0;
+      cells(piece.type,piece.rot,piece.x,piece.y).forEach(([cx,cy])=>{ if(cy>=0)board[cy][cx]=piece.type; });
+      let cleared=0;
+      for(let r=ROWS-1;r>=0;r--) {
+        if(board[r].every(c=>c)){board.splice(r,1);board.unshift(Array(COLS).fill(null));cleared++;r++;}
+      }
+      piece=null; return cleared;
+    };
+
+    // Canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = COLS*CELL; canvas.height = ROWS*CELL;
+    canvas.style.cssText = 'display:block;margin:0 auto;border-radius:4px;border:1px solid #1e3060;background:#050b17;touch-action:none';
+    const ctx = canvas.getContext('2d');
+
+    const draw = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle='#0d1a2e'; ctx.lineWidth=0.5;
+      for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(COLS*CELL,r*CELL);ctx.stroke();}
+      for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,ROWS*CELL);ctx.stroke();}
+      for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
+        if(board[r][c]){ ctx.fillStyle=COLORS[board[r][c]]||COLORS.fill; ctx.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2); }
+      }
+      if(piece){
+        const gy=ghostY(piece.type,piece.rot,piece.x,piece.y);
+        if(gy!==piece.y){ ctx.fillStyle=COLORS.ghost; cells(piece.type,piece.rot,piece.x,gy).forEach(([cx,cy])=>{if(cy>=0)ctx.fillRect(cx*CELL+1,cy*CELL+1,CELL-2,CELL-2);}); }
+        ctx.fillStyle=COLORS[piece.type];
+        cells(piece.type,piece.rot,piece.x,piece.y).forEach(([cx,cy])=>{if(cy>=0)ctx.fillRect(cx*CELL+1,cy*CELL+1,CELL-2,CELL-2);});
+      }
+    };
+    const flash = (color='#22ff88') => {
+      ctx.fillStyle=color+'33';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    };
+
+    const lang = getLang();
+    const STEPS = [
+      { ko:{t:'이동',h:'← → 키로 블록을 3번 이동하세요'},en:{t:'Move',h:'Move the block 3 times with ← → keys'},ja:{t:'移動',h:'← →キーでブロックを3回動かしてください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));spawn('I',2);actionCount=0;},
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y)){piece.x--;actionCount++;} if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y)){piece.x++;actionCount++;} if(actionCount>=3&&!stepDone)done(); }
+      },
+      { ko:{t:'회전',h:'Z 또는 ↑ 키로 블록을 회전하세요'},en:{t:'Rotate',h:'Rotate with Z or ↑ key'},ja:{t:'回転',h:'ZまたはJキーでブロックを回転してください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));spawn('T',2);},
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z'||k==='x'||k==='X')&&valid(piece.type,nr,piece.x,piece.y)){piece.rot=nr;if(!stepDone)done();} }
+      },
+      { ko:{t:'하드드롭',h:'Space 키로 블록을 하드드롭 하세요'},en:{t:'Hard Drop',h:'Press Space to hard drop'},ja:{t:'ハードドロップ',h:'Spaceキーでハードドロップしてください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));spawn('L',2);},
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z')&&valid(piece.type,nr,piece.x,piece.y))piece.rot=nr; if(k===' '&&!stepDone){piece.y=ghostY(piece.type,piece.rot,piece.x,piece.y);lock();done();} }
+      },
+      { ko:{t:'홀드',h:'Shift 또는 C 키로 블록을 홀드하세요'},en:{t:'Hold',h:'Press Shift or C to hold'},ja:{t:'ホールド',h:'ShiftまたはCキーでホールドしてください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));holdPiece=null;spawn('S',2);},
+        key(k){ if(!piece||holdUsed)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; if((k==='Shift'||k==='c'||k==='C')&&!stepDone){const prev=holdPiece;holdPiece=piece.type;holdUsed=true;spawn(prev||'J',2);done();} }
+      },
+      { ko:{t:'라인 클리어',h:'빈 칸을 채워서 줄을 클리어하세요! (Space: 하드드롭)'},en:{t:'Line Clear',h:'Fill the gap to clear a row! (Space: hard drop)'},ja:{t:'ライン消去',h:'空きを埋めてラインを消してください！(Space: ハードドロップ)'},
+        setup(){
+          board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+          for(let c=0;c<COLS;c++){ if(c!==4)board[ROWS-1][c]='Z'; }
+          for(let c=0;c<COLS;c++){ if(c!==3)board[ROWS-2][c]='J'; }
+          spawn('I',2);
+        },
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z')&&valid(piece.type,nr,piece.x,piece.y))piece.rot=nr; if(k===' '){piece.y=ghostY(piece.type,piece.rot,piece.x,piece.y);const c=lock();if(c>0&&!stepDone)done();else if(!piece)spawn('I',2);} if(k==='ArrowDown'&&valid(piece.type,piece.rot,piece.x,piece.y+1))piece.y++; }
+      },
     ];
-    const SLIDES = ['s1', 's2', 's3', 's4', 's5'];
-    let cur = 0;
-    const render = () => {
-      const s = SLIDES[cur];
-      overlay.querySelector('#tutorialStepLabel').textContent = `${cur + 1} / ${SLIDES.length}`;
-      overlay.querySelector('#tutorialArt').textContent = ART[cur];
-      overlay.querySelector('#tutorialSlideTitle').textContent = t(`tutorial.${s}.title`);
-      overlay.querySelector('#tutorialSlideBody').textContent = t(`tutorial.${s}.body`);
-      overlay.querySelectorAll('.tutorial-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
-      overlay.querySelector('#tutorialPrevBtn').textContent = cur === 0 ? '' : t('tutorial.prev');
-      overlay.querySelector('#tutorialPrevBtn').style.visibility = cur === 0 ? 'hidden' : '';
-      overlay.querySelector('#tutorialNextBtn').textContent = cur === SLIDES.length - 1 ? t('tutorial.done') : t('tutorial.next');
+
+    let keyHandler=null, touchState={};
+    const closeOverlay = () => {
+      if(keyHandler){document.removeEventListener('keydown',keyHandler);keyHandler=null;}
+      overlay.classList.remove('active');
     };
-    const dots = overlay.querySelector('#tutorialDots');
-    dots.innerHTML = SLIDES.map((_, i) => `<span class="tutorial-dot${i === 0 ? ' active' : ''}"></span>`).join('');
-    overlay.querySelector('#tutorialCloseBtn').onclick = () => overlay.classList.remove('active');
-    overlay.querySelector('#tutorialPrevBtn').onclick = () => { if (cur > 0) { cur--; render(); } };
-    overlay.querySelector('#tutorialNextBtn').onclick = () => {
-      if (cur < SLIDES.length - 1) { cur++; render(); }
-      else overlay.classList.remove('active');
+
+    const done = () => {
+      stepDone=true;
+      flash();
+      draw();
+      setTimeout(()=>{
+        stepIndex++;
+        if(stepIndex>=STEPS.length){ closeOverlay(); return; }
+        stepDone=false;
+        loadStep(stepIndex);
+      }, 700);
     };
-    overlay.onclick = e => { if (e.target === overlay) overlay.classList.remove('active'); };
-    cur = 0;
-    render();
+
+    const updateDots = () => overlay.querySelectorAll('.tutorial-dot').forEach((d,i)=>d.classList.toggle('active',i===stepIndex));
+    const updateHold = () => {
+      const hd = overlay.querySelector('#tutHold');
+      if(hd){ hd.style.background=holdPiece?COLORS[holdPiece]:'#1a2640'; hd.textContent=holdPiece||''; }
+    };
+
+    const loadStep = (idx) => {
+      const s=STEPS[idx]; const ld=s[lang]||s.ko;
+      overlay.querySelector('#tutorialStepLabel').textContent=`${idx+1} / ${STEPS.length}`;
+      overlay.querySelector('#tutorialSlideTitle').textContent=ld.t||'';
+      overlay.querySelector('#tutorialSlideBody').textContent=ld.h;
+      updateDots();
+      s.setup();
+      draw();
+      updateHold();
+    };
+
+    // Build UI into artDiv
+    const artDiv = overlay.querySelector('#tutorialArt');
+    artDiv.style.cssText='display:flex;flex-direction:column;gap:6px;background:transparent;border:none;padding:0;min-height:unset';
+    // Hold indicator + canvas
+    artDiv.innerHTML=`<div style="display:flex;gap:8px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px">
+        <div style="font-size:10px;color:#5585d4">HOLD</div>
+        <div id="tutHold" style="width:38px;height:38px;border:1px solid #263d72;border-radius:4px;background:#1a2640;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold"></div>
+      </div>
+      <div id="tutCanvasWrap"></div>
+    </div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:2px">
+      <button class="ghost tut-btn" data-act="left" style="padding:6px 12px">◀</button>
+      <button class="ghost tut-btn" data-act="rot" style="padding:6px 12px">↻</button>
+      <button class="ghost tut-btn" data-act="right" style="padding:6px 12px">▶</button>
+      <button class="ghost tut-btn" data-act="drop" style="padding:6px 14px">▼▼</button>
+      <button class="ghost tut-btn" data-act="hold" style="padding:6px 10px">HOLD</button>
+    </div>`;
+    artDiv.querySelector('#tutCanvasWrap').appendChild(canvas);
+
+    // Touch button wiring
+    artDiv.querySelectorAll('.tut-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const a=btn.dataset.act;
+        const fakeKey={'left':'ArrowLeft','right':'ArrowRight','rot':'z','drop':' ','hold':'c'}[a];
+        if(fakeKey&&!stepDone){STEPS[stepIndex]?.key?.(fakeKey);draw();updateHold();}
+      });
+    });
+
+    // Keyboard
+    keyHandler=(e)=>{
+      if(!overlay.classList.contains('active'))return;
+      if(e.key==='Escape'){closeOverlay();return;}
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault();
+      if(!stepDone)STEPS[stepIndex]?.key?.(e.key);
+      draw(); updateHold();
+    };
+    document.addEventListener('keydown',keyHandler);
+
+    // Dots & close
+    overlay.querySelector('#tutorialDots').innerHTML=STEPS.map((_,i)=>`<span class="tutorial-dot${i===0?' active':''}"></span>`).join('');
+    overlay.querySelector('#tutorialCloseBtn').onclick=closeOverlay;
+    overlay.onclick=e=>{if(e.target===overlay)closeOverlay();};
+    overlay.querySelector('.tutorial-nav').style.display='none';
+
+    // Launch
     overlay.classList.add('active');
+    stepIndex=0; stepDone=false;
+    loadStep(0);
   }
 
   openCodex() {
