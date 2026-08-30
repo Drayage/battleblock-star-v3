@@ -2712,20 +2712,18 @@ class Game {
   checkRunAchievements(ascensionLevel) {
     if (this.run.practiceMode) return;
     this.unlockAchievement('first_clear');
-    if (this.run.gold >= 200) this.unlockAchievement('rich');
     if ((this.runMaxGold || 0) >= 500) this.unlockAchievement('gold_500');
     if (this.run.equippedSkills.length >= 3) this.unlockAchievement('skill_master');
     if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
     if ((this.runEliteKills || 0) >= 3) this.unlockAchievement('elite_hunter');
     if ((this.runConsUsed || 0) >= 5) this.unlockAchievement('cons_user');
-    // 한 종류 10개: 덱의 카드 shapeId 카운트
+    // 덱 미니멀: 클리어 시점에 10장 이하
     const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
-    const shapeCounts = {};
-    for (const id of allCards) {
-      const card = CARD_LIBRARY?.[id];
-      if (card?.shapeId) shapeCounts[card.shapeId] = (shapeCounts[card.shapeId] || 0) + 1;
-    }
-    if (Object.values(shapeCounts).some(n => n >= 10)) this.unlockAchievement('mono_deck');
+    const deckSizeAtClear = allCards.length;
+    if (deckSizeAtClear <= 10) this.unlockAchievement('deck_minimalist');
+    // 저주 덱: 정크/저주 카드 4개 이상으로 클리어
+    const curseCount = allCards.filter(id => CARD_LIBRARY?.[id]?.traits?.includes('curse')).length;
+    if (curseCount >= 4) this.unlockAchievement('junk_collector');
     if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
     if (ascensionLevel >= 2) this.unlockAchievement('asc_clear_2');
     if (ascensionLevel >= 3) this.unlockAchievement('ascension_3');
@@ -2784,10 +2782,17 @@ class Game {
     if (this.battleMaxCombo >= 10) this.unlockAchievement('combo_master');
     // 한 번에 쓰레기 8줄 이상 제거
     if (this.runGarbageNuke) this.unlockAchievement('garbage_nuke');
-    // 덱 크기 (승리 시)
+    // 덱 크기 (전투 승리 시)
     const deckSize = this.run.deck.draw.length + this.run.deck.discard.length;
     if (deckSize >= 40) this.unlockAchievement('deck_overload');
-    if (deckSize <= 10) this.unlockAchievement('deck_minimalist');
+    // 한 우물만 파기: 전투 승리 시 같은 모양 10개 이상
+    const bCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
+    const shapeCounts = {};
+    for (const id of bCards) {
+      const card = CARD_LIBRARY?.[id];
+      if (card?.shapeId) shapeCounts[card.shapeId] = (shapeCounts[card.shapeId] || 0) + 1;
+    }
+    if (Object.values(shapeCounts).some(n => n >= 10)) this.unlockAchievement('mono_deck');
     // 장기전: 적이 100개 이상 피스를 놓은 전투에서 승리
     if (this.battleEnemyPieces >= 100) this.unlockAchievement('long_battle');
   }
