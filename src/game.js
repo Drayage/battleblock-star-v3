@@ -68,19 +68,21 @@ const LIFETIME_KEY = 'bbs.lifetime.v1';
 const META_KEY = 'bbs.meta.v1';
 
 const META_UPGRADES = [
-  { id: 'startGold',       icon: '💰',  name: '초기 자금',    desc: '런 시작 골드 +15',                    maxLevel: 4, costs: [1, 1, 1, 2] },
+  { id: 'startGold',       icon: '💰',  name: '초기 자금',    desc: '런 시작 골드 +15',                    maxLevel: 4, costs: [1, 1, 1, 1] },
   { id: 'rerollDiscount',  icon: '🔄',  name: '리롤 할인',    desc: '상점 리롤 비용 -5G',                  maxLevel: 3, costs: [1, 1, 1] },
   { id: 'startCons',       icon: '💊',  name: '비상 소모품',  desc: '런 시작 소모품 +1',                   maxLevel: 2, costs: [1, 2] },
-  { id: 'startHp',         icon: '❤️',  name: '체력 강화',    desc: '런 시작 HP(필드 높이) +1',            maxLevel: 3, costs: [1, 2, 2] },
+  { id: 'startHp',         icon: '❤️',  name: '체력 강화',    desc: '런 시작 HP(필드 높이) +1',            maxLevel: 3, costs: [1, 1, 1] },
   { id: 'shopDeals',       icon: '🏪',  name: '상점 특가',    desc: '상점 할인 아이템 +1칸',               maxLevel: 2, costs: [2, 3] },
   { id: 'startRewardTier', icon: '🎁',  name: '보상 강화',    desc: '1라운드 보상 티어 +1 (최대 2단계)',    maxLevel: 2, costs: [1, 3] },
-  { id: 'startCardAdd',    icon: '🃏',  name: '덱 확장',      desc: '시작 덱에 랜덤 특수 카드 +1',         maxLevel: 3, costs: [2, 3, 4] },
+  { id: 'startCardAdd',    icon: '🃏',  name: '덱 확장',      desc: '시작 덱에 랜덤 특수 카드 +1',         maxLevel: 3, costs: [2, 2, 3] },
   { id: 'startCardRem',    icon: '✂️',  name: '덱 정리',      desc: '런 시작 전 카드 무료 제거 +1',        maxLevel: 2, costs: [3, 4] },
   { id: 'startRelic',      icon: '📦',  name: '유물 상자',    desc: '런 시작시 랜덤 유물 1개',             maxLevel: 1, costs: [5] },
   { id: 'rewardReroll',    icon: '🎲',  name: '보상 재굴리기', desc: '런 당 보상 재굴리기 +1회',           maxLevel: 4, costs: [1, 2, 3, 4] },
   { id: 'battleRecovery',  icon: '💉',  name: '전투 회복',    desc: '적 처치 후 가비지 1줄 회복',         maxLevel: 3, costs: [2, 3, 4] },
+  { id: 'cardUpgrade',     icon: '🔧',  name: '카드 업그레이드', desc: '시작 덱 카드 1장을 특수 버전으로 업그레이드', maxLevel: 2, costs: [2, 4] },
+  { id: 'startMana',       icon: '⚡',  name: '전투 시작 마나', desc: '전투 시작 시 마나 +20',            maxLevel: 2, costs: [1, 2] },
 ];
-// 합계 포인트: 5+3+3+5+5+4+9+7+5+10+9 = 65 (업적 전부 달성 시 전부 최대)
+// 합계 포인트: 4+3+3+3+5+4+7+7+5+10+9+6+3 = 69 (업적 70개, 1P 여유)
 
 // Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
@@ -1143,6 +1145,7 @@ class Game {
   }
 
   showShop() {
+    if (!this.run?.practiceMode && !this.vs) this.unlockAchievement('first_shop');
     this.show('shopScreen');
     document.getElementById('leaveShopBtn').textContent = ui('nextBattle');
     document.getElementById('shopGold').textContent = `${ui('gold')} ${this.run.gold}`;
@@ -1572,6 +1575,10 @@ class Game {
     this.clearBattleTimeouts();
     this.enemyCard = enemyCard;
     this.discover('enemies', this.enemyCodexKey(enemyCard));
+    if (!this.run?.practiceMode && !this.vs) {
+      if (enemyCard.type === 'boss') this.unlockAchievement('boss_encounter');
+      this.incrementLifetime('battles', 10, 'battle_10');
+    }
     if (this.run.relics.includes('steel_heart')) {
       this.run.hpRows = Math.min(28, this.run.hpRows + 1);
     }
@@ -1586,6 +1593,7 @@ class Game {
     for (const entry of this.enemy.garbageEntries) { entry.timer = 0; entry.instant = true; }
     if (this.run.relics.includes('natural_heal')) this.player.purgeGarbageRows(2);
     if (this.run.relics.includes('mana_surge')) this.player.mpCap = 120;
+    if (this.run.startMana) this.player.mp = Math.min(this.player.mpCap, this.run.startMana);
     if (this.run.relics.includes('combo_keeper')) this.player.comboGuard = true;
     if (this.run.relics.includes('chain_reactor')) this.player.chainReactor = true;
     if (this.run.relics.includes('set_blastcap')) this.player.explodeRadiusBonus = 1;
@@ -2257,6 +2265,7 @@ class Game {
     }
     this.checkBattleAchievements(this.enemyCard.type);
     this.checkBattleMilestoneAchievements();
+    if (!this.run?.practiceMode && this.run.round >= 10) this.unlockAchievement('round_10');
     const goldMult = (this.run.relics.includes('greed') ? 1.2 : 1) * (this.currentAscMod().goldFactor ?? 1.0);
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
     this.runMaxGold = Math.max(this.runMaxGold || 0, this.run.gold);
@@ -2422,6 +2431,7 @@ class Game {
     if (!win && !this.run?.practiceMode) {
       const lt = this.loadLifetime?.();
       if (lt) { lt.winStreak = 0; this.saveLifetime?.(lt); }
+      this.incrementLifetime('losses', 5, 'loss_5');
     }
     if (win) {
       const lvl = this.getAscensionLevel?.() ?? 0;
@@ -2566,6 +2576,20 @@ class Game {
     if (lvl('rewardReroll')) run.rewardRerolls = lvl('rewardReroll');
     // 전투 회복 레벨
     if (lvl('battleRecovery')) run.battleRecovery = lvl('battleRecovery');
+    // 카드 업그레이드: 기존 베이스 카드 1장을 특수 버전으로 교체
+    if (lvl('cardUpgrade')) {
+      const upgradeable = Object.keys(BLOCK_UPGRADES).filter(id =>
+        run.deck.draw.includes(id) || run.deck.discard.includes(id)
+      );
+      for (let i = 0; i < lvl('cardUpgrade'); i++) {
+        if (!upgradeable.length) break;
+        const baseId = upgradeable[Math.floor(Math.random() * upgradeable.length)];
+        const opts = BLOCK_UPGRADES[baseId];
+        if (opts?.length) run.deck.addCard(opts[Math.floor(Math.random() * opts.length)]);
+      }
+    }
+    // 전투 시작 마나
+    if (lvl('startMana')) run.startMana = lvl('startMana') * 20;
   }
 
   showMetaScreen() {
@@ -2724,8 +2748,8 @@ class Game {
 
   checkBattleAchievements(enemyType) {
     if (this.run?.practiceMode) return;
-    if (enemyType === 'boss') this.unlockAchievement('boss_kill');
     if (enemyType === 'elite') {
+      this.unlockAchievement('first_elite');
       this.runEliteKills = (this.runEliteKills || 0) + 1;
       const lt = this.loadLifetime();
       lt.eliteKills = (lt.eliteKills || 0) + 1;

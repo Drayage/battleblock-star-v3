@@ -979,7 +979,7 @@ export const ASCENSION_MODS = [
 export const ACHIEVEMENTS = [
   { id: 'first_clear', icon: '🏆', ko: '첫 클리어', en: 'First Clear', ja: '初クリア', ko_d: '게임을 처음으로 클리어했습니다', en_d: 'Clear the game for the first time', ja_d: '初めてゲームをクリアした' },
   { id: 'three_wins', icon: '🥉', ko: '삼연승', en: 'Triple Win', ja: '三連勝', ko_d: '3회 클리어 (누적)', en_d: 'Clear 3 times (total)', ja_d: '3回クリア(累計)' },
-  { id: 'boss_kill', icon: '💀', ko: '보스 처치', en: 'Boss Slayer', ja: 'ボス討伐', ko_d: '최종 보스를 처치했습니다', en_d: 'Defeat the final boss', ja_d: 'ラストボスを倒した' },
+  { id: 'boss_encounter', icon: '💀', ko: '보스 조우', en: 'Boss Encounter', ja: 'ボス遭遇', ko_d: '처음으로 보스와 맞닥뜨리다', en_d: 'Face the final boss for the first time', ja_d: '初めてボスと対面した' },
   { id: 'elite_killer', icon: '⚡', ko: '엘리트 사냥꾼', en: 'Elite Hunter', ja: 'エリートハンター', ko_d: '엘리트 5마리 처치 (누적)', en_d: 'Defeat 5 elites (total)', ja_d: 'エリート5体討伐(累計)' },
   { id: 'rich', icon: '💰', ko: '부자', en: 'Rich', ja: '大富豪', ko_d: '골드 200 이상 보유하고 클리어', en_d: 'Clear with 200+ gold', ja_d: '200G以上持ってクリア' },
   { id: 'skill_master', icon: '🎯', ko: '스킬 마스터', en: 'Skill Master', ja: 'スキルマスター', ko_d: '스킬 3개 장착하고 클리어', en_d: 'Clear with 3 skills equipped', ja_d: '3スキル装備してクリア' },
@@ -1050,4 +1050,10 @@ export const ACHIEVEMENTS = [
   { id: 'marathon300_6m', icon: '🏃', ko: '울트라 마라톤',   en: 'Ultra Marathon',    ja: 'ウルトラマラソン', ko_d: '마라톤 300줄 6분 이내 클리어', en_d: 'Clear marathon 300 in under 6 minutes', ja_d: 'マラソン300ライン6分以内クリア' },
   { id: 'timeatk2_100',   icon: '💥', ko: '타임어택 고수',   en: 'Time Attack Pro',   ja: 'タイムアタック達人', ko_d: '타임어택 2분에서 100점 이상', en_d: 'Score 100+ in 2-minute time attack', ja_d: '2分タイムアタックで100点以上' },
   { id: 'timeatk3_150',   icon: '💥', ko: '타임어택 달인',   en: 'Time Attack Master', ja: 'タイムアタック名人', ko_d: '타임어택 3분에서 150점 이상', en_d: 'Score 150+ in 3-minute time attack', ja_d: '3分タイムアタックで150点以上' },
+  // 입문 업적
+  { id: 'first_elite', icon: '⚔️', ko: '첫 엘리트 승리', en: 'First Elite Kill', ja: '初エリート撃破', ko_d: '처음으로 엘리트를 처치했습니다', en_d: 'Defeat an elite enemy for the first time', ja_d: '初めてエリート敵を倒した' },
+  { id: 'first_shop',  icon: '🛍️', ko: '첫 상점 방문',   en: 'First Shop Visit', ja: '初ショップ訪問', ko_d: '처음으로 상점을 방문했습니다', en_d: 'Visit the shop for the first time', ja_d: '初めてショップを訪問した' },
+  { id: 'battle_10',   icon: '🔟', ko: '열 번째 전투',   en: 'Battle Veteran',   ja: '10戦目',         ko_d: '전투 10번 돌입 (누적)', en_d: 'Enter 10 battles (total)', ja_d: '戦闘10回突入(累計)' },
+  { id: 'round_10',    icon: '🏅', ko: '10라운드 돌파',  en: 'Round 10 Reached', ja: 'ラウンド10突破',  ko_d: '한 런에서 10라운드 이상 승리', en_d: 'Win a battle at round 10 or later', ja_d: '一ランで10ラウンド以上勝利' },
+  { id: 'loss_5',      icon: '💀', ko: '다섯 번의 패배', en: 'Five Defeats',     ja: '5敗',            ko_d: '5번째 패배 (누적)', en_d: 'Lose 5 times (total)', ja_d: '5回敗北(累計)' },
 ];
