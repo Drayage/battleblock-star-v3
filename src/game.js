@@ -342,6 +342,9 @@ class Game {
       this.refreshMenu();
       this.show('menu');
     });
+    document.querySelectorAll('.solo-lb-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.showSoloLeaderboard(btn.dataset.mode));
+    });
     document.querySelectorAll('.solo-start-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;
@@ -349,6 +352,7 @@ class Game {
         this.startSoloMode(mode, startLevel);
       });
     });
+    document.getElementById('soloPauseBtn')?.addEventListener('click', () => this.toggleSoloPause());
     document.getElementById('soloQuitBtn')?.addEventListener('click', () => {
       if (!this.solo) return;
       document.getElementById('gameScreen').classList.remove('solo-active');
@@ -1669,28 +1673,72 @@ class Game {
   refreshSoloRecords() {
     let records = {};
     try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    const fmtMs = ms => {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const cs = Math.floor((ms % 1000) / 10);
+      return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    };
     for (const [key, cfg] of Object.entries(SOLO_MODES)) {
       const el = document.getElementById(`rec-${key}`);
       if (!el) continue;
       const rec = records[key];
       if (!rec) { el.textContent = '기록 없음'; continue; }
-      if (cfg.unit === 'time') {
-        if (rec.topOut) { el.textContent = `미완료 · ${rec.value}줄`; continue; }
-        const ms = rec.value;
-        const min = Math.floor(ms / 60000);
-        const sec = Math.floor((ms % 60000) / 1000);
-        const cs = Math.floor((ms % 1000) / 10);
-        el.textContent = `최고: ${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-      } else {
-        el.textContent = `최고: ${rec.value}줄`;
+      const parts = [];
+      if (cfg.unit === 'time' && rec.timeTop10?.length) {
+        parts.push(`⏱ ${fmtMs(rec.timeTop10[0].ms)}`);
       }
+      if (rec.scoreTop10?.length) {
+        parts.push(`💥 ${rec.scoreTop10[0].score}`);
+      }
+      el.textContent = parts.length ? parts.join(' · ') : '기록 없음';
     }
+  }
+
+  showSoloLeaderboard(modeKey) {
+    const modeConfig = SOLO_MODES[modeKey];
+    if (!modeConfig) return;
+    let records = {};
+    try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    const rec = records[modeKey] || {};
+    const fmtMs = ms => {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const cs = Math.floor((ms % 1000) / 10);
+      return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    };
+    const rowHtml = (entries, cols) => {
+      if (!entries?.length) return '<p style="color:#8590ac;font-size:13px">기록 없음</p>';
+      return `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="color:#8590ac">${cols.map(c => `<th style="text-align:left;padding:3px 6px;border-bottom:1px solid #2a3458">${c}</th>`).join('')}</tr>
+        ${entries.map((e, i) => `<tr style="color:${i === 0 ? '#ffe082' : '#d7e5ff'}">
+          <td style="padding:3px 6px">${i + 1}</td>
+          <td style="padding:3px 6px">💥 ${e.score}</td>
+          ${e.ms != null ? `<td style="padding:3px 6px">⏱ ${fmtMs(e.ms)}</td>` : ''}
+          <td style="padding:3px 6px">${e.date || ''}</td>
+        </tr>`).join('')}
+      </table>`;
+    };
+    const hasTime = modeConfig.unit === 'time';
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    modal.innerHTML = `
+      <div class="deck-modal-inner" style="min-width:320px;max-width:480px">
+        <h3>🏆 ${modeConfig.name} 순위</h3>
+        ${hasTime ? `<h4 style="color:#8dcfff;margin:12px 0 6px">⏱ 시간 Top 10 (완료 기준)</h4>
+          ${rowHtml(rec.timeTop10, ['#', '점수', '시간', '날짜'])}` : ''}
+        <h4 style="color:#ffe082;margin:12px 0 6px">💥 점수 Top 10</h4>
+        ${rowHtml(rec.scoreTop10, ['#', '점수', '시간', '날짜'])}
+        <button class="ghost" id="soloLbCloseBtn" style="margin-top:14px">닫기</button>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('soloLbCloseBtn').addEventListener('click', () => modal.remove());
   }
 
   startSoloMode(modeKey, startLevel = 0) {
     const modeConfig = SOLO_MODES[modeKey];
     if (!modeConfig) return;
-    this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, ended: false, topOut: false };
+    this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, score: 0, ended: false, topOut: false };
     this.player = new Board({ rows: 20, deck: new Deck() });
     this.fallTimer = 0;
     this.lockTimer = 0;
@@ -1698,6 +1746,9 @@ class Game {
     this.groundTouched = false;
     this.soloPaused = false;
     document.getElementById('soloModeName').textContent = modeConfig.name;
+    const pauseBtn = document.getElementById('soloPauseBtn');
+    if (pauseBtn) pauseBtn.textContent = '⏸';
+    document.getElementById('soloScore').textContent = '💥 0';
     document.getElementById('gameScreen').classList.add('solo-active');
     this.show('gameScreen');
     this.renderer.resizeSolo(20);
@@ -1718,6 +1769,7 @@ class Game {
       : `${this.solo.linesCleared}줄`;
     const lvlStr = modeConfig.speedRamp ? ` · Lv.${this.solo.level + 1}` : '';
     document.getElementById('soloStats').textContent = `${timeStr} · ${linesStr}${lvlStr}`;
+    document.getElementById('soloScore').textContent = `💥 ${this.solo.score || 0}`;
   }
 
   updateSolo(dt, now) {
@@ -1744,6 +1796,7 @@ class Game {
   resolveSolo(result) {
     if (!result || !this.solo || this.solo.ended) return;
     this.emitPlaceSfx(result);
+    this.solo.score = (this.solo.score || 0) + (result.attack || 0);
     if (result.cleared > 0) {
       this.solo.linesCleared += result.cleared;
       const modeConfig = SOLO_MODES[this.solo.mode];
@@ -1763,63 +1816,79 @@ class Game {
     this.solo.ended = true;
     this.solo.topOut = topOut;
     const modeConfig = SOLO_MODES[this.solo.mode];
+    const date = new Date().toISOString().slice(0, 10);
     let records = {};
     try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
-    const existing = records[this.solo.mode];
-    let isBest = false;
-    if (modeConfig.unit === 'time') {
-      if (!topOut) {
-        if (!existing || existing.topOut || existing.value > this.solo.elapsed) {
-          records[this.solo.mode] = { value: this.solo.elapsed, topOut: false };
-          isBest = true;
-        }
-      } else if (!existing || (existing.topOut && existing.value < this.solo.linesCleared)) {
-        records[this.solo.mode] = { value: this.solo.linesCleared, topOut: true };
-      }
-    } else {
-      if (!existing || existing.value < this.solo.linesCleared) {
-        records[this.solo.mode] = { value: this.solo.linesCleared, topOut };
-        isBest = true;
-      }
+    const modeRec = records[this.solo.mode] || { timeTop10: [], scoreTop10: [] };
+    let isBestTime = false, isBestScore = false;
+
+    // scoreTop10: all modes, sorted DESC by score
+    const scoreEntry = { score: this.solo.score || 0, ms: this.solo.elapsed, lines: this.solo.linesCleared, topOut, date };
+    modeRec.scoreTop10 = [...(modeRec.scoreTop10 || []), scoreEntry]
+      .sort((a, b) => b.score - a.score || a.ms - b.ms)
+      .slice(0, 10);
+    if (modeRec.scoreTop10[0] === scoreEntry) isBestScore = true;
+
+    // timeTop10: only for time-unit modes and only completed runs
+    if (modeConfig.unit === 'time' && !topOut) {
+      const timeEntry = { ms: this.solo.elapsed, score: this.solo.score || 0, lines: this.solo.linesCleared, date };
+      modeRec.timeTop10 = [...(modeRec.timeTop10 || []), timeEntry]
+        .sort((a, b) => a.ms - b.ms)
+        .slice(0, 10);
+      if (modeRec.timeTop10[0] === timeEntry) isBestTime = true;
     }
+
+    records[this.solo.mode] = modeRec;
     try { localStorage.setItem(SOLO_RECORD_KEY, JSON.stringify(records)); } catch {}
+    const isBest = isBestTime || isBestScore;
     // draw final frame with end overlay
     this.renderer.drawSolo(this.player, this.solo, modeConfig, true);
     // show result overlay after short delay
-    setTimeout(() => this.showSoloResult(isBest), 800);
+    setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore), 800);
   }
 
-  showSoloResult(isBest = false) {
+  showSoloResult(isBest = false, isBestTime = false, isBestScore = false) {
     const modeConfig = SOLO_MODES[this.solo.mode];
     const topOut = this.solo.topOut;
     const modal = document.createElement('div');
     modal.className = 'deck-modal active';
-    const timeStr = (() => {
-      const ms = this.solo.elapsed;
+    const fmtMs = ms => {
       const min = Math.floor(ms / 60000);
       const sec = Math.floor((ms % 60000) / 1000);
       const cs = Math.floor((ms % 1000) / 10);
       return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-    })();
+    };
+    const timeStr = fmtMs(this.solo.elapsed);
     const resultLine = topOut
-      ? `게임 오버 · ${this.solo.linesCleared}줄 클리어`
+      ? `게임 오버 · ${this.solo.linesCleared}줄`
       : modeConfig.unit === 'time'
         ? `${modeConfig.name} 클리어! · ${timeStr}`
-        : `${modeConfig.name} 종료 · ${this.solo.linesCleared}줄`;
+        : `${modeConfig.name} 종료 · ${this.solo.linesCleared}줄 · ${timeStr}`;
+    const bestTag = isBestTime && isBestScore ? '⏱+💥 신기록!'
+      : isBestTime ? '⏱ 최고 기록 (시간)!'
+      : isBestScore ? '💥 최고 기록 (점수)!'
+      : '';
     modal.innerHTML = `
       <div class="deck-modal-inner">
         <h3>${topOut ? '💀 게임 오버' : '🎉 ' + (isBest ? '신기록!' : '완료!')}</h3>
         <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
-        ${isBest ? '<p style="color:#ffe082;font-size:13px">✨ 개인 최고 기록!</p>' : ''}
-        <div style="display:flex;gap:10px;margin-top:14px">
+        <p style="color:#ffe082;font-size:14px;margin:4px 0">💥 점수: ${this.solo.score || 0}</p>
+        ${bestTag ? `<p style="color:#ffe082;font-size:13px">✨ ${bestTag}</p>` : ''}
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
           <button class="ghost" id="soloRetryBtn">다시 하기</button>
+          <button class="ghost" id="soloLbResultBtn">순위 보기</button>
           <button class="ghost" id="soloMenuBtn">모드 선택</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
+    const savedMode = this.solo.mode;
+    const savedStartLevel = this.solo.startLevel;
     document.getElementById('soloRetryBtn').addEventListener('click', () => {
       modal.remove();
-      this.startSoloMode(this.solo.mode, this.solo.startLevel);
+      this.startSoloMode(savedMode, savedStartLevel);
+    });
+    document.getElementById('soloLbResultBtn').addEventListener('click', () => {
+      this.showSoloLeaderboard(savedMode);
     });
     document.getElementById('soloMenuBtn').addEventListener('click', () => {
       modal.remove();
@@ -1832,8 +1901,11 @@ class Game {
 
   action(action) {
     if (!this.inBattle() && !this.inSolo()) return;
-    if (action === 'pause') return this.togglePause();
-    if (this.paused) return;
+    if (action === 'pause') {
+      if (this.inSolo()) return this.toggleSoloPause();
+      return this.togglePause();
+    }
+    if (this.paused || this.soloPaused) return;
     if (this.playerInvertTimer > 0) {
       if (action === 'left') action = 'right';
       else if (action === 'right') action = 'left';
@@ -2816,6 +2888,14 @@ class Game {
     this.message = this.paused ? t('screen.pauseTitle') : t('screen.resume');
     this.audio.playSfx(this.paused ? 'pause' : 'resume');
     this.autoSave();
+  }
+
+  toggleSoloPause() {
+    if (!this.solo || this.solo.ended) return;
+    this.soloPaused = !this.soloPaused;
+    const btn = document.getElementById('soloPauseBtn');
+    if (btn) btn.textContent = this.soloPaused ? '▶' : '⏸';
+    this.audio.playSfx(this.soloPaused ? 'pause' : 'resume');
   }
 
   // 즉발 효과(onPlace)에 따른 SFX. result.instant는 board.applyOnPlace에서 채워진다.

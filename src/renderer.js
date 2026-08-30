@@ -205,7 +205,7 @@ export class Renderer {
       for (let c = 0; c < COLS; c++) {
         const cell = board.grid[r][c];
         if (!cell) continue;
-        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0);
+        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0, cell.shapeId);
         if (cell.hp > 0) {
           ctx.fillStyle = '#ffe27a';
           ctx.font = `bold ${Math.max(9, cs * 0.5)}px Courier New`;
@@ -219,7 +219,7 @@ export class Renderer {
       const gy = board.ghostY();
       const ghost = board.current.clone();
       ghost.y = gy;
-      const color = COLORS[board.current.card.id] || '#fff';
+      const color = COLORS[board.current.card.id] || COLORS[board.current.card.shapeId] || '#fff';
       const inset = 3;
       const size = cs - inset * 2;
       ctx.save();
@@ -234,7 +234,7 @@ export class Renderer {
         ctx.strokeRect(gx, gyPx, size, size);
       }
       ctx.restore();
-      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0);
+      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0, board.current.card.shapeId);
     }
     if (board.flash > 0 && !this.noFlash) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
@@ -311,10 +311,10 @@ export class Renderer {
     }
   }
 
-  cell(x, y, cs, type, fuse = 0) {
+  cell(x, y, cs, type, fuse = 0, shapeId = null) {
     const ctx = this.ctx;
     const pad = Math.max(1, Math.floor(cs * 0.08));
-    ctx.fillStyle = COLORS[type] || '#d9e0ef';
+    ctx.fillStyle = COLORS[type] || (shapeId ? COLORS[shapeId] : null) || '#d9e0ef';
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2);
     ctx.fillStyle = 'rgba(255,255,255,.16)';
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
@@ -428,7 +428,7 @@ export class Renderer {
     const shape = card.shape[0];
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
-        if (shape[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, card.id);
+        if (shape[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, card.id, 0, card.shapeId);
       }
     }
   }

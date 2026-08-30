@@ -18,7 +18,7 @@ function normalizeGrid(source, rows) {
 }
 
 function cell(card) {
-  const made = { type: card.id, attack: card.cellAttack, traits: [...card.traits] };
+  const made = { type: card.id, shapeId: card.shapeId || null, attack: card.cellAttack, traits: [...card.traits] };
   if (card.fuse) made.fuse = card.fuse;
   return made;
 }
