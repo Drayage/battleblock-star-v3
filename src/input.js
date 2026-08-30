@@ -293,7 +293,7 @@ export class InputController {
   }
 
   handleKey(code, repeated = false) {
-    if (!this.game.inBattle()) return;
+    if (!this.game.inBattle() && !this.game.inSolo()) return;
     const map = {
       ArrowLeft: 'left',
       ArrowRight: 'right',

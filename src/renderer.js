@@ -538,30 +538,57 @@ export class Renderer {
 
   resizeSolo(rows) {
     const mobile = window.innerWidth < 720;
-    const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
     const viewportH = Math.floor(window.visualViewport?.height || window.innerHeight);
-    const widthCell = Math.floor((mobileWidth - 44) / COLS);
-    const heightCell = Math.floor((viewportH - 180) / rows);
-    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 24;
-    const bw = COLS * cell;
-    const bh = rows * cell;
-    const canvasW = mobile ? mobileWidth : 700;
-    const boardX = mobile ? Math.floor((mobileWidth - bw) / 2) : Math.floor((canvasW - bw) / 2);
-    const boardY = mobile ? 8 : 60;
-    const canvasH = mobile ? boardY + bh + 60 : boardY + bh + 20;
-    this.soloLayout = { mobile, cell, rows, w: canvasW, h: canvasH, bX: boardX, bY: boardY, bw, bh };
+    const viewportW = window.innerWidth;
     const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
-    this.canvas.width = Math.round(canvasW * dpr);
-    this.canvas.height = Math.round(canvasH * dpr);
-    this.canvas.style.width = `${canvasW}px`;
-    this.canvas.style.height = `${canvasH}px`;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const scale = Math.min(1,
-      (window.innerWidth - 8) / canvasW,
-      ((window.visualViewport?.height || window.innerHeight) - (mobile ? 140 : 100)) / canvasH
-    );
-    this.canvas.style.transform = `scale(${scale})`;
-    this.canvas.parentElement.style.height = `${Math.ceil(canvasH * scale)}px`;
+
+    if (mobile) {
+      const mobileWidth = Math.max(320, Math.min(430, viewportW));
+      const widthCell = Math.floor((mobileWidth - 44) / COLS);
+      const heightCell = Math.floor((viewportH - 180) / rows);
+      const cell = Math.max(15, Math.min(24, widthCell, heightCell));
+      const bw = COLS * cell;
+      const bh = rows * cell;
+      const boardX = Math.floor((mobileWidth - bw) / 2);
+      const boardY = 8;
+      const canvasW = mobileWidth;
+      const canvasH = boardY + bh + 60;
+      this.soloLayout = { mobile, cell, rows, w: canvasW, h: canvasH, bX: boardX, bY: boardY, bw, bh, lx: 4, pw: 70 };
+      this.canvas.width = Math.round(canvasW * dpr);
+      this.canvas.height = Math.round(canvasH * dpr);
+      this.canvas.style.width = `${canvasW}px`;
+      this.canvas.style.height = `${canvasH}px`;
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const scale = Math.min(1, (viewportW - 8) / canvasW, (viewportH - 140) / canvasH);
+      this.canvas.style.transform = `scale(${scale})`;
+      this.canvas.parentElement.style.height = `${Math.ceil(canvasH * scale)}px`;
+    } else {
+      // 데스크탑: 뷰포트를 꽉 채우도록 동적 cell 계산
+      const hudH = 40;  // soloHud 바 높이
+      const boardY = 10;
+      const boardPadV = 12;
+      const pw = 128;   // 사이드 패널 폭
+      const gap = 10;   // 패널-보드 간격
+      const availH = viewportH - hudH - boardY - boardPadV;
+      const availW = viewportW - (pw + gap) * 2 - 16;
+      const cellH = Math.floor(availH / rows);
+      const cellW = Math.floor(availW / COLS);
+      const cell = Math.max(18, Math.min(48, cellH, cellW));
+      const bw = COLS * cell;
+      const bh = rows * cell;
+      const lx = 8;
+      const boardX = lx + pw + gap;
+      const canvasW = boardX + bw + gap + pw + lx;
+      const canvasH = boardY + bh + boardPadV;
+      this.soloLayout = { mobile, cell, rows, w: canvasW, h: canvasH, bX: boardX, bY: boardY, bw, bh, lx, pw };
+      this.canvas.width = Math.round(canvasW * dpr);
+      this.canvas.height = Math.round(canvasH * dpr);
+      this.canvas.style.width = `${canvasW}px`;
+      this.canvas.style.height = `${canvasH}px`;
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.canvas.style.transform = 'scale(1)';
+      this.canvas.parentElement.style.height = `${canvasH}px`;
+    }
   }
 
   drawSolo(player, solo, modeConfig, ended = false, noFlash = false) {
@@ -573,34 +600,43 @@ export class Renderer {
     ctx.fillRect(0, 0, L.w, L.h);
     // left mini-panel: hold + level
     if (!L.mobile) {
-      const px = L.bX - 110;
+      const px = L.lx;
+      const pw = L.pw;
+      const previewCell = Math.max(6, L.cell * 0.42);
       ctx.fillStyle = '#0f1424';
-      ctx.fillRect(px, L.bY, 100, 130);
+      ctx.fillRect(px, L.bY, pw, L.bh);
       ctx.strokeStyle = '#26375f';
       ctx.lineWidth = 1;
-      ctx.strokeRect(px, L.bY, 100, 130);
+      ctx.strokeRect(px, L.bY, pw, L.bh);
+      const fs = Math.max(10, Math.min(14, Math.round(L.cell * 0.4)));
       ctx.fillStyle = '#9fb2dc';
-      ctx.font = 'bold 10px Courier New';
-      ctx.fillText('HOLD', px + 8, L.bY + 14);
-      if (player.held) this.preview(player.held, px + 18, L.bY + 22, Math.max(6, L.cell * 0.44));
+      ctx.font = `bold ${fs}px Courier New`;
+      ctx.fillText('HOLD', px + 8, L.bY + fs + 4);
+      if (player.held) this.preview(player.held, px + 14, L.bY + fs + 12, previewCell);
+      const levelY = L.bY + fs + 12 + previewCell * 2.8 + 14;
       ctx.fillStyle = '#7ab8ff';
-      ctx.fillText(`LEVEL ${solo.level + 1}`, px + 8, L.bY + 92);
+      ctx.fillText(`LEVEL ${solo.level + 1}`, px + 8, levelY);
       ctx.fillStyle = '#d7e5ff';
-      ctx.fillText(`${solo.linesCleared}줄`, px + 8, L.bY + 108);
+      ctx.fillText(`${solo.linesCleared}줄`, px + 8, levelY + fs + 6);
     }
     // right mini-panel: next queue
     if (!L.mobile) {
       const nx = L.bX + L.bw + 10;
+      const pw = L.pw;
+      const previewCell = Math.max(6, L.cell * 0.42);
+      const rowH = previewCell * 3.2;
+      const panelH = L.bh;
       ctx.fillStyle = '#0f1424';
-      ctx.fillRect(nx, L.bY, 100, 180);
+      ctx.fillRect(nx, L.bY, pw, panelH);
       ctx.strokeStyle = '#26375f';
       ctx.lineWidth = 1;
-      ctx.strokeRect(nx, L.bY, 100, 180);
+      ctx.strokeRect(nx, L.bY, pw, panelH);
+      const fs = Math.max(10, Math.min(14, Math.round(L.cell * 0.4)));
       ctx.fillStyle = '#9fb2dc';
-      ctx.font = 'bold 10px Courier New';
-      ctx.fillText('NEXT', nx + 8, L.bY + 14);
-      const nextQ = player.nextQueue?.slice(0, 4) || [];
-      nextQ.forEach((card, i) => this.preview(card, nx + 18, L.bY + 24 + i * 38, Math.max(7, L.cell * 0.44)));
+      ctx.font = `bold ${fs}px Courier New`;
+      ctx.fillText('NEXT', nx + 8, L.bY + fs + 4);
+      const nextQ = player.nextQueue?.slice(0, 5) || [];
+      nextQ.forEach((card, i) => this.preview(card, nx + 14, L.bY + fs + 14 + i * rowH, previewCell));
       // time stat
       const isCountdown = modeConfig.timeLimit > 0;
       const displayMs = isCountdown ? Math.max(0, modeConfig.timeLimit - solo.elapsed) : solo.elapsed;
@@ -610,8 +646,8 @@ export class Renderer {
       const cs = Math.floor((displayMs % 1000) / 10);
       const timeStr = `${min}:${String(sec).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
       ctx.fillStyle = isCountdown && displayMs < 10000 ? '#ff8080' : '#ffe082';
-      ctx.font = 'bold 11px Courier New';
-      ctx.fillText(timeStr, nx + 8, L.bY + 168);
+      ctx.font = `bold ${fs + 1}px Courier New`;
+      ctx.fillText(timeStr, nx + 8, L.bY + panelH - 8);
     }
     // draw the board
     this.board(player, L.bX, L.bY, L.cell, '', 0);
