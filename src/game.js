@@ -300,6 +300,26 @@ class Game {
     document.getElementById('codexBtn')?.addEventListener('click', () => this.openCodex());
     document.getElementById('recordsBtn')?.addEventListener('click', () => this.openMenuPanel('records'));
     document.getElementById('settingsBtn')?.addEventListener('click', () => this.openMenuPanel('settings'));
+    document.getElementById('noFlashToggleBtn')?.addEventListener('click', () => {
+      const cur = localStorage.getItem('bbs.settings.noFlash') === '1';
+      localStorage.setItem('bbs.settings.noFlash', cur ? '0' : '1');
+      this._refreshNoFlashBtn();
+    });
+    document.getElementById('devCodeSubmitBtn')?.addEventListener('click', () => {
+      const val = document.getElementById('devCodeInput')?.value?.trim().toUpperCase();
+      if (val === 'LSDKK') {
+        const records = this.loadRecords();
+        if (!records.some(r => r.result === 'win')) {
+          records.unshift({ date: new Date().toISOString(), result: 'win', floor: 20, gold: 0, deckSize: 21, ascension: 0 });
+          localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 20)));
+        }
+        if (document.getElementById('devCodeInput')) document.getElementById('devCodeInput').value = '';
+        this.refreshMenu();
+        this.showToast('🔓 개발자 코드 적용: 클리어 해금', 'elite', 3000);
+      } else if (val) {
+        this.showToast('❌ 잘못된 코드', 'challenge-fail', 2000);
+      }
+    });
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
@@ -405,8 +425,12 @@ class Game {
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
     this.refreshAscensionDisplay();
+    const cleared = this.hasEverCleared();
     const soloBtn = document.getElementById('soloModesBtn');
-    if (soloBtn) soloBtn.classList.toggle('hidden', !this.hasEverCleared());
+    if (soloBtn) soloBtn.classList.toggle('hidden', !cleared);
+    const vsBtn = document.getElementById('vsModeBtn');
+    if (vsBtn) vsBtn.classList.toggle('hidden', !cleared);
+    this._refreshNoFlashBtn();
   }
 
   menuText(key) {
@@ -2957,8 +2981,9 @@ class Game {
       message: this.message,
       skillCooldowns: this.skillCooldowns,
       effects: this.currentEffectBadges(),
-        playerFog: this.playerFogTimer,
-        alert: this.alertTimer > 0 ? this.alertText : null
+      playerFog: this.playerFogTimer,
+      alert: this.alertTimer > 0 ? this.alertText : null,
+      noFlash: this.isNoFlash()
     });
     this.message = '';
   }
@@ -3348,6 +3373,18 @@ class Game {
     if (el) el.textContent = relayBest ? `최고: ${relayBest}킬` : '기록 없음';
   }
 
+  _refreshNoFlashBtn() {
+    const btn = document.getElementById('noFlashToggleBtn');
+    if (!btn) return;
+    const on = localStorage.getItem('bbs.settings.noFlash') === '1';
+    btn.textContent = on ? 'ON' : 'OFF';
+    btn.classList.toggle('active', on);
+  }
+
+  isNoFlash() {
+    return localStorage.getItem('bbs.settings.noFlash') === '1';
+  }
+
   startVsMode(mode, difficulty = 1) {
     this.vs = { mode, difficulty, wins: [0, 0], game: 1, relayKills: 0, ended: false };
     this._vsGameEndHandled = false;
@@ -3508,18 +3545,17 @@ class Game {
     const pick = pool[Math.floor(Math.random() * pool.length)];
     if (pick.type === 'relic' && !this.run.relics.includes(pick.id)) {
       this.run.relics.push(pick.id);
-      this.flashAlert(`유물 획득: ${RELICS[pick.id]?.name || pick.id}`);
+      this.showToast(`🎁 유물 획득: ${RELICS[pick.id]?.name || pick.id}`, 'elite', 3500);
     } else if (pick.type === 'cons') {
       if (this.run.consumables.length < 3) {
         this.run.consumables.push(pick.id);
         this.renderTouchSlots();
-        this.flashAlert(`소모품 획득: ${CONSUMABLES[pick.id]?.name || pick.id}`);
+        this.showToast(`🎁 소모품 획득: ${CONSUMABLES[pick.id]?.name || pick.id}`, 'elite', 3500);
       } else {
-        // Try relic instead
         const relicId = allRelicIds.find(r => !this.run.relics.includes(r));
         if (relicId) {
           this.run.relics.push(relicId);
-          this.flashAlert(`유물 획득: ${RELICS[relicId]?.name || relicId}`);
+          this.showToast(`🎁 유물 획득: ${RELICS[relicId]?.name || relicId}`, 'elite', 3500);
         }
       }
     }
@@ -3547,6 +3583,9 @@ class Game {
     const seriesLabel = `${this.vs.relayKills}킬`;
     document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
     this.renderer.resize(this.player.rows, this.enemy.rows);
+    const aiNames = ['일반', '균형형', '공격형'];
+    const diffLabel = ['쉬움', '보통', '어려움'][difficulty] || '보통';
+    this.showToast(`⚔️ ${this.vs.relayKills}번째 적 등장 (난이도: ${diffLabel})`, 'elite', 3000);
   }
 
   _showVsInterGame(playerWon) {

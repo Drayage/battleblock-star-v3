@@ -71,7 +71,8 @@ export class Renderer {
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
 
-  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0, alert = null }) {
+  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0, alert = null, noFlash = false }) {
+    this.noFlash = noFlash;
     if (!this.layout) this.resize(player.rows, enemy.rows);
     const L = this.layout;
     const ctx = this.ctx;
@@ -235,7 +236,7 @@ export class Renderer {
       ctx.restore();
       for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0);
     }
-    if (board.flash > 0) {
+    if (board.flash > 0 && !this.noFlash) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
       ctx.fillRect(ox, oy, bw, bh);
     }

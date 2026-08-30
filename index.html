@@ -70,6 +70,17 @@
             <button class="ghost lang-btn" data-lang="ja">🇯🇵 日本語</button>
           </div>
         </div>
+        <div class="setting-row">
+          <span>화면 깜빡임 제거 <small>(플래시 효과 비활성화)</small></span>
+          <button id="noFlashToggleBtn" class="ghost">OFF</button>
+        </div>
+        <div class="setting-row">
+          <span>개발자 코드</span>
+          <div style="display:flex;gap:6px">
+            <input id="devCodeInput" type="text" placeholder="코드 입력" style="background:#0a1020;border:1px solid #2a3e5e;color:#d7e5ff;border-radius:4px;padding:4px 8px;font-size:12px;width:100px">
+            <button id="devCodeSubmitBtn" class="ghost">적용</button>
+          </div>
+        </div>
       </div>
       <div id="ascensionDisplay" class="ascension-display hidden"></div>
       <button id="startRunBtn" class="primary" data-i18n="menu.startRun">Start Run</button>
@@ -83,7 +94,7 @@
         <button id="settingsBtn" class="ghost">설정</button>
         <button id="achievementsBtn" class="ghost" data-i18n="menu.achievements">업적</button>
         <button id="soloModesBtn" class="ghost hidden">싱글 모드</button>
-        <button id="vsModeBtn" class="ghost">VS 모드</button>
+        <button id="vsModeBtn" class="ghost hidden">VS 모드</button>
       </div>
       <div class="audio-toggles">
         <button id="bgmToggleBtn" class="ghost" data-label="음악" data-i18n-label="menu.music">음악</button>
