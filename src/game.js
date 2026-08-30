@@ -1858,13 +1858,21 @@ class Game {
     if (modeConfig.timeLimit > 0 && this.solo.elapsed >= modeConfig.timeLimit) {
       return this.finishSolo(false);
     }
-    // 타임어택 카운트다운: 15초 남은 시점부터 초마다 심장소리
-    if (modeConfig.timeLimit > 0) {
-      const remainMs = modeConfig.timeLimit - this.solo.elapsed;
-      if (remainMs <= 15000 && remainMs > 0) {
-        const remSec = Math.ceil(remainMs / 1000);
-        if (remSec !== this.solo._countdownSec) {
-          this.solo._countdownSec = remSec;
+    // 카운트다운 심장소리: 조건 진입 후 초마다
+    {
+      let doCountdown = false;
+      if (modeConfig.timeLimit > 0) {
+        const remainMs = modeConfig.timeLimit - this.solo.elapsed;
+        doCountdown = remainMs <= 15000 && remainMs > 0;
+      } else if (modeConfig.goalLines > 0) {
+        const threshold = this.solo.mode === 'sprint40' ? 1 : 10;
+        const remaining = modeConfig.goalLines - this.solo.linesCleared;
+        doCountdown = remaining <= threshold && remaining > 0;
+      }
+      if (doCountdown) {
+        const elapsedSec = Math.floor(this.solo.elapsed / 1000);
+        if (elapsedSec !== this.solo._countdownSec) {
+          this.solo._countdownSec = elapsedSec;
           this.audio.playHeartbeat();
         }
       }
@@ -1899,19 +1907,6 @@ class Game {
         if (this.solo.level !== prevLevel) {
           const sp = getSoloMusicPreset(this.solo.mode, this.solo.level, this.solo.linesCleared);
           if (sp) this.audio.setIntensity(sp);
-        }
-      }
-      // 마라톤 카운트다운: 10줄 남은 시점부터 줄 제거마다 심장소리
-      if (modeConfig.goalLines > 0 && !modeConfig.timeLimit) {
-        const remaining = modeConfig.goalLines - this.solo.linesCleared;
-        if (remaining <= 10 && remaining > 0) this.audio.playHeartbeat();
-      }
-      // 스프린트 카운트다운: 마지막 1줄에서 한 번만
-      if (this.solo.mode === 'sprint40') {
-        const remaining = modeConfig.goalLines - this.solo.linesCleared;
-        if (remaining === 1 && !this.solo._sprint1Warned) {
-          this.solo._sprint1Warned = true;
-          this.audio.playSfx('comboCharge');
         }
       }
       if (modeConfig.goalLines > 0 && this.solo.linesCleared >= modeConfig.goalLines) {
