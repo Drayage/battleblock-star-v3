@@ -2748,7 +2748,7 @@ class Game {
     lt.totalWins = (lt.totalWins || 0) + 1;
     lt.winStreak = (lt.winStreak || 0) + 1;
     this.saveLifetime(lt);
-    if (lt.totalWins >= 3) this.unlockAchievement('three_wins');
+    if (lt.winStreak >= 3) this.unlockAchievement('three_wins');
     if (lt.winStreak >= 10) this.unlockAchievement('win_streak_10');
   }
 

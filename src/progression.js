@@ -1054,7 +1054,7 @@ export const ACHIEVEMENTS = [
   { cat: 'run', id: 'set_comboCharge', icon: '🔗', ko: '콤보 세트 완성',   en: 'Combo Set Complete',   ja: 'コンボセット完成',   ko_d: '콤보 세트 7종 모두 보유', en_d: 'Collect all 7 Combo cards',     ja_d: 'コンボカード7種コンプリート' },
   { cat: 'run', id: 'all_sets',        icon: '📖', ko: '세트 도감 완성',   en: 'Set Compendium',       ja: 'セット図鑑完成',     ko_d: '모든 특수 블록 세트 완성 (8세트)', en_d: 'Complete all 8 block sets', ja_d: '全8セット完成' },
   // ── 평생 누적 ──────────────────────────────────────────────
-  { cat: 'lifetime', id: 'three_wins',       icon: '🥉', ko: '삼승',             en: 'Triple Win',        ja: '3勝',        ko_d: '3회 클리어 (누적)', en_d: 'Clear 3 times (total)', ja_d: '3回クリア(累計)' },
+  { cat: 'lifetime', id: 'three_wins',       icon: '🥉', ko: '3연승',            en: 'Triple Streak',     ja: '3連勝',      ko_d: '연속으로 3회 클리어', en_d: 'Clear 3 times in a row', ja_d: '連続3回クリア' },
   { cat: 'lifetime', id: 'win_streak_10',    icon: '🔥', ko: '10연승',           en: '10-Win Streak',     ja: '10連勝',     ko_d: '연속으로 10회 클리어', en_d: 'Clear 10 times in a row', ja_d: '連続10回クリア' },
   { cat: 'lifetime', id: 'challenge_10',     icon: '🏅', ko: '미션 마스터',      en: 'Mission Master',    ja: 'ミッションマスター', ko_d: '도전 성공 누적 10회', en_d: 'Complete 10 missions total', ja_d: 'ミッション成功累計10回' },
   { cat: 'lifetime', id: 'battle_10',        icon: '🔟', ko: '열 번째 전투',     en: 'Battle Veteran',    ja: '10戦目',     ko_d: '전투 10번 돌입 (누적)', en_d: 'Enter 10 battles (total)', ja_d: '戦闘10回突入(累計)' },
