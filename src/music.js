@@ -259,6 +259,87 @@ const BOSS_PAD = [
   ['A4', 8], ['G4', 8], ['F#4', 8], ['A#4', 4], ['B4', 4]
 ];
 
+// ===== 솔로 모드 음악 =====
+// 마라톤/스프린트: A단조 드라이빙 행진 (Am-F-C/G-Am 진행)
+const SOLO_MARATHON_LEAD = [
+  ['A4', 1], ['C5', 1], ['E5', 2],
+  ['G5', 1], ['E5', 1], ['D5', 1], ['C5', 1],
+  ['F4', 1], ['A4', 1], ['C5', 2],
+  ['G5', 2], ['F5', 1], ['E5', 1],
+  ['A5', 1], ['G5', 1], ['E5', 2],
+  ['F5', 2], ['D5', 1], ['C5', 1],
+  ['B4', 1], ['C5', 1], ['D5', 1], ['E5', 1],
+  ['A4', 4]
+];
+const SOLO_MARATHON_BASS = [
+  ['A2', 2], ['E3', 2], ['A2', 2], ['C3', 2],
+  ['F2', 2], ['C3', 2], ['G2', 2], ['D3', 2],
+  ['A2', 2], ['E3', 2], ['F2', 2], ['C3', 2],
+  ['E2', 2], ['B2', 2], ['A2', 4]
+];
+const SOLO_MARATHON_ARP = [
+  ['A3', 0.5], ['C4', 0.5], ['E4', 0.5], ['A4', 0.5], ['E4', 0.5], ['C4', 0.5], ['E4', 0.5], ['C4', 0.5],
+  ['A3', 0.5], ['C4', 0.5], ['E4', 0.5], ['A4', 0.5], ['E4', 0.5], ['C4', 0.5], ['E4', 0.5], ['C4', 0.5],
+  ['F3', 0.5], ['A3', 0.5], ['C4', 0.5], ['F4', 0.5], ['C4', 0.5], ['A3', 0.5], ['C4', 0.5], ['A3', 0.5],
+  ['G3', 0.5], ['B3', 0.5], ['D4', 0.5], ['G4', 0.5], ['D4', 0.5], ['B3', 0.5], ['D4', 0.5], ['B3', 0.5],
+  ['A3', 0.5], ['C4', 0.5], ['E4', 0.5], ['A4', 0.5], ['E4', 0.5], ['C4', 0.5], ['E4', 0.5], ['C4', 0.5],
+  ['F3', 0.5], ['A3', 0.5], ['C4', 0.5], ['F4', 0.5], ['C4', 0.5], ['A3', 0.5], ['C4', 0.5], ['A3', 0.5],
+  ['E3', 0.5], ['G#3', 0.5], ['B3', 0.5], ['E4', 0.5], ['B3', 0.5], ['G#3', 0.5], ['B3', 0.5], ['G#3', 0.5],
+  ['A3', 1], ['C4', 1], ['E4', 2]
+];
+
+// 타임어택: D단조 긴박 카운트다운 (Dm-Gm-A-Dm 진행)
+const SOLO_TIMEATTACK_LEAD = [
+  ['D5', 1], ['F5', 1], ['A5', 1], ['F5', 1],
+  ['G5', 2], ['F5', 1], ['D5', 1],
+  ['C#5', 1], ['E5', 1], ['A5', 1], ['G5', 1],
+  ['F5', 2], ['D5', 2],
+  ['A5', 1], ['A#5', 1], ['A5', 1], ['G5', 1],
+  ['F5', 2], ['E5', 1], ['D5', 1],
+  ['C#5', 1], ['D5', 1], ['E5', 1], ['F5', 1],
+  ['D5', 4]
+];
+const SOLO_TIMEATTACK_BASS = [
+  ['D2', 2], ['A2', 2], ['G2', 2], ['D3', 2],
+  ['A2', 2], ['E3', 2], ['D2', 4],
+  ['D2', 2], ['F2', 2], ['G2', 2], ['D3', 2],
+  ['A2', 2], ['C#3', 2], ['D2', 4]
+];
+const SOLO_TIMEATTACK_PULSE = [
+  ['D4', 0.5], ['-', 0.5], ['D4', 0.5], ['-', 0.5], ['A3', 0.5], ['-', 0.5], ['A3', 0.5], ['-', 0.5],
+  ['G3', 0.5], ['-', 0.5], ['G3', 0.5], ['-', 0.5], ['D4', 0.5], ['-', 0.5], ['D4', 0.5], ['-', 0.5],
+  ['A3', 0.5], ['-', 0.5], ['C#4', 0.5], ['-', 0.5], ['E4', 0.5], ['-', 0.5], ['A3', 0.5], ['-', 0.5],
+  ['D4', 2], ['F4', 1], ['A4', 1],
+  ['D4', 0.5], ['-', 0.5], ['F4', 0.5], ['-', 0.5], ['A4', 0.5], ['-', 0.5], ['G4', 0.5], ['-', 0.5],
+  ['G3', 0.5], ['-', 0.5], ['A#3', 0.5], ['-', 0.5], ['D4', 0.5], ['-', 0.5], ['F4', 0.5], ['-', 0.5],
+  ['A3', 0.5], ['-', 0.5], ['C#4', 0.5], ['-', 0.5], ['E4', 0.5], ['-', 0.5], ['G#4', 0.5], ['-', 0.5],
+  ['A3', 2], ['D4', 2]
+];
+
+// 엔드리스: E도리안 순환 최면 (Em-G-A-Em 진행)
+const SOLO_ENDLESS_LEAD = [
+  ['E5', 2], ['G5', 1], ['B5', 1],
+  ['D5', 1], ['B4', 1], ['G4', 2],
+  ['C#5', 1], ['E5', 1], ['A5', 1], ['G5', 1],
+  ['F#5', 2], ['E5', 2],
+  ['B5', 1], ['A5', 1], ['G5', 1], ['F#5', 1],
+  ['E5', 2], ['D5', 2],
+  ['C#5', 1], ['D5', 1], ['E5', 1], ['F#5', 1],
+  ['E5', 4]
+];
+const SOLO_ENDLESS_BASS = [
+  ['E2', 2], ['B2', 2], ['G2', 2], ['D3', 2],
+  ['A2', 2], ['E3', 2], ['E2', 4],
+  ['E2', 2], ['B2', 2], ['G2', 2], ['D3', 2],
+  ['A2', 2], ['D2', 2], ['E2', 4]
+];
+const SOLO_ENDLESS_PAD = [
+  ['E3', 4], ['G3', 4],
+  ['A3', 4], ['E3', 4],
+  ['E3', 4], ['G3', 4],
+  ['A3', 4], ['B3', 4]
+];
+
 export const PRESETS = {
   title: {
     label: '타이틀',
@@ -357,12 +438,123 @@ export const PRESETS = {
     label: '보스 긴박',
     bpm: 168,
     tracks: [
-      // 긴 sustain을 16분음표 트레몰로로 분할 — 보스 테마가 폭주하는 느낌
       { notes: pulsate(BOSS_LEAD, 2), type: 'sawtooth', vol: 0.18, detune: 10 },
       { notes: pulsate(BOSS_LEAD, 2), type: 'square', vol: 0.10, detune: -14 },
-      { notes: transpose(pulsate(BOSS_LEAD, 2), 12), type: 'triangle', vol: 0.08 }, // 옥타브-업
-      { notes: pulsate(BOSS_BASS, 2), type: 'sawtooth', vol: 0.24 },                 // 베이스 8분음표 펄스
+      { notes: transpose(pulsate(BOSS_LEAD, 2), 12), type: 'triangle', vol: 0.08 },
+      { notes: pulsate(BOSS_BASS, 2), type: 'sawtooth', vol: 0.24 },
       { notes: BOSS_PAD, type: 'sawtooth', vol: 0.12 }
+    ]
+  },
+
+  // ── 솔로: 마라톤/스프린트 Am (BPM: 120 → 152 → 188 → 228) ──
+  soloMarathon: {
+    label: '솔로 마라톤', bpm: 120,
+    tracks: [
+      { notes: SOLO_MARATHON_LEAD, type: 'square', vol: 0.16 },
+      { notes: SOLO_MARATHON_ARP, type: 'triangle', vol: 0.10 },
+      { notes: SOLO_MARATHON_BASS, type: 'sawtooth', vol: 0.14 }
+    ]
+  },
+  soloMarathonMid: {
+    label: '솔로 마라톤 Lv4', bpm: 152,
+    tracks: [
+      { notes: SOLO_MARATHON_LEAD, type: 'square', vol: 0.17 },
+      { notes: SOLO_MARATHON_ARP, type: 'triangle', vol: 0.10 },
+      { notes: pulsate(SOLO_MARATHON_BASS, 2), type: 'sawtooth', vol: 0.15 }
+    ]
+  },
+  soloMarathonFast: {
+    label: '솔로 마라톤 Lv7', bpm: 188,
+    tracks: [
+      { notes: SOLO_MARATHON_LEAD, type: 'square', vol: 0.17, detune: 8 },
+      { notes: SOLO_MARATHON_LEAD, type: 'sawtooth', vol: 0.09, detune: -12 },
+      { notes: SOLO_MARATHON_ARP, type: 'triangle', vol: 0.09 },
+      { notes: pulsate(SOLO_MARATHON_BASS, 2), type: 'sawtooth', vol: 0.17 }
+    ]
+  },
+  soloMarathonMax: {
+    label: '솔로 마라톤 Lv10+', bpm: 228,
+    tracks: [
+      { notes: SOLO_MARATHON_LEAD, type: 'square', vol: 0.16, detune: 10 },
+      { notes: SOLO_MARATHON_LEAD, type: 'sawtooth', vol: 0.10, detune: -14 },
+      { notes: transpose(SOLO_MARATHON_LEAD, 12), type: 'triangle', vol: 0.07 },
+      { notes: SOLO_MARATHON_ARP, type: 'triangle', vol: 0.08 },
+      { notes: pulsate(SOLO_MARATHON_BASS, 4), type: 'sawtooth', vol: 0.19 }
+    ]
+  },
+
+  // ── 솔로: 타임어택 Dm (BPM: 136 → 168 → 208 → 252) ──
+  soloTimeAtk: {
+    label: '솔로 타임어택', bpm: 136,
+    tracks: [
+      { notes: SOLO_TIMEATTACK_LEAD, type: 'square', vol: 0.16 },
+      { notes: SOLO_TIMEATTACK_PULSE, type: 'triangle', vol: 0.09 },
+      { notes: SOLO_TIMEATTACK_BASS, type: 'sawtooth', vol: 0.15 }
+    ]
+  },
+  soloTimeAtkMid: {
+    label: '솔로 타임어택 Lv4', bpm: 168,
+    tracks: [
+      { notes: SOLO_TIMEATTACK_LEAD, type: 'square', vol: 0.17 },
+      { notes: SOLO_TIMEATTACK_PULSE, type: 'triangle', vol: 0.10 },
+      { notes: pulsate(SOLO_TIMEATTACK_BASS, 2), type: 'sawtooth', vol: 0.16 }
+    ]
+  },
+  soloTimeAtkFast: {
+    label: '솔로 타임어택 Lv7', bpm: 208,
+    tracks: [
+      { notes: SOLO_TIMEATTACK_LEAD, type: 'square', vol: 0.17, detune: 8 },
+      { notes: SOLO_TIMEATTACK_LEAD, type: 'sawtooth', vol: 0.09, detune: -12 },
+      { notes: SOLO_TIMEATTACK_PULSE, type: 'triangle', vol: 0.10 },
+      { notes: pulsate(SOLO_TIMEATTACK_BASS, 2), type: 'sawtooth', vol: 0.17 }
+    ]
+  },
+  soloTimeAtkMax: {
+    label: '솔로 타임어택 Lv10+', bpm: 252,
+    tracks: [
+      { notes: SOLO_TIMEATTACK_LEAD, type: 'square', vol: 0.16, detune: 10 },
+      { notes: SOLO_TIMEATTACK_LEAD, type: 'sawtooth', vol: 0.10, detune: -14 },
+      { notes: transpose(SOLO_TIMEATTACK_LEAD, 12), type: 'triangle', vol: 0.07 },
+      { notes: SOLO_TIMEATTACK_PULSE, type: 'triangle', vol: 0.09 },
+      { notes: pulsate(SOLO_TIMEATTACK_BASS, 4), type: 'sawtooth', vol: 0.19 }
+    ]
+  },
+
+  // ── 솔로: 엔드리스 E도리안 (BPM: 104 → 132 → 160 → 196) ──
+  soloEndless: {
+    label: '솔로 엔드리스', bpm: 104,
+    tracks: [
+      { notes: SOLO_ENDLESS_LEAD, type: 'triangle', vol: 0.16 },
+      { notes: SOLO_ENDLESS_PAD, type: 'sine', vol: 0.11 },
+      { notes: SOLO_ENDLESS_BASS, type: 'sine', vol: 0.14 }
+    ]
+  },
+  soloEndlessMid: {
+    label: '솔로 엔드리스 Lv4', bpm: 132,
+    tracks: [
+      { notes: SOLO_ENDLESS_LEAD, type: 'square', vol: 0.15 },
+      { notes: SOLO_ENDLESS_LEAD, type: 'triangle', vol: 0.08, detune: 6 },
+      { notes: SOLO_ENDLESS_PAD, type: 'triangle', vol: 0.10 },
+      { notes: SOLO_ENDLESS_BASS, type: 'sawtooth', vol: 0.14 }
+    ]
+  },
+  soloEndlessFast: {
+    label: '솔로 엔드리스 Lv7', bpm: 160,
+    tracks: [
+      { notes: SOLO_ENDLESS_LEAD, type: 'square', vol: 0.16, detune: 8 },
+      { notes: SOLO_ENDLESS_LEAD, type: 'sawtooth', vol: 0.09, detune: -12 },
+      { notes: SOLO_ENDLESS_PAD, type: 'triangle', vol: 0.09 },
+      { notes: pulsate(SOLO_ENDLESS_BASS, 2), type: 'sawtooth', vol: 0.16 }
+    ]
+  },
+  soloEndlessMax: {
+    label: '솔로 엔드리스 Lv10+', bpm: 196,
+    tracks: [
+      { notes: SOLO_ENDLESS_LEAD, type: 'square', vol: 0.16, detune: 10 },
+      { notes: SOLO_ENDLESS_LEAD, type: 'sawtooth', vol: 0.10, detune: -14 },
+      { notes: transpose(SOLO_ENDLESS_LEAD, 12), type: 'triangle', vol: 0.07 },
+      { notes: SOLO_ENDLESS_PAD, type: 'triangle', vol: 0.08 },
+      { notes: pulsate(SOLO_ENDLESS_BASS, 2), type: 'sawtooth', vol: 0.17 }
     ]
   }
 };

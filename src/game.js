@@ -89,6 +89,15 @@ const META_UPGRADES = [
 // Standard block guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
 const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
+const SOLO_MUSIC_BASE = { sprint40: 'soloMarathon', marathon150: 'soloMarathon', marathon300: 'soloMarathon', timeatk2: 'soloTimeAtk', timeatk3: 'soloTimeAtk', endless: 'soloEndless' };
+function getSoloMusicPreset(modeKey, level) {
+  const base = SOLO_MUSIC_BASE[modeKey];
+  if (!base) return null;
+  if (level >= 9) return base + 'Max';
+  if (level >= 6) return base + 'Fast';
+  if (level >= 3) return base + 'Mid';
+  return base;
+}
 const SOLO_MODES = {
   sprint40:    { name: '40줄 스프린트', goalLines: 40,  timeLimit: 0,      speedRamp: true,  unit: 'time'  },
   timeatk2:   { name: '타임어택 2분',  goalLines: 0,   timeLimit: 120000, speedRamp: true,  unit: 'lines' },
@@ -1804,6 +1813,8 @@ class Game {
     document.getElementById('gameScreen').classList.add('solo-active');
     this.show('gameScreen');
     this.renderer.resizeSolo(20);
+    const soloPreset = getSoloMusicPreset(modeKey, startLevel);
+    if (soloPreset) this.audio.setScene(soloPreset);
     this.updateSoloStats();
   }
 
@@ -1853,7 +1864,12 @@ class Game {
       this.solo.linesCleared += result.cleared;
       const modeConfig = SOLO_MODES[this.solo.mode];
       if (modeConfig.speedRamp) {
+        const prevLevel = this.solo.level;
         this.solo.level = Math.min(SOLO_FALL_SPEEDS.length - 1, Math.floor(this.solo.linesCleared / 10));
+        if (this.solo.level !== prevLevel) {
+          const sp = getSoloMusicPreset(this.solo.mode, this.solo.level);
+          if (sp) this.audio.setIntensity(sp);
+        }
       }
       if (modeConfig.goalLines > 0 && this.solo.linesCleared >= modeConfig.goalLines) {
         this.solo.linesCleared = modeConfig.goalLines;
