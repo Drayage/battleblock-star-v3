@@ -205,7 +205,7 @@ export class Renderer {
       for (let c = 0; c < COLS; c++) {
         const cell = board.grid[r][c];
         if (!cell) continue;
-        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0, cell.shapeId);
+        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0, cell.shapeId, cell.abilityId);
         if (cell.hp > 0) {
           ctx.fillStyle = '#ffe27a';
           ctx.font = `bold ${Math.max(9, cs * 0.5)}px Courier New`;
@@ -234,7 +234,7 @@ export class Renderer {
         ctx.strokeRect(gx, gyPx, size, size);
       }
       ctx.restore();
-      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0, board.current.card.shapeId);
+      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0, board.current.card.shapeId, board.current.card.abilityId);
     }
     if (board.flash > 0 && !this.noFlash) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
@@ -311,7 +311,7 @@ export class Renderer {
     }
   }
 
-  cell(x, y, cs, type, fuse = 0, shapeId = null) {
+  cell(x, y, cs, type, fuse = 0, shapeId = null, abilityId = null) {
     const ctx = this.ctx;
     const pad = Math.max(1, Math.floor(cs * 0.08));
     ctx.fillStyle = COLORS[type] || (shapeId ? COLORS[shapeId] : null) || '#d9e0ef';
@@ -322,7 +322,7 @@ export class Renderer {
     if (cs >= 16) {
       const mark = fuse > 0 ? String(fuse)
         : type === TYPES.CROSS ? '+'
-        : ABILITY_GLYPH[CARD_LIBRARY[type]?.abilityId] || '';
+        : ABILITY_GLYPH[abilityId ?? CARD_LIBRARY[type]?.abilityId] || '';
       if (mark) {
         ctx.fillStyle = '#06101d';
         ctx.font = `bold ${Math.floor(cs * 0.48 * (GLYPH_SCALE[mark] || 1))}px Courier New`;
@@ -428,7 +428,7 @@ export class Renderer {
     const shape = card.shape[0];
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
-        if (shape[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, card.id, 0, card.shapeId);
+        if (shape[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, card.id, 0, card.shapeId, card.abilityId);
       }
     }
   }

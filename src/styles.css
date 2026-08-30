@@ -162,11 +162,11 @@ button{font:inherit}
 .endless-speed-selector select { background:#0f1828; border:1px solid #2a3e5e; color:#d7e5ff; border-radius:4px; padding:3px 6px; font-size:12px; }
 #soloBackBtn { margin-top:10px; }
 /* solo game HUD */
-.solo-hud { display:none; align-items:center; gap:10px; padding:6px 12px; background:#0a1020; border-bottom:1px solid #1a2840; flex-wrap:wrap; }
-.solo-mode-name { font-size:13px; font-weight:bold; color:#8dcfff; }
-.solo-stats { font-size:13px; color:#d7e5ff; flex:1; }
-.solo-score { font-size:13px; color:#ffe082; font-weight:bold; white-space:nowrap; }
-.solo-pause-btn { padding:2px 8px; font-size:13px; min-width:0; }
+.solo-hud { display:none; align-items:center; gap:10px; padding:6px 12px; background:#0a1020; border-bottom:1px solid #1a2840; overflow:hidden; }
+.solo-mode-name { font-size:13px; font-weight:bold; color:#8dcfff; white-space:nowrap; flex:0 0 auto; }
+.solo-stats { font-size:13px; color:#d7e5ff; font-variant-numeric:tabular-nums; white-space:nowrap; flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; }
+.solo-score { font-size:13px; color:#ffe082; font-weight:bold; white-space:nowrap; font-variant-numeric:tabular-nums; flex:0 0 auto; min-width:70px; }
+.solo-pause-btn { padding:2px 8px; font-size:13px; min-width:0; flex:0 0 auto; }
 .solo-lb-btn { font-size:11px; padding:2px 6px; margin-top:4px; }
 #gameScreen.solo-active .hud { display:none; }
 #gameScreen.solo-active .solo-hud { display:flex; }

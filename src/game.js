@@ -1769,7 +1769,7 @@ class Game {
       : `${this.solo.linesCleared}줄`;
     const lvlStr = modeConfig.speedRamp ? ` · Lv.${this.solo.level + 1}` : '';
     document.getElementById('soloStats').textContent = `${timeStr} · ${linesStr}${lvlStr}`;
-    document.getElementById('soloScore').textContent = `💥 ${this.solo.score || 0}`;
+    document.getElementById('soloScore').textContent = `💥 ${Math.round((this.solo.score || 0) * 100) / 100}`;
   }
 
   updateSolo(dt, now) {
@@ -1823,7 +1823,7 @@ class Game {
     let isBestTime = false, isBestScore = false;
 
     // scoreTop10: all modes, sorted DESC by score
-    const scoreEntry = { score: this.solo.score || 0, ms: this.solo.elapsed, lines: this.solo.linesCleared, topOut, date };
+    const scoreEntry = { score: Math.round((this.solo.score || 0) * 100) / 100, ms: this.solo.elapsed, lines: this.solo.linesCleared, topOut, date };
     modeRec.scoreTop10 = [...(modeRec.scoreTop10 || []), scoreEntry]
       .sort((a, b) => b.score - a.score || a.ms - b.ms)
       .slice(0, 10);
@@ -1872,7 +1872,7 @@ class Game {
       <div class="deck-modal-inner">
         <h3>${topOut ? '💀 게임 오버' : '🎉 ' + (isBest ? '신기록!' : '완료!')}</h3>
         <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
-        <p style="color:#ffe082;font-size:14px;margin:4px 0">💥 점수: ${this.solo.score || 0}</p>
+        <p style="color:#ffe082;font-size:14px;margin:4px 0">💥 점수: ${Math.round((this.solo.score || 0) * 100) / 100}</p>
         ${bestTag ? `<p style="color:#ffe082;font-size:13px">✨ ${bestTag}</p>` : ''}
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
           <button class="ghost" id="soloRetryBtn">다시 하기</button>
@@ -3560,9 +3560,13 @@ class Game {
         const baseCard = CARD_LIBRARY[s];
         const donor = allCards[Math.floor(rand() * allCards.length)];
         const ability = ABILITY_LIBRARY[donor.abilityId] || ABILITY_LIBRARY.none;
+        const exactCard = allCards.find(c => c.shapeId === s && c.abilityId === ability.id);
+        const cardName = exactCard ? exactCard.name
+          : ability.id === 'none' ? (baseCard.name || s)
+          : `${ability.name} ${baseCard.shapeName || s}`;
         cards.push({
           id: `rnd_${s}_${r}`,
-          name: `랜덤 ${s}`,
+          name: cardName,
           shapeId: s,
           shapeName: baseCard.shapeName,
           abilityId: ability.id,
