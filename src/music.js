@@ -382,6 +382,8 @@ export class BGMPlayer {
     this.loopTimer = null;
     this.currentPreset = null;
     this._pendingPlay = null;
+    this._loopStart = 0;  // ctx time when current loop iteration began (conceptually)
+    this._loopLen = 0;    // full loop duration in seconds
   }
 
   setVolume(v) {
@@ -413,15 +415,24 @@ export class BGMPlayer {
     };
   }
 
-  scheduleTrack(track, bpm, startTime) {
+  // skipSec: 루프 시작부터 이 시간만큼 건너뛰고 이어서 재생 (전환 시 seamless 재개용)
+  scheduleTrack(track, bpm, startTime, skipSec = 0) {
     const beat = 60 / bpm;
-    let t = startTime;
+    let t = startTime - skipSec; // 루프 개념상 시작점
     let totalBeats = 0;
     for (const [note, d] of track.notes) {
-      const midi = noteToMidi(note);
-      const freq = midi == null ? 0 : midiToFreq(midi);
-      this.scheduleNote(t, freq, d * beat * 0.92, track.type, track.vol, track.detune || 0);
-      t += d * beat;
+      const dur = d * beat;
+      const noteEnd = t + dur;
+      if (noteEnd > startTime) {
+        const actualStart = Math.max(t, startTime);
+        const actualDur = noteEnd - actualStart;
+        if (actualDur > 0.01) {
+          const midi = noteToMidi(note);
+          const freq = midi == null ? 0 : midiToFreq(midi);
+          this.scheduleNote(actualStart, freq, actualDur * 0.92, track.type, track.vol, track.detune || 0);
+        }
+      }
+      t += dur;
       totalBeats += d;
     }
     return totalBeats * beat;
@@ -444,18 +455,31 @@ export class BGMPlayer {
       const now = this.ctx.currentTime;
       for (const osc of this.activeNodes.slice()) { try { osc.stop(now); } catch {} }
       this.activeNodes = [];
+      // 이전 루프 위치 계산 → 새 프리셋도 같은 위치부터 이어서 재생
+      let skipSec = 0;
+      if (this._loopLen > 0) {
+        const elapsed = now - this._loopStart;
+        skipSec = ((elapsed % this._loopLen) + this._loopLen) % this._loopLen;
+      }
       // 페이드인
       this.master.gain.cancelScheduledValues(now);
       this.master.gain.setValueAtTime(0, now);
       this.master.gain.linearRampToValueAtTime(this.targetVolume, now + Math.max(0.05, fadeMs / 1000));
+      let firstLoop = true;
       const schedule = () => {
         if (this.currentPreset !== presetName) return;
         const t = this.ctx.currentTime + 0.05;
+        const skip = firstLoop ? skipSec : 0;
+        firstLoop = false;
         let loopLen = 0;
         for (const track of preset.tracks) {
-          loopLen = Math.max(loopLen, this.scheduleTrack(track, preset.bpm, t));
+          loopLen = Math.max(loopLen, this.scheduleTrack(track, preset.bpm, t, skip));
         }
-        this.loopTimer = setTimeout(schedule, (loopLen - 0.08) * 1000);
+        // 루프 위치 추적: 개념적 루프 시작 = t - skip
+        this._loopStart = t - skip;
+        this._loopLen = loopLen;
+        const remaining = loopLen - skip;
+        this.loopTimer = setTimeout(schedule, Math.max(100, (remaining - 0.08) * 1000));
       };
       schedule();
     };
