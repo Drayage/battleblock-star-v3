@@ -349,6 +349,7 @@ class Game {
     document.getElementById('codexBtn')?.addEventListener('click', () => this.openCodex());
     document.getElementById('recordsBtn')?.addEventListener('click', () => this.openMenuPanel('records'));
     document.getElementById('settingsBtn')?.addEventListener('click', () => this.openMenuPanel('settings'));
+    document.getElementById('tutorialBtn')?.addEventListener('click', () => this.openTutorial());
     const _noFlashHandler = () => {
       const cur = localStorage.getItem('bbs.settings.noFlash') === '1';
       localStorage.setItem('bbs.settings.noFlash', cur ? '0' : '1');
@@ -474,6 +475,7 @@ class Game {
     const _c = document.getElementById('codexBtn'); if (_c) _c.textContent = this.menuText('codex');
     const _r = document.getElementById('recordsBtn'); if (_r) _r.textContent = this.menuText('records');
     const _s = document.getElementById('settingsBtn'); if (_s) _s.textContent = this.menuText('settings');
+    const _tut = document.getElementById('tutorialBtn'); if (_tut) _tut.textContent = t('menu.tutorial');
     document.getElementById('startRunBtn').textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
     if (this.run) {
       document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
@@ -675,6 +677,48 @@ class Game {
     }
     modal.classList.add('active');
     this.input?.resetMenuFocus();
+  }
+
+  openTutorial() {
+    const overlay = document.getElementById('tutorialOverlay');
+    if (!overlay) return;
+    const ART = [
+      // slide 1 — controls
+      '  ← [블록] →\n    ↓\n  [Z/↑] 회전\n[Space] 하드드롭\n[Shift] 홀드',
+      // slide 2 — line clear
+      '████████████  ← clear!\n  ██  ████\n ████  ██\n[combo] x2 → +가비지',
+      // slide 3 — deck
+      '┌──────────┐  ┌──────────┐  ┌──────────┐\n│ CARD [1] │  │ CARD [2] │  │ CARD [3] │\n│ 공격      │  │ 방어      │  │ 강화      │\n└──────────┘  └──────────┘  └──────────┘',
+      // slide 4 — VS battle
+      '  내 HP ██████░░░░  상대 HP ████░░░░░░\n\n  줄 제거 → 가비지 발사 →→→\n\n  상대 HP 0 = 승리!',
+      // slide 5 — solo mode
+      '마라톤   Sprint40  타임어택  엔드리스\n150/300줄  40줄      ⏱최대     ∞\n  빠르게↑   최속↑     점수↑     레벨↑',
+    ];
+    const SLIDES = ['s1', 's2', 's3', 's4', 's5'];
+    let cur = 0;
+    const render = () => {
+      const s = SLIDES[cur];
+      overlay.querySelector('#tutorialStepLabel').textContent = `${cur + 1} / ${SLIDES.length}`;
+      overlay.querySelector('#tutorialArt').textContent = ART[cur];
+      overlay.querySelector('#tutorialSlideTitle').textContent = t(`tutorial.${s}.title`);
+      overlay.querySelector('#tutorialSlideBody').textContent = t(`tutorial.${s}.body`);
+      overlay.querySelectorAll('.tutorial-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+      overlay.querySelector('#tutorialPrevBtn').textContent = cur === 0 ? '' : t('tutorial.prev');
+      overlay.querySelector('#tutorialPrevBtn').style.visibility = cur === 0 ? 'hidden' : '';
+      overlay.querySelector('#tutorialNextBtn').textContent = cur === SLIDES.length - 1 ? t('tutorial.done') : t('tutorial.next');
+    };
+    const dots = overlay.querySelector('#tutorialDots');
+    dots.innerHTML = SLIDES.map((_, i) => `<span class="tutorial-dot${i === 0 ? ' active' : ''}"></span>`).join('');
+    overlay.querySelector('#tutorialCloseBtn').onclick = () => overlay.classList.remove('active');
+    overlay.querySelector('#tutorialPrevBtn').onclick = () => { if (cur > 0) { cur--; render(); } };
+    overlay.querySelector('#tutorialNextBtn').onclick = () => {
+      if (cur < SLIDES.length - 1) { cur++; render(); }
+      else overlay.classList.remove('active');
+    };
+    overlay.onclick = e => { if (e.target === overlay) overlay.classList.remove('active'); };
+    cur = 0;
+    render();
+    overlay.classList.add('active');
   }
 
   openCodex() {

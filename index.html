@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#070912">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Battle Block Star v3.0</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260830-vs17">
-  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260830-vs17">
-  <link rel="icon" href="./assets/icon-192.png?v=20260830-vs17">
-  <link rel="stylesheet" href="./src/styles.css?v=20260830-vs17">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260830-vs18">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png?v=20260830-vs18">
+  <link rel="icon" href="./assets/icon-192.png?v=20260830-vs18">
+  <link rel="stylesheet" href="./src/styles.css?v=20260830-vs18">
 </head>
 <body>
   <div id="toastContainer"></div>
@@ -92,6 +92,7 @@
         <button id="codexBtn" class="ghost">도감</button>
         <button id="recordsBtn" class="ghost">기록</button>
         <button id="settingsBtn" class="ghost">설정</button>
+        <button id="tutorialBtn" class="ghost" data-i18n="menu.tutorial">튜토리얼</button>
         <button id="achievementsBtn" class="ghost" data-i18n="menu.achievements">업적</button>
         <button id="metaBtn" class="ghost">성장</button>
         <button id="soloModesBtn" class="ghost hidden">솔로</button>
@@ -329,6 +330,25 @@
     </section>
   </main>
 
-  <script type="module" src="./src/game.js?v=20260830-vs17"></script>
+  <!-- Tutorial overlay -->
+  <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true">
+    <div class="tutorial-box">
+      <div class="tutorial-head">
+        <span id="tutorialStepLabel" class="tutorial-step"></span>
+        <button id="tutorialCloseBtn" class="ghost" style="padding:6px 10px">✕</button>
+      </div>
+      <div id="tutorialArt" class="tutorial-art"></div>
+      <div id="tutorialSlideTitle" class="tutorial-slide-title"></div>
+      <div id="tutorialSlideBody" class="tutorial-slide-body"></div>
+      <div class="tutorial-dots" id="tutorialDots"></div>
+      <div class="tutorial-nav">
+        <button id="tutorialPrevBtn" class="ghost" style="min-width:72px"></button>
+        <span></span>
+        <button id="tutorialNextBtn" class="ghost" style="min-width:72px"></button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/game.js?v=20260830-vs18"></script>
 </body>
 </html>

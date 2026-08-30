@@ -76,6 +76,42 @@ const STRINGS = {
   // ===== 업적 / 승천 =====
   'menu.achievements': { ko: '업적', en: 'Achievements', ja: '実績' },
   'menu.ascensionLevel': { ko: '승천 레벨', en: 'Ascension Level', ja: '昇天レベル' },
+  'menu.tutorial': { ko: '튜토리얼', en: 'Tutorial', ja: 'チュートリアル' },
+
+  // ===== 튜토리얼 =====
+  'tutorial.prev': { ko: '이전', en: 'Prev', ja: '前へ' },
+  'tutorial.next': { ko: '다음', en: 'Next', ja: '次へ' },
+  'tutorial.done': { ko: '완료', en: 'Done', ja: '完了' },
+  'tutorial.s1.title': { ko: '기본 조작', en: 'Basic Controls', ja: '基本操作' },
+  'tutorial.s1.body': {
+    ko: '← → 좌우 이동 · ↓ 소프트 드롭\nZ / ↑ 회전 · Space 하드 드롭 (즉시 낙하)\nShift / C 홀드 (블록 교환 보관)\n1 · 2 · 3 카드 사용 · Q · W · E 소모품 사용\nP / Esc 일시정지',
+    en: '← → Move · ↓ Soft drop\nZ / ↑ Rotate · Space Hard drop (instant fall)\nShift / C Hold (swap & store block)\n1 · 2 · 3 Use card · Q · W · E Use item\nP / Esc Pause',
+    ja: '← → 移動 · ↓ ソフトドロップ\nZ / ↑ 回転 · Space ハードドロップ（即落下）\nShift / C ホールド（ブロック交換・保管）\n1 · 2 · 3 カード使用 · Q · W · E アイテム使用\nP / Esc ポーズ'
+  },
+  'tutorial.s2.title': { ko: '줄 제거와 콤보', en: 'Line Clear & Combos', ja: 'ライン消去とコンボ' },
+  'tutorial.s2.body': {
+    ko: '가로 한 줄을 블록으로 꽉 채우면 제거됩니다.\n2줄 이상 동시 제거 → 상대에게 쓰레기줄을 발사!\n연속으로 클리어할수록 콤보가 쌓여 더 많은 줄을 보냅니다.\n4줄 동시 제거(쿼드)는 최대 위력!',
+    en: 'Fill an entire row to clear it.\nClear 2+ rows at once → send garbage to your opponent!\nClear rows consecutively to build combos and send more.\n4-row clear (Quad) hits the hardest!',
+    ja: '横一列をブロックで埋めると消去されます。\n2列以上同時消去 → 相手にゴミ行を送ります！\n連続消去でコンボが積まれ、より多くのゴミ行を送れます。\n4列同時消去（クワッド）が最大の威力！'
+  },
+  'tutorial.s3.title': { ko: '카드와 덱', en: 'Cards & Deck', ja: 'カードとデッキ' },
+  'tutorial.s3.body': {
+    ko: '전투 시작 시 덱에서 카드 3장을 드로우합니다.\n1·2·3 키로 카드를 사용해 특수 효과를 발동하세요.\n공격·방어·버프 등 다양한 카드가 있습니다.\n전투 후 카드를 획득하거나 상점에서 구매해 덱을 강화하세요.',
+    en: 'At battle start, draw 3 cards from your deck.\nPress 1·2·3 to activate card effects.\nCards include attack, defense, buff, and more.\nAfter battles, gain or buy cards to grow your deck.',
+    ja: 'バトル開始時に、デッキからカード3枚をドローします。\n1·2·3キーでカード効果を発動しましょう。\n攻撃・防御・強化など様々なカードがあります。\nバトル後にカードを獲得・購入してデッキを強化しましょう。'
+  },
+  'tutorial.s4.title': { ko: 'VS 배틀', en: 'VS Battle', ja: 'VSバトル' },
+  'tutorial.s4.body': {
+    ko: '상대 HP(최대 허용 쓰레기줄 수)를 0으로 만들면 승리!\n내 보드에 블록이 꼭대기까지 차면 패배합니다.\n쓰레기줄을 많이 보낼수록 상대 HP가 줄어듭니다.\n보스·엘리트는 강력한 스킬을 사용하니 조심하세요.\n20라운드 모두 이기면 런 클리어!',
+    en: "Reduce the opponent's HP (max garbage rows) to 0 to win!\nIf your board fills to the top, you lose.\nSending more garbage rows whittles down enemy HP.\nBeware: boss & elite enemies use powerful skills.\nWin all 20 rounds to clear a full run!",
+    ja: '相手のHP（最大ゴミ行数）を0にすれば勝利！\nボードが頂上まで埋まると敗北です。\nゴミ行を多く送るほど相手のHPが減ります。\nボス・エリートは強力なスキルを使うので注意！\n20ラウンドすべてに勝てばランクリア！'
+  },
+  'tutorial.s5.title': { ko: '솔로 모드', en: 'Solo Mode', ja: 'ソロモード' },
+  'tutorial.s5.body': {
+    ko: '메인 메뉴에서 게임을 클리어하면 솔로 모드가 열립니다.\n마라톤: 150 / 300줄 제거 도전\n40줄 스프린트: 최대한 빠르게 40줄 제거\n타임어택: 제한 시간 내 최대한 많은 줄 제거\n엔드리스: 끝없이 쌓으며 최고 레벨 도전!',
+    en: 'Clear the game once to unlock Solo mode.\nMarathon: Clear 150 / 300 lines\nSprint 40: Clear 40 lines as fast as possible\nTime Attack: Clear as many lines as possible in time\nEndless: Stack forever and reach the highest level!',
+    ja: 'ゲームをクリアするとソロモードが解放されます。\nマラソン: 150 / 300ライン消去に挑戦\nスプリント40: 最速で40ライン消去\nタイムアタック: 時間内に最大ライン消去\nエンドレス: 永遠に積み続け最高レベルを目指す！'
+  },
 
   // ===== 자주 쓰이는 동사·라벨 =====
   'common.on': { ko: 'ON', en: 'ON', ja: 'ON' },
