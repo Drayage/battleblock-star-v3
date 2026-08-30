@@ -37,6 +37,7 @@ import {
   grantEliteRelic,
   isRunComplete,
   isShopRound,
+  makeEnemy,
   makeEnemyChoices,
   makeEventChoices,
   makeStarterChoices,
@@ -3473,7 +3474,7 @@ class Game {
 
   _makeVsDummyRun() {
     return {
-      relics: [], skills: [], consumables: [], equippedSkills: [],
+      relics: [], consumables: [], equippedSkills: [],
       ownedSkills: [], gold: 0, round: 1, hpRows: 20,
       deckCount: () => 21, persistentGrid: null, practiceMode: false
     };
@@ -3485,27 +3486,39 @@ class Game {
     this._vsGameEndHandled = false;
     const { mode, difficulty } = this.vs;
 
-    // Fake enemy card (no roguelike-specific fields needed)
-    const speeds = [280, 200, 140];
-    this.enemyCard = {
-      type: 'normal', name: 'VS 배틀', aiProfile: 'balanced',
-      speed: speeds[difficulty] ?? 200, mirror: false, ability: null,
-      rewardGold: 0, rewardPool: 'normal', startingRows: 20,
-      startingGarbage: 0, vsMode: true
-    };
+    // Build enemy card
+    const seed = Date.now();
+    if (mode === 'relay') {
+      const firstEnemy = makeEnemy(1);
+      this.enemyCard = { ...firstEnemy, vsMode: true, rewardGold: 0, startingRows: 20 };
+    } else {
+      const speeds = [280, 200, 140];
+      this.enemyCard = {
+        type: 'normal', name: 'VS 배틀', aiProfile: 'balanced',
+        speed: speeds[difficulty] ?? 200, mirror: false, ability: null,
+        rewardGold: 0, rewardPool: 'normal', startingRows: 20,
+        startingGarbage: 0, deckExtras: [], vsMode: true
+      };
+    }
 
     // Build decks
-    const seed = Date.now();
     const playerDeck = mode === 'random' ? this.makeRandomDeck(seed) : new Deck();
-    const enemyDeck  = mode === 'random' ? this.makeRandomDeck((seed ^ 0xdeadbeef) >>> 0) : new Deck();
+    const enemyDeckCards = mode === 'relay' ? (this.enemyCard.deckExtras || []) : (mode === 'random' ? [] : []);
+    const enemyDeck = mode === 'random' ? this.makeRandomDeck((seed ^ 0xdeadbeef) >>> 0) : new Deck(enemyDeckCards);
 
     this.player = new Board({ rows: 20, deck: playerDeck });
     this.player.delaysGarbageOnClear = true;
     this.player.onGarbageLanded = () => this.input.vibrate('garbage');
     this.enemy = new Board({ rows: 20, deck: enemyDeck });
     this.enemy.delaysGarbageOnClear = false;
+    if (mode === 'relay' && this.enemyCard.startingGarbage > 0) {
+      this.enemy.receiveGarbage(Math.min(this.enemyCard.startingGarbage, 5));
+      for (const entry of this.enemy.garbageEntries) { entry.timer = 0; entry.instant = true; }
+    }
 
-    this.ai = new AI('balanced', {}, difficulty);
+    this.ai = mode === 'relay'
+      ? new AI(this.enemyCard.aiProfile || 'balanced', this.enemyCard.aiSkill || {})
+      : new AI('balanced', {}, difficulty);
 
     // Reset all battle state
     this.fallTimer = 0; this.lockTimer = 0; this.lockResets = 0; this.groundTouched = false;
@@ -3595,7 +3608,7 @@ class Game {
     if (this.vs.mode === 'relay') {
       if (playerWon) {
         this.vs.relayKills++;
-        if (this.vs.relayKills % 3 === 0) this._relayDrop();
+        this._relayKillReward();
         setTimeout(() => this._startNextRelayEnemy(), 800);
       } else {
         this.vs.ended = true;
@@ -3619,40 +3632,67 @@ class Game {
     }
   }
 
-  _relayDrop() {
-    const allRelicIds = Object.keys(RELICS);
-    const allConsIds = Object.keys(CONSUMABLES);
-    const pool = [
-      ...allRelicIds.map(r => ({ type: 'relic', id: r })),
-      ...allConsIds.map(c => ({ type: 'cons', id: c }))
-    ];
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    if (pick.type === 'relic' && !this.run.relics.includes(pick.id)) {
-      this.run.relics.push(pick.id);
-      this.showToast(`🎁 유물 획득: ${RELICS[pick.id]?.name || pick.id}`, 'elite', 3500);
-    } else if (pick.type === 'cons') {
-      if (this.run.consumables.length < 3) {
-        this.run.consumables.push(pick.id);
-        this.renderTouchSlots();
-        this.showToast(`🎁 소모품 획득: ${CONSUMABLES[pick.id]?.name || pick.id}`, 'elite', 3500);
-      } else {
-        const relicId = allRelicIds.find(r => !this.run.relics.includes(r));
-        if (relicId) {
-          this.run.relics.push(relicId);
-          this.showToast(`🎁 유물 획득: ${RELICS[relicId]?.name || relicId}`, 'elite', 3500);
+  _relayKillReward() {
+    const kills = this.vs.relayKills;
+    const EXCLUDED_RELICS = new Set(['merchant_token', 'warehouse_key', 'greed', 'bounty_market', 'set_goldhand', 'instant_gauge']);
+
+    // 매 킬: 랜덤 특수 카드
+    const specialCards = Object.values(CARD_LIBRARY).filter(c => c.abilityId && c.abilityId !== 'none');
+    if (specialCards.length) {
+      const card = specialCards[Math.floor(Math.random() * specialCards.length)];
+      this.player.deck.addCard(card.id);
+      this.showToast(`🃏 카드 획득: ${card.name}`, 'normal', 2500);
+    }
+
+    // 매 킬: 랜덤 소모품
+    const consIds = Object.keys(CONSUMABLES);
+    if (consIds.length && this.run.consumables.length < 3) {
+      const consId = consIds[Math.floor(Math.random() * consIds.length)];
+      this.run.consumables.push(consId);
+      this.renderTouchSlots();
+      this.showToast(`💊 소모품 획득: ${CONSUMABLES[consId]?.name || consId}`, 'normal', 2500);
+    }
+
+    // 1킬, 3킬, 5킬... (홀수 킬): 랜덤 스킬
+    if (kills === 1 || (kills > 1 && (kills - 1) % 2 === 0)) {
+      const skillIds = Object.keys(SKILLS);
+      const available = skillIds.filter(id => !this.run.ownedSkills.includes(id));
+      if (available.length) {
+        const skillId = available[Math.floor(Math.random() * available.length)];
+        this.run.ownedSkills.push(skillId);
+        if (this.run.equippedSkills.length < 3) {
+          this.run.equippedSkills.push(skillId);
+          this.renderTouchSlots();
         }
+        this.showToast(`✨ 스킬 획득: ${SKILLS[skillId]?.name || skillId}`, 'elite', 3000);
+      }
+    }
+
+    // 3킬마다: 전투용 유물
+    if (kills % 3 === 0) {
+      const relicIds = Object.keys(RELICS).filter(id => !EXCLUDED_RELICS.has(id) && !this.run.relics.includes(id));
+      if (relicIds.length) {
+        const relicId = relicIds[Math.floor(Math.random() * relicIds.length)];
+        this.run.relics.push(relicId);
+        this.showToast(`🎁 유물 획득: ${RELICS[relicId]?.name || relicId}`, 'elite', 3500);
       }
     }
   }
 
   _startNextRelayEnemy() {
     if (!this.vs || this.vs.ended) return;
-    const { difficulty } = this.vs;
-    const speeds = [280, 200, 140];
-    this.enemyCard.speed = speeds[difficulty] ?? 200;
-    this.enemy = new Board({ rows: 20, deck: new Deck() });
+    const kills = this.vs.relayKills;
+    const isElite = kills > 0 && kills % 5 === 0;
+    const round = Math.min(kills + 1, 18);
+    const nextEnemy = makeEnemy(round, isElite);
+    this.enemyCard = { ...nextEnemy, vsMode: true, rewardGold: 0, startingRows: 20 };
+    this.enemy = new Board({ rows: 20, deck: new Deck(nextEnemy.deckExtras || []) });
     this.enemy.delaysGarbageOnClear = false;
-    this.ai = new AI('balanced', {}, difficulty);
+    if (nextEnemy.startingGarbage > 0) {
+      this.enemy.receiveGarbage(Math.min(nextEnemy.startingGarbage, 6));
+      for (const entry of this.enemy.garbageEntries) { entry.timer = 0; entry.instant = true; }
+    }
+    this.ai = new AI(nextEnemy.aiProfile || 'balanced', nextEnemy.aiSkill || {});
     this._vsGameEndHandled = false;
     this.battleEndResult = null;
     this.battleEndDelay = 0;
@@ -3662,14 +3702,11 @@ class Game {
     this.bossRhythmSent = 0; this.bossRhythmRestTimer = 0;
     this.enemyDebuffs = {}; this.battleEnemyPieces = 0; this.battleEnemyAttacks = 0;
     this.aiFocusActivations = 0; this.aiFocusInEpisode = false;
-    this.message = `${this.vs.relayKills}킬! 다음 적 등장`;
-    const modeName = '이어달리기';
-    const seriesLabel = `${this.vs.relayKills}킬`;
-    document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
+    this.message = `${kills}킬! 다음 적 등장`;
+    document.getElementById('battleMeta').textContent = `이어달리기 · ${kills}킬`;
     this.renderer.resize(this.player.rows, this.enemy.rows);
-    const aiNames = ['일반', '균형형', '공격형'];
-    const diffLabel = ['쉬움', '보통', '어려움'][difficulty] || '보통';
-    this.showToast(`⚔️ ${this.vs.relayKills}번째 적 등장 (난이도: ${diffLabel})`, 'elite', 3000);
+    const typeLabel = isElite ? '⭐ 엘리트' : '⚔️';
+    this.showToast(`${typeLabel} ${kills}번째 적: ${nextEnemy.name}`, 'elite', 3500);
   }
 
   _showVsInterGame(playerWon) {
