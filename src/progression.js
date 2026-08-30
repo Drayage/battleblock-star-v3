@@ -919,10 +919,12 @@ export function pickMetaRelic(run) {
   return shuffle(fallback)[0] || null;
 }
 
-// 메타업글 전용: 브론즈 75% / 실버 25% 특수 카드, 골드·다이아 없음
+// 메타업글 전용: 브론즈 75% / 실버 25% 특수 카드, 골드·다이아·정크(curse) 제외
 export function pickMetaCard() {
   const tier = Math.random() < 0.75 ? TIERS.BRONZE : TIERS.SILVER;
-  const specials = Object.values(CARD_LIBRARY).filter(c => c.abilityId && c.abilityId !== 'none');
+  const specials = Object.values(CARD_LIBRARY).filter(c =>
+    c.abilityId && c.abilityId !== 'none' && !c.traits?.includes('curse')
+  );
   const pool = specials.filter(c => c.tier === tier);
   if (pool.length) return shuffle(pool)[0];
   const fallback = specials.filter(c => c.tier === TIERS.BRONZE || c.tier === TIERS.SILVER);
@@ -1005,7 +1007,7 @@ export const ACHIEVEMENTS = [
   { cat: 'clear', id: 'rich',           icon: '💰', ko: '부자',               en: 'Rich',                  ja: '大富豪',         ko_d: '골드 200 이상 보유하고 클리어', en_d: 'Clear with 200+ gold', ja_d: '200G以上持ってクリア' },
   { cat: 'clear', id: 'skill_master',   icon: '🎯', ko: '스킬 마스터',        en: 'Skill Master',          ja: 'スキルマスター',  ko_d: '스킬 3개 장착하고 클리어', en_d: 'Clear with 3 skills equipped', ja_d: '3スキル装備してクリア' },
   { cat: 'clear', id: 'relic_hunter',   icon: '🧬', ko: '유물 사냥꾼',        en: 'Relic Hunter',          ja: '遺物ハンター',    ko_d: '유물 5개 이상 보유하고 클리어', en_d: 'Clear with 5+ relics', ja_d: '遺物5個以上でクリア' },
-  { cat: 'clear', id: 'deck_overload',  icon: '📤', ko: '덱 과부하',          en: 'Deck Overload',         ja: 'デッキ過負荷',   ko_d: '카드 35장 이상으로 클리어', en_d: 'Clear with 35+ cards in deck', ja_d: 'カード35枚以上でクリア' },
+  { cat: 'clear', id: 'deck_overload',  icon: '📤', ko: '덱 과부하',          en: 'Deck Overload',         ja: 'デッキ過負荷',   ko_d: '카드 40장 이상 보유 후 전투 승리', en_d: 'Win a battle with 40+ cards in deck', ja_d: 'カード40枚以上で戦闘勝利' },
   { cat: 'clear', id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',          en: 'Deck Minimalist',       ja: 'デッキ最小',     ko_d: '카드 10장 이하로 클리어', en_d: 'Clear with 10 or fewer cards in deck', ja_d: 'カード10枚以下でクリア' },
   { cat: 'clear', id: 'mono_deck',      icon: '🔩', ko: '한 우물만 파기',     en: 'Mono Build',            ja: '一点特化',       ko_d: '덱에 같은 모양 블록이 10개 이상 있는 상태로 클리어', en_d: 'Clear with 10+ of the same shape in deck', ja_d: '同一形状10枚以上でクリア' },
   { cat: 'clear', id: 'ascension_1',    icon: '🌙', ko: '승천자',             en: 'Ascendant',             ja: '昇天者',         ko_d: '승천 A1 이상에서 클리어', en_d: 'Clear at Ascension A1+', ja_d: '昇天A1以上でクリア' },
@@ -1035,10 +1037,10 @@ export const ACHIEVEMENTS = [
   { cat: 'run', id: 'long_battle',    icon: '⏱️', ko: '장기전',          en: 'Long Battle',      ja: '長期戦',           ko_d: '한 전투에서 적이 100개 피스를 놓을 때까지 버티고 승리', en_d: 'Win while the enemy places 100+ pieces in one battle', ja_d: '敵が100ピース置くまで耐えて勝利' },
   { cat: 'run', id: 'lucky_gambler',  icon: '🎰', ko: '행운의 도박사',   en: 'Lucky Gambler',    ja: '幸運の賭博師',     ko_d: '도박에서 승리', en_d: 'Win a gamble', ja_d: 'ギャンブルに勝利した' },
   { cat: 'run', id: 'l_clear',        icon: '🔷', ko: 'L 블록 삭제',     en: 'L-Block Deleted',  ja: 'Lブロック削除',   ko_d: 'L 모양 카드를 덱에서 제거', en_d: 'Remove an L-shaped card from your deck', ja_d: 'L型カードをデッキから除去' },
-  { cat: 'run', id: 'shop_spender',   icon: '🛒', ko: '큰 손',           en: 'Big Spender',      ja: '大散財',           ko_d: '상점에서 한 런에 100골드 이상 지출', en_d: 'Spend 100+ gold at shops in one run', ja_d: 'ショップで一ランに100G以上消費' },
+  { cat: 'run', id: 'shop_spender',   icon: '🛒', ko: '큰 손',           en: 'Big Spender',      ja: '大散財',           ko_d: '한 상점에서 300골드 이상 지출', en_d: 'Spend 300+ gold in a single shop visit', ja_d: '一回のショップで300G以上消費' },
   { cat: 'run', id: 'cons_user',      icon: '🎒', ko: '소모품 애호가',   en: 'Item User',        ja: 'アイテム愛用者',   ko_d: '한 런에서 소모품 5개 이상 사용', en_d: 'Use 5+ consumables in one run', ja_d: '一ランでアイテム5個以上使用' },
   { cat: 'run', id: 'gold_500',       icon: '💎', ko: '황금 부자',       en: 'Gold Hoarder',     ja: '黄金持ち',         ko_d: '한 런에서 500골드 이상 보유', en_d: 'Hold 500+ gold in one run', ja_d: '一ランで500G以上保有' },
-  { cat: 'run', id: 'atk_big',        icon: '💥', ko: '대포격',          en: 'Cannon Fire',      ja: '大砲撃',           ko_d: '한 번에 5줄 이상 공격', en_d: 'Send 5+ garbage in a single attack', ja_d: '一度に5列以上攻撃' },
+  { cat: 'run', id: 'atk_big',        icon: '💥', ko: '대포격',          en: 'Cannon Fire',      ja: '大砲撃',           ko_d: '한 번에 6줄 이상 공격', en_d: 'Send 6+ garbage in a single attack', ja_d: '一度に6列以上攻撃' },
   { cat: 'run', id: 'explode_big',    icon: '💣', ko: '대폭발',          en: 'Big Explosion',    ja: '大爆発',           ko_d: '폭발로 한 번에 20개 이상 블록 제거', en_d: 'Destroy 20+ cells in one explosion', ja_d: '爆発で一度に20個以上破壊' },
   { cat: 'run', id: 'mana_burst',     icon: '🔮', ko: '마나 폭발',       en: 'Mana Burst',       ja: 'マナバースト',     ko_d: '한 번에 40 이상 마나 회복', en_d: 'Recover 40+ mana in a single turn', ja_d: '一度に40以上マナ回復' },
   { cat: 'run', id: 'garbage_nuke',   icon: '🧹', ko: '쓰레기 대청소',   en: 'Garbage Purge',    ja: 'ゴミ大掃除',       ko_d: '한 번에 쓰레기 8줄 이상 제거 (클렌즈 포함)', en_d: 'Remove 8+ garbage rows at once (including cleanse)', ja_d: '一度にゴミ8行以上消去(クレンズ含む)' },

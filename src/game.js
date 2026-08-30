@@ -1148,6 +1148,7 @@ class Game {
 
   showShop() {
     if (!this.run?.practiceMode && !this.vs) this.unlockAchievement('first_shop');
+    this.shopSessionSpent = 0;
     this.show('shopScreen');
     document.getElementById('leaveShopBtn').textContent = ui('nextBattle');
     document.getElementById('shopGold').textContent = `${ui('gold')} ${this.run.gold}`;
@@ -1445,6 +1446,8 @@ class Game {
       const paidPrice = priceOverride ?? this.effectivePrice(item, stock.dealKey === key);
       this.run.gold -= paidPrice;
       this.runShopSpent = (this.runShopSpent || 0) + paidPrice;
+      this.shopSessionSpent = (this.shopSessionSpent || 0) + paidPrice;
+      if (!this.run?.practiceMode && !this.vs && this.shopSessionSpent >= 300) this.unlockAchievement('shop_spender');
       stock.locked = (stock.locked || []).filter(lockedKey => lockedKey !== key);
       if (this.run.relics.includes('warehouse_key')) {
         const idx = stock.items.findIndex(it => shopItemKey(it) === key);
@@ -2766,7 +2769,7 @@ class Game {
   checkBattleMilestoneAchievements() {
     if (this.run?.practiceMode) return;
     // 한 번에 큰 공격
-    if (this.battleMaxSingleAttack >= 5) this.unlockAchievement('atk_big');
+    if (this.battleMaxSingleAttack >= 6) this.unlockAchievement('atk_big');
     // 폭발 대량 제거
     if (this.battleMaxExplodeCells >= 20) this.unlockAchievement('explode_big');
     // 마나 대량 회복
@@ -2783,12 +2786,10 @@ class Game {
     if (this.runGarbageNuke) this.unlockAchievement('garbage_nuke');
     // 덱 크기 (승리 시)
     const deckSize = this.run.deck.draw.length + this.run.deck.discard.length;
-    if (deckSize >= 35) this.unlockAchievement('deck_overload');
+    if (deckSize >= 40) this.unlockAchievement('deck_overload');
     if (deckSize <= 10) this.unlockAchievement('deck_minimalist');
     // 장기전: 적이 100개 이상 피스를 놓은 전투에서 승리
     if (this.battleEnemyPieces >= 100) this.unlockAchievement('long_battle');
-    // 상점 지출 (런 전체 누적)
-    if ((this.runShopSpent || 0) >= 100) this.unlockAchievement('shop_spender');
   }
 
   checkSetAchievements() {
