@@ -2583,9 +2583,13 @@ class Game {
       );
       for (let i = 0; i < lvl('cardUpgrade'); i++) {
         if (!upgradeable.length) break;
-        const baseId = upgradeable[Math.floor(Math.random() * upgradeable.length)];
+        const idx = Math.floor(Math.random() * upgradeable.length);
+        const baseId = upgradeable[idx];
         const opts = BLOCK_UPGRADES[baseId];
-        if (opts?.length) run.deck.addCard(opts[Math.floor(Math.random() * opts.length)]);
+        if (opts?.length) {
+          const upgradeId = opts[Math.floor(Math.random() * opts.length)];
+          if (run.deck.replaceCard(baseId, upgradeId)) upgradeable.splice(idx, 1);
+        }
       }
     }
     // 전투 시작 마나
