@@ -77,8 +77,10 @@ const META_UPGRADES = [
   { id: 'startCardAdd',    icon: '🃏',  name: '덱 확장',      desc: '시작 덱에 랜덤 특수 카드 +1',         maxLevel: 3, costs: [3, 4, 5] },
   { id: 'startCardRem',    icon: '✂️',  name: '덱 정리',      desc: '런 시작 전 카드 무료 제거 +1',        maxLevel: 2, costs: [4, 5] },
   { id: 'startRelic',      icon: '📦',  name: '유물 상자',    desc: '런 시작시 랜덤 유물 1개',             maxLevel: 1, costs: [5] },
+  { id: 'rewardReroll',   icon: '🎲',  name: '보상 재굴리기', desc: '런 당 보상 재굴리기 +1회',            maxLevel: 2, costs: [3, 4] },
+  { id: 'battleRecovery', icon: '💉',  name: '전투 회복',    desc: '적 처치 후 가비지 1줄 회복',          maxLevel: 2, costs: [4, 5] },
 ];
-// 합계 포인트: 6+5+4+9+7+8+12+9+5 = 65 (업적 전부 달성 시 전부 최대)
+// 합계 포인트: 6+5+4+9+7+8+12+9+5+7+9 = 81 (65포인트로 우선순위 선택 필요)
 
 // Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
@@ -2270,6 +2272,16 @@ class Game {
     }
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
+    // 전투 회복: 적 처치 후 가비지 줄 제거
+    if (this.run.battleRecovery) {
+      let recovered = 0;
+      for (let r = this.run.persistentGrid.length - 1; r >= 0 && recovered < this.run.battleRecovery; r--) {
+        if (this.run.persistentGrid[r].some(cell => cell?.type === 'garbage')) {
+          this.run.persistentGrid[r] = Array.from({ length: 10 }, () => null);
+          recovered++;
+        }
+      }
+    }
     this.run.deck.refill();
     if (this.enemyCard?.type === 'boss' || isRunComplete(this.run)) {
       this.run.round = Math.max(this.run.round, 20);
@@ -2313,6 +2325,24 @@ class Game {
       });
       wrap.appendChild(btn);
     });
+    // 보상 재굴리기 버튼
+    if ((this.run.rewardRerolls || 0) > 0) {
+      const rerollBtn = document.createElement('button');
+      rerollBtn.className = 'ghost wide';
+      const rerollLabel = getLang() === 'en'
+        ? `🎲 Reroll Rewards (${this.run.rewardRerolls} left)`
+        : getLang() === 'ja'
+          ? `🎲 報酬引き直し (残り${this.run.rewardRerolls}回)`
+          : `🎲 보상 재굴리기 (${this.run.rewardRerolls}회 남음)`;
+      rerollBtn.textContent = rerollLabel;
+      rerollBtn.addEventListener('click', () => {
+        this.run.rewardRerolls--;
+        const basePenalty = this.currentAscMod().rewardTierPenalty ?? 0;
+        const tierBonus = this.run.round === 1 ? (this.run.startRewardTierBonus || 0) : 0;
+        this.showRewards(makeRewards(this.enemyCard.rewardPool, basePenalty - tierBonus), grantedRelic);
+      });
+      panel.appendChild(rerollBtn);
+    }
     this.input?.resetMenuFocus();
   }
 
@@ -2516,6 +2546,10 @@ class Game {
     if (lvl('startRewardTier')) run.startRewardTierBonus = lvl('startRewardTier');
     // 시작 카드 제거 횟수 (newRun에서 처리)
     run._metaStartCardRem = lvl('startCardRem');
+    // 보상 재굴리기 횟수
+    if (lvl('rewardReroll')) run.rewardRerolls = lvl('rewardReroll');
+    // 전투 회복 레벨
+    if (lvl('battleRecovery')) run.battleRecovery = lvl('battleRecovery');
   }
 
   showMetaScreen() {
