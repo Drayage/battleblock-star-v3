@@ -2510,7 +2510,23 @@ class Game {
 
   // ===== 영구 업그레이드 (메타) =====
   loadMeta() {
-    try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; }
+    try {
+      const meta = JSON.parse(localStorage.getItem(META_KEY) || '{}');
+      // 마이그레이션: 메타 시스템 도입 전 해금된 업적 포인트 보정
+      if (!meta._migrated) {
+        const unlocked = this.loadAchievements();
+        const earned = unlocked.size;
+        const spentTotal = META_UPGRADES.reduce((sum, upg) => {
+          const cur = (meta.upgrades || {})[upg.id] || 0;
+          return sum + upg.costs.slice(0, cur).reduce((a, b) => a + b, 0);
+        }, 0);
+        meta.totalEarned = earned;
+        meta.points = Math.max(meta.points || 0, earned - spentTotal);
+        meta._migrated = true;
+        try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch {}
+      }
+      return meta;
+    } catch { return {}; }
   }
   saveMeta(meta) {
     try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch {}
