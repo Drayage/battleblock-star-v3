@@ -620,9 +620,10 @@ export function makeRewards(pool = 'normal', tierPenalty = 0) {
   let sourceTier = String(pool).includes(TIERS.GOLD) ? TIERS.GOLD
     : String(pool).includes(TIERS.SILVER) ? TIERS.SILVER
       : pool === 'normal' ? TIERS.BRONZE : pool;
-  if (!elite && tierPenalty > 0) {
+  if (!elite && tierPenalty !== 0) {
     const idx = TIER_ORDER.indexOf(sourceTier);
-    sourceTier = TIER_ORDER[Math.max(0, idx - tierPenalty)] ?? TIERS.BRONZE;
+    const clamped = Math.max(0, Math.min(TIER_ORDER.length - 1, idx - tierPenalty));
+    sourceTier = TIER_ORDER[clamped] ?? TIERS.BRONZE;
   }
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
     .filter(isPlayerRewardCard)

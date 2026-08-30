@@ -2280,7 +2280,7 @@ class Game {
     this.checkSetAchievements?.();
     const baseTierPenalty = this.currentAscMod().rewardTierPenalty ?? 0;
     const tierBonus = this.run.round === 1 ? (this.run.startRewardTierBonus || 0) : 0;
-    this.showRewards(makeRewards(this.enemyCard.rewardPool, Math.max(0, baseTierPenalty - tierBonus)), relicId);
+    this.showRewards(makeRewards(this.enemyCard.rewardPool, baseTierPenalty - tierBonus), relicId);
     this.autoSave();
   }
 
