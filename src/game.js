@@ -1,14 +1,34 @@
-import { Board } from './board.js?v=20260829-ascension1';
-import { ABILITY_GLYPH, ABILITY_LIBRARY, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, SET_LABELS, TYPES } from './constants.js?v=20260829-ascension1';
-import { Deck } from './deck.js?v=20260829-ascension1';
-import { AI } from './ai.js?v=20260829-ascension1';
-import { Renderer } from './renderer.js?v=20260829-ascension1';
-import { InputController } from './input.js?v=20260829-ascension1';
-import { AudioManager } from './audio.js?v=20260829-ascension1';
-import { t, getLang, setLang, onLangChange, applyDomTranslations, LANGS } from './i18n.js?v=20260829-ascension1';
-import { tEnemyName, tKindLabel } from './i18n-data.js?v=20260829-ascension1';
-import { SKILLS } from './skills.js?v=20260829-ascension1';
-import { CONSUMABLES } from './consumables.js?v=20260829-ascension1';
+import { Board } from './board.js?v=20260830-vs6';
+import { ABILITY_GLYPH, ABILITY_LIBRARY, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, SET_LABELS, TYPES } from './constants.js?v=20260830-vs6';
+import { Deck } from './deck.js?v=20260830-vs6';
+import { AI } from './ai.js?v=20260830-vs6';
+import { Renderer } from './renderer.js?v=20260830-vs6';
+import { InputController } from './input.js?v=20260830-vs6';
+import { AudioManager } from './audio.js?v=20260830-vs6';
+import {
+  t,
+  getLang,
+  setLang,
+  onLangChange,
+  applyDomTranslations,
+  LANGS,
+  ui,
+  dataName,
+  dataDesc,
+  trCardName,
+  trCardDesc,
+  trEnemyName,
+  trEnemyStyle,
+  trAbilityName,
+  trAbilityDesc,
+  trChallengeLabel,
+  trChallengeCond,
+  trRewardLabel,
+  trRewardDetail
+} from './i18n.js?v=20260830-vs6';
+import { tEnemyName, tKindLabel } from './i18n-data.js?v=20260830-vs6';
+import { SKILLS } from './skills.js?v=20260830-vs6';
+import { CONSUMABLES } from './consumables.js?v=20260830-vs6';
 import {
   RunState,
   RELICS,
@@ -31,7 +51,7 @@ import {
   abilityOf,
   ACHIEVEMENTS,
   ASCENSION_MODS
-} from './progression.js?v=20260829-ascension1';
+} from './progression.js?v=20260830-vs6';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -43,6 +63,18 @@ const ACHIEVEMENT_KEY = 'bbs.achievements.v1';
 const ASCENSION_KEY = 'bbs.ascension.v1';     // 선택된 레벨
 const ASCENSION_MAX_KEY = 'bbs.ascension.max.v1'; // 최대 해금 레벨
 const LIFETIME_KEY = 'bbs.lifetime.v1';
+const META_KEY = 'bbs.meta.v1';
+
+const META_UPGRADES = [
+  { id: 'startHp',        icon: '❤️',  name: '체력 강화',    desc: '런 시작 HP(필드 높이) +1',     maxLevel: 3, costs: [2, 2, 3] },
+  { id: 'startGold',      icon: '💰',  name: '초기 자금',    desc: '런 시작 골드 +15',              maxLevel: 4, costs: [1, 1, 2, 2] },
+  { id: 'startCardAdd',   icon: '🃏',  name: '덱 확장',      desc: '시작 덱에 랜덤 특수 카드 +1',  maxLevel: 3, costs: [2, 3, 3] },
+  { id: 'startCardRem',   icon: '✂️',  name: '덱 정리',      desc: '런 시작 전 카드 무료 제거 +1', maxLevel: 2, costs: [3, 4] },
+  { id: 'shopDeals',      icon: '🏪',  name: '상점 특가',    desc: '상점 할인 아이템 +1칸',         maxLevel: 2, costs: [3, 4] },
+  { id: 'rerollDiscount', icon: '🔄',  name: '리롤 할인',    desc: '상점 리롤 비용 -5G',            maxLevel: 3, costs: [2, 2, 2] },
+  { id: 'startRelic',     icon: '📦',  name: '유물 상자',    desc: '런 시작시 랜덤 유물 1개',       maxLevel: 1, costs: [5] },
+  { id: 'startCons',      icon: '💊',  name: '비상 소모품',  desc: '런 시작 소모품 +1',             maxLevel: 2, costs: [2, 3] },
+];
 
 // Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
@@ -276,6 +308,7 @@ class Game {
       this.autoSave();
     });
     document.getElementById('achievementsBtn')?.addEventListener('click', () => this.showAchievementsModal());
+    document.getElementById('metaBtn')?.addEventListener('click', () => this.showMetaScreen());
     document.getElementById('soloModesBtn')?.addEventListener('click', () => this.showSoloSelect());
     document.getElementById('soloBackBtn')?.addEventListener('click', () => {
       this.solo = null;
@@ -407,8 +440,15 @@ class Game {
     for (let i = 0; i < (ascMod.startCurseCards ?? 0); i++) {
       this.run.deck.addCard(i % 2 === 0 ? 'HEAVY_JUNK' : 'WIDE_JUNK');
     }
-    this.routeNextScreen();
-    this.autoSave();
+    this.applyMetaUpgrades(this.run);
+    const remCount = this.run._metaStartCardRem || 0;
+    delete this.run._metaStartCardRem;
+    if (remCount > 0) {
+      this._metaStartCardRemFlow(remCount, () => { this.routeNextScreen(); this.autoSave(); });
+    } else {
+      this.routeNextScreen();
+      this.autoSave();
+    }
   }
 
   routeNextScreen() {
@@ -735,10 +775,20 @@ class Game {
     const sold = new Set(stock.sold || []);
     const locked = new Set(stock.locked || []);
     const dealKey = stock.dealKey || null;
+    const bonusDeals = this.run.bonusShopDeals || 0;
+    let extraDealCount = bonusDeals;
+    const dealKeys = new Set([dealKey]);
+    if (bonusDeals > 0) {
+      for (const it of items) {
+        if (extraDealCount <= 0) break;
+        const k = shopItemKey(it);
+        if (!dealKeys.has(k)) { dealKeys.add(k); extraDealCount--; }
+      }
+    }
     for (const item of items) {
       const key = shopItemKey(item);
       const soldOut = sold.has(key);
-      const isDeal = key === dealKey && !soldOut;
+      const isDeal = dealKeys.has(key) && !soldOut;
       const price = this.effectivePrice(item, isDeal);
       const slot = document.createElement('div');
       slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
@@ -797,7 +847,7 @@ class Game {
   shopRerollCost() {
     const key = String(this.run.round);
     const n = this.run.shopStock?.[key]?.rerolls || 0;
-    return 20 + n * 10;
+    return Math.max(0, 20 + n * 10 - (this.run.rerollDiscount || 0));
   }
 
   rerollShop() {
@@ -1893,6 +1943,144 @@ class Game {
       const name = lang === 'en' ? ach.en : lang === 'ja' ? ach.ja : ach.ko;
       this.showToast(`🏅 ${lang === 'en' ? 'Achievement: ' : lang === 'ja' ? '実績解除: ' : '업적 해금: '}${ach.icon} ${name}`, 'elite', 3500);
     }
+    // Award 1 meta point per achievement
+    const meta = this.loadMeta();
+    meta.points = (meta.points || 0) + 1;
+    meta.totalEarned = (meta.totalEarned || 0) + 1;
+    this.saveMeta(meta);
+  }
+
+  // ===== 영구 업그레이드 (메타) =====
+  loadMeta() {
+    try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; }
+  }
+  saveMeta(meta) {
+    try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch {}
+  }
+
+  applyMetaUpgrades(run) {
+    const meta = this.loadMeta();
+    const upgs = meta.upgrades || {};
+    const lvl = id => upgs[id] || 0;
+
+    if (lvl('startHp')) run.hpRows = Math.min(28, run.hpRows + lvl('startHp'));
+    if (lvl('startGold')) run.gold += lvl('startGold') * 15;
+    if (lvl('rerollDiscount')) run.rerollDiscount = lvl('rerollDiscount') * 5;
+    if (lvl('shopDeals')) run.bonusShopDeals = lvl('shopDeals');
+
+    // 시작 유물
+    if (lvl('startRelic')) {
+      const available = Object.keys(RELICS).filter(id => !run.relics.includes(id));
+      if (available.length) run.relics.push(available[Math.floor(Math.random() * available.length)]);
+    }
+    // 시작 소모품
+    const consIds = Object.keys(CONSUMABLES);
+    for (let i = 0; i < lvl('startCons') && run.consumables.length < 3; i++) {
+      run.consumables.push(consIds[Math.floor(Math.random() * consIds.length)]);
+    }
+    // 시작 카드 추가
+    const specials = Object.values(CARD_LIBRARY).filter(c => c.abilityId && c.abilityId !== 'none');
+    for (let i = 0; i < lvl('startCardAdd'); i++) {
+      const card = specials[Math.floor(Math.random() * specials.length)];
+      if (card) run.deck.addCard(card.id);
+    }
+    // 시작 카드 제거 횟수 (newRun에서 처리)
+    run._metaStartCardRem = lvl('startCardRem');
+  }
+
+  showMetaScreen() {
+    const meta = this.loadMeta();
+    const upgs = meta.upgrades || {};
+    const pts = meta.points || 0;
+    const totalEarned = meta.totalEarned || 0;
+    const maxPts = ACHIEVEMENTS.length;
+
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+
+    const rows = META_UPGRADES.map(upg => {
+      const cur = upgs[upg.id] || 0;
+      const maxed = cur >= upg.maxLevel;
+      const nextCost = maxed ? 0 : upg.costs[cur];
+      const canAfford = pts >= nextCost;
+      const barWidth = Math.round((cur / upg.maxLevel) * 100);
+      return `
+        <div class="meta-upg-row" data-id="${upg.id}">
+          <div class="meta-upg-info">
+            <span class="meta-upg-icon">${upg.icon}</span>
+            <div>
+              <div class="meta-upg-name">${upg.name}</div>
+              <div class="meta-upg-desc">${upg.desc}</div>
+              <div class="meta-upg-bar-wrap"><div class="meta-upg-bar" style="width:${barWidth}%"></div></div>
+            </div>
+          </div>
+          <div class="meta-upg-right">
+            <div class="meta-upg-level">Lv ${cur}/${upg.maxLevel}</div>
+            ${maxed
+              ? `<button class="ghost" disabled>MAX</button>`
+              : `<button class="ghost meta-buy-btn${canAfford ? '' : ' dim'}" data-id="${upg.id}" ${canAfford ? '' : 'disabled'}>${nextCost}P ↑</button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+
+    modal.innerHTML = `
+      <div class="deck-modal-inner meta-modal">
+        <h3>🌟 영구 업그레이드</h3>
+        <div class="meta-pts">포인트: <strong>${pts}</strong> / ${maxPts} &nbsp;(총 획득 ${totalEarned})</div>
+        <div class="meta-upg-list">${rows}</div>
+        <button class="ghost wide" id="metaCloseBtn" style="margin-top:12px">닫기</button>
+      </div>`;
+    document.body.appendChild(modal);
+
+    modal.querySelectorAll('.meta-buy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const upg = META_UPGRADES.find(u => u.id === id);
+        if (!upg) return;
+        const cur = (meta.upgrades || {})[id] || 0;
+        if (cur >= upg.maxLevel) return;
+        const cost = upg.costs[cur];
+        if ((meta.points || 0) < cost) return;
+        meta.points = (meta.points || 0) - cost;
+        meta.upgrades = meta.upgrades || {};
+        meta.upgrades[id] = cur + 1;
+        this.saveMeta(meta);
+        modal.remove();
+        this.showMetaScreen();
+      });
+    });
+    document.getElementById('metaCloseBtn').addEventListener('click', () => modal.remove());
+  }
+
+  _metaStartCardRemFlow(count, onDone) {
+    if (count <= 0) { onDone(); return; }
+    const allIds = [...this.run.deck.draw, ...this.run.deck.discard, ...this.run.deck.extraCards];
+    if (!allIds.length) { onDone(); return; }
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    const cards = [...new Set(allIds)].map(id => CARD_LIBRARY[id]).filter(Boolean);
+    const cardHtml = cards.map(c => `<button class="choice meta-rem-card" data-id="${c.id}" style="padding:6px 10px;font-size:12px;margin:3px"><strong>${c.name}</strong></button>`).join('');
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>✂️ 덱 정리 (${count}회 남음)</h3>
+        <p style="color:#8590ac;font-size:13px;margin:6px 0">제거할 카드를 선택하세요 (무료)</p>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:240px;overflow-y:auto;margin:8px 0">${cardHtml}</div>
+        <button class="ghost" id="metaRemSkipBtn" style="margin-top:8px">건너뛰기</button>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelectorAll('.meta-rem-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.run.deck.removeCard(btn.dataset.id);
+        this.run.deck.refill();
+        modal.remove();
+        this._metaStartCardRemFlow(count - 1, onDone);
+      });
+    });
+    document.getElementById('metaRemSkipBtn').addEventListener('click', () => {
+      modal.remove();
+      this._metaStartCardRemFlow(count - 1, onDone);
+    });
   }
 
   checkRunAchievements(ascensionLevel) {
