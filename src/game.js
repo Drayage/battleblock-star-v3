@@ -1790,6 +1790,7 @@ class Game {
     const modeConfig = SOLO_MODES[modeKey];
     if (!modeConfig) return;
     this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, score: 0, ended: false, topOut: false };
+    this.enemy = null;
     this.player = new Board({ rows: 20, deck: new Deck() });
     this.fallTimer = 0;
     this.lockTimer = 0;

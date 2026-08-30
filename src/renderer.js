@@ -563,23 +563,23 @@ export class Renderer {
       this.canvas.style.transform = `scale(${scale})`;
       this.canvas.parentElement.style.height = `${Math.ceil(canvasH * scale)}px`;
     } else {
-      // 데스크탑: 뷰포트를 꽉 채우도록 동적 cell 계산
-      const hudH = 40;  // soloHud 바 높이
+      // 데스크탑: 캔버스 = 뷰포트 전폭, 보드는 내부 중앙 정렬
+      const hudH = 40;
       const boardY = 10;
       const boardPadV = 12;
-      const pw = 128;   // 사이드 패널 폭
-      const gap = 10;   // 패널-보드 간격
+      const pw = 128;
+      const gap = 10;
       const availH = viewportH - hudH - boardY - boardPadV;
-      const availW = viewportW - (pw + gap) * 2 - 16;
+      const availW = viewportW - (pw + gap) * 2 - 32;
       const cellH = Math.floor(availH / rows);
       const cellW = Math.floor(availW / COLS);
       const cell = Math.max(18, Math.min(48, cellH, cellW));
       const bw = COLS * cell;
       const bh = rows * cell;
-      const lx = 8;
-      const boardX = lx + pw + gap;
-      const canvasW = boardX + bw + gap + pw + lx;
+      const canvasW = viewportW;
       const canvasH = boardY + bh + boardPadV;
+      const boardX = Math.floor((canvasW - bw) / 2);
+      const lx = Math.max(8, boardX - gap - pw); // 패널 시작 x
       this.soloLayout = { mobile, cell, rows, w: canvasW, h: canvasH, bX: boardX, bY: boardY, bw, bh, lx, pw };
       this.canvas.width = Math.round(canvasW * dpr);
       this.canvas.height = Math.round(canvasH * dpr);
