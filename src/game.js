@@ -1277,6 +1277,7 @@ class Game {
       this.run.deck.refill();
       this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
       if (CARD_LIBRARY[choice.id]?.shapeId === 'L') this.unlockAchievement('l_clear');
+      this.checkDeckMinimalist();
     }
     if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
@@ -1750,10 +1751,17 @@ class Game {
         this.run.deck.refill();
         this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
         if (CARD_LIBRARY[id]?.shapeId === 'L') this.unlockAchievement('l_clear');
+        this.checkDeckMinimalist();
         done(true);
       },
       onSkip: () => skipped(false)
     });
+  }
+
+  checkDeckMinimalist() {
+    if (!this.run) return;
+    const total = (this.run.deck.draw?.length || 0) + (this.run.deck.discard?.length || 0);
+    if (total <= 10) this.unlockAchievement('deck_minimalist');
   }
 
   acquireSkill(id, done = () => {}, skipped = done) {
@@ -3015,11 +3023,8 @@ class Game {
     if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
     if ((this.runEliteKills || 0) >= 3) this.unlockAchievement('elite_hunter');
     if ((this.runConsUsed || 0) >= 5) this.unlockAchievement('cons_user');
-    // 덱 미니멀: 클리어 시점에 10장 이하
-    const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
-    const deckSizeAtClear = allCards.length;
-    if (deckSizeAtClear <= 10) this.unlockAchievement('deck_minimalist');
     // 저주 덱: 정크/저주 카드 4개 이상으로 클리어
+    const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
     const curseCount = allCards.filter(id => CARD_LIBRARY?.[id]?.traits?.includes('curse')).length;
     if (curseCount >= 4) this.unlockAchievement('junk_collector');
     if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');

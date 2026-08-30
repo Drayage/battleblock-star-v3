@@ -1003,7 +1003,7 @@ export const ACHIEVEMENTS = [
   { cat: 'clear', id: 'first_clear',    icon: '🏆', ko: '첫 클리어',         en: 'First Clear',          ja: '初クリア',       ko_d: '게임을 처음으로 클리어했습니다', en_d: 'Clear the game for the first time', ja_d: '初めてゲームをクリアした' },
   { cat: 'clear', id: 'skill_master',   icon: '🎯', ko: '스킬 마스터',        en: 'Skill Master',          ja: 'スキルマスター',  ko_d: '스킬 3개 장착하고 클리어', en_d: 'Clear with 3 skills equipped', ja_d: '3スキル装備してクリア' },
   { cat: 'clear', id: 'relic_hunter',   icon: '🧬', ko: '유물 사냥꾼',        en: 'Relic Hunter',          ja: '遺物ハンター',    ko_d: '유물 5개 이상 보유하고 클리어', en_d: 'Clear with 5+ relics', ja_d: '遺物5個以上でクリア' },
-  { cat: 'clear', id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',          en: 'Deck Minimalist',       ja: 'デッキ最小',     ko_d: '카드 10장 이하로 클리어', en_d: 'Clear with 10 or fewer cards in deck', ja_d: 'カード10枚以下でクリア' },
+  { cat: 'clear', id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',          en: 'Deck Minimalist',       ja: 'デッキ最小',     ko_d: '런 중 덱이 10장 이하가 되는 순간', en_d: 'Reach 10 or fewer cards in deck during a run', ja_d: 'ラン中にデッキが10枚以下になった瞬間' },
   { cat: 'clear', id: 'junk_collector', icon: '🗑️', ko: '저주받은 덱',        en: 'Cursed Deck',           ja: '呪われたデッキ', ko_d: '정크·저주 카드 4개 이상 보유하고 클리어', en_d: 'Clear with 4+ junk/curse cards in deck', ja_d: 'ジャンク・呪いカード4枚以上でクリア' },
   { cat: 'clear', id: 'ascension_1',    icon: '🌙', ko: '승천자',             en: 'Ascendant',             ja: '昇天者',         ko_d: '승천 A1 이상에서 클리어', en_d: 'Clear at Ascension A1+', ja_d: '昇天A1以上でクリア' },
   { cat: 'clear', id: 'asc_clear_2',    icon: '🌙', ko: 'A2 격전 클리어',     en: 'A2 Intense Clear',      ja: 'A2クリア',       ko_d: '승천 A2(격전)에서 클리어', en_d: 'Clear at Ascension A2 (Intense)', ja_d: '昇天A2(激戦)でクリア' },
