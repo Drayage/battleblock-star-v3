@@ -1,6 +1,6 @@
 import { GAME_TIMING } from './constants.js?v=20260829-ascension1';
 
-// Standard gamepad button mapping — 국룰 테트리스 레이아웃
+// Standard gamepad button mapping — 블록 게임 표준 레이아웃
 const BTN_ONE_SHOT = {
   0:  'ccw',         // A / Cross → 반시계 회전
   1:  'rotate',      // B / Circle → 시계 회전

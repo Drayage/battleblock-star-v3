@@ -321,7 +321,7 @@ export class Board {
     const cells = this.current.cells;
     if (cells.some(pos => pos.y < 0) || !cells.some(pos => pos.y >= 0)) {
       this.defeated = true;
-      return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, tetris: false, tSpin: false, topOut: true };
+      return { cleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, fourLine: false, tSpin: false, topOut: true };
     }
     for (const pos of cells) {
       const made = cell(this.current.card);
@@ -355,9 +355,9 @@ export class Board {
     const result = this.clearLines();
     if (result.cleared > 0) {
       result.tSpin = wasTSpin;
-      result.tetris = result.fullCleared >= 4;
+      result.fourLine = result.fullCleared >= 4;
       result.clearText = this.clearLabel(result);
-      const multiplier = (result.tetris ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
+      const multiplier = (result.fourLine ? 1.5 : 1) * (result.tSpin ? 1.2 : 1);
       result.attack = Number((result.attack * multiplier).toFixed(2));
       this.combo++;
       const comboStep = this.comboEngine ? 0.15 : 0.1;
@@ -480,7 +480,7 @@ export class Board {
   }
 
   clearLines() {
-    const empty = { cleared: 0, fullCleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, slow: 0, gold: 0, chargeGained: 0, tetris: false, tSpin: false };
+    const empty = { cleared: 0, fullCleared: 0, attack: 0, mana: 0, bombRows: [], purge: false, slow: 0, gold: 0, chargeGained: 0, fourLine: false, tSpin: false };
     const fullRows = new Set();
     for (let r = 0; r < this.rows; r++) if (this.grid[r].every(Boolean)) fullRows.add(r);
     if (!fullRows.size) return empty;
@@ -592,7 +592,7 @@ export class Board {
       gold,
       chargeGained,
       powerCells,
-      tetris: false,
+      fourLine: false,
       tSpin: false
     };
   }

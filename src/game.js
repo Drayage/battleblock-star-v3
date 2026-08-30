@@ -86,7 +86,7 @@ const META_UPGRADES = [
 ];
 // 합계 포인트: 4+3+3+3+5+4+7+7+5+10+9+6+3 = 69 (업적 70개, 1P 여유)
 
-// Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
+// Standard block guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
 const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
 const SOLO_MODES = {
@@ -714,7 +714,7 @@ class Game {
     this.run.practiceMode = this.practiceMode;
     this.discoverRunState();
     this.runShopSpent = 0;
-    this.runBattleTetris = false;
+    this.runBattleClassic = false;
     this.runGarbageNuke = false;
     this.runEliteKills = 0;
     this.runConsUsed = 0;

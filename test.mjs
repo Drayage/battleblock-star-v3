@@ -227,7 +227,7 @@ tetrisBoard.current = new Mino(CARD_LIBRARY[TYPES.I], 3, 16);
 tetrisBoard.current.rot = 1;
 const tetrisClear = tetrisBoard.lock();
 assert.equal(tetrisClear.cleared, 4);
-assert.equal(tetrisClear.tetris, true);
+assert.equal(tetrisClear.fourLine, true);
 assert.equal(tetrisClear.attack, 6);
 assert.equal(tetrisClear.clearText, 'QUAD');
 assert.equal(tetrisBoard.clearText, 'QUAD');
