@@ -451,6 +451,7 @@ class Game {
     if (id === 'shopScreen') return this.audio.setScene('shop');
     if (id === 'endScreen') return this.audio.setScene(this.lastRunResult === 'win' ? 'clear' : 'gameover');
     if (id === 'gameScreen') {
+      if (this.solo) return; // solo 음악은 startSoloMode에서 직접 설정
       const e = this.enemyCard;
       if (e?.type === 'boss') return this.audio.setScene('boss');
       if (e?.type === 'elite') return this.audio.setScene('elite');
@@ -1857,6 +1858,17 @@ class Game {
     if (modeConfig.timeLimit > 0 && this.solo.elapsed >= modeConfig.timeLimit) {
       return this.finishSolo(false);
     }
+    // 타임어택 카운트다운: 15초 남은 시점부터 초마다 심장소리
+    if (modeConfig.timeLimit > 0) {
+      const remainMs = modeConfig.timeLimit - this.solo.elapsed;
+      if (remainMs <= 15000 && remainMs > 0) {
+        const remSec = Math.ceil(remainMs / 1000);
+        if (remSec !== this.solo._countdownSec) {
+          this.solo._countdownSec = remSec;
+          this.audio.playHeartbeat();
+        }
+      }
+    }
     this.input.update(now);
     this.player.flash = Math.max(0, this.player.flash - dt);
     this.player.tickEffects(dt);
@@ -1887,6 +1899,19 @@ class Game {
         if (this.solo.level !== prevLevel) {
           const sp = getSoloMusicPreset(this.solo.mode, this.solo.level, this.solo.linesCleared);
           if (sp) this.audio.setIntensity(sp);
+        }
+      }
+      // 마라톤 카운트다운: 10줄 남은 시점부터 줄 제거마다 심장소리
+      if (modeConfig.goalLines > 0 && !modeConfig.timeLimit) {
+        const remaining = modeConfig.goalLines - this.solo.linesCleared;
+        if (remaining <= 10 && remaining > 0) this.audio.playHeartbeat();
+      }
+      // 스프린트 카운트다운: 마지막 1줄에서 한 번만
+      if (this.solo.mode === 'sprint40') {
+        const remaining = modeConfig.goalLines - this.solo.linesCleared;
+        if (remaining === 1 && !this.solo._sprint1Warned) {
+          this.solo._sprint1Warned = true;
+          this.audio.playSfx('comboCharge');
         }
       }
       if (modeConfig.goalLines > 0 && this.solo.linesCleared >= modeConfig.goalLines) {
