@@ -321,11 +321,13 @@ class Game {
     document.getElementById('codexBtn')?.addEventListener('click', () => this.openCodex());
     document.getElementById('recordsBtn')?.addEventListener('click', () => this.openMenuPanel('records'));
     document.getElementById('settingsBtn')?.addEventListener('click', () => this.openMenuPanel('settings'));
-    document.getElementById('noFlashToggleBtn')?.addEventListener('click', () => {
+    const _noFlashHandler = () => {
       const cur = localStorage.getItem('bbs.settings.noFlash') === '1';
       localStorage.setItem('bbs.settings.noFlash', cur ? '0' : '1');
       this._refreshNoFlashBtn();
-    });
+    };
+    document.getElementById('noFlashToggleBtn')?.addEventListener('click', _noFlashHandler);
+    document.getElementById('noFlashToggleBtnPause')?.addEventListener('click', _noFlashHandler);
     document.getElementById('devCodeSubmitBtn')?.addEventListener('click', () => {
       const val = document.getElementById('devCodeInput')?.value?.trim().toUpperCase();
       if (val === 'LSDKK') {
@@ -1823,7 +1825,7 @@ class Game {
 
   updateSolo(dt, now) {
     if (this.soloPaused) {
-      this.renderer.drawSolo(this.player, this.solo, SOLO_MODES[this.solo.mode]);
+      this.renderer.drawSolo(this.player, this.solo, SOLO_MODES[this.solo.mode], false, this.isNoFlash());
       return;
     }
     this.solo.elapsed += dt;
@@ -1839,7 +1841,7 @@ class Game {
     this.updatePlayerGravity(dt);
     if (this.player.defeated) return this.finishSolo(true);
     this.updateSoloStats();
-    this.renderer.drawSolo(this.player, this.solo, modeConfig);
+    this.renderer.drawSolo(this.player, this.solo, modeConfig, false, this.isNoFlash());
   }
 
   resolveSolo(result) {
@@ -1893,7 +1895,7 @@ class Game {
     // solo achievements
     if (!topOut) this._checkSoloAchievements(this.solo.mode, this.solo.elapsed, this.solo.score || 0);
     // draw final frame with end overlay
-    this.renderer.drawSolo(this.player, this.solo, modeConfig, true);
+    this.renderer.drawSolo(this.player, this.solo, modeConfig, true, this.isNoFlash());
     // show result overlay after short delay
     setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore), 800);
   }
@@ -3808,11 +3810,13 @@ class Game {
   }
 
   _refreshNoFlashBtn() {
-    const btn = document.getElementById('noFlashToggleBtn');
-    if (!btn) return;
     const on = localStorage.getItem('bbs.settings.noFlash') === '1';
-    btn.textContent = on ? 'ON' : 'OFF';
-    btn.classList.toggle('active', on);
+    for (const id of ['noFlashToggleBtn', 'noFlashToggleBtnPause']) {
+      const btn = document.getElementById(id);
+      if (!btn) continue;
+      btn.textContent = on ? 'ON' : 'OFF';
+      btn.classList.toggle('active', on);
+    }
   }
 
   isNoFlash() {

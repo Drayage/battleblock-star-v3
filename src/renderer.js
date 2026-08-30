@@ -564,7 +564,8 @@ export class Renderer {
     this.canvas.parentElement.style.height = `${Math.ceil(canvasH * scale)}px`;
   }
 
-  drawSolo(player, solo, modeConfig, ended = false) {
+  drawSolo(player, solo, modeConfig, ended = false, noFlash = false) {
+    this.noFlash = noFlash;
     if (!this.soloLayout) this.resizeSolo(player.rows);
     const L = this.soloLayout;
     const ctx = this.ctx;
