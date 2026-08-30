@@ -35,6 +35,8 @@ import {
   BLOCK_UPGRADES,
   applyReward,
   grantEliteRelic,
+  pickMetaRelic,
+  pickMetaCard,
   isRunComplete,
   isShopRound,
   makeEnemy,
@@ -2552,20 +2554,19 @@ class Game {
     if (lvl('rerollDiscount')) run.rerollDiscount = lvl('rerollDiscount') * 5;
     if (lvl('shopDeals')) run.bonusShopDeals = lvl('shopDeals');
 
-    // 시작 유물
+    // 시작 유물 (브론즈 75% / 실버 25%, 골드·다이아 제외)
     if (lvl('startRelic')) {
-      const available = Object.keys(RELICS).filter(id => !run.relics.includes(id));
-      if (available.length) run.relics.push(available[Math.floor(Math.random() * available.length)]);
+      const relic = pickMetaRelic(run);
+      if (relic) run.relics.push(relic.id);
     }
     // 시작 소모품
     const consIds = Object.keys(CONSUMABLES);
     for (let i = 0; i < lvl('startCons') && run.consumables.length < 3; i++) {
       run.consumables.push(consIds[Math.floor(Math.random() * consIds.length)]);
     }
-    // 시작 카드 추가
-    const specials = Object.values(CARD_LIBRARY).filter(c => c.abilityId && c.abilityId !== 'none');
+    // 시작 카드 추가 (브론즈 75% / 실버 25%, 골드·다이아 제외)
     for (let i = 0; i < lvl('startCardAdd'); i++) {
-      const card = specials[Math.floor(Math.random() * specials.length)];
+      const card = pickMetaCard();
       if (card) run.deck.addCard(card.id);
     }
     // 1라운드 보상 티어 보너스

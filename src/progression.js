@@ -909,6 +909,26 @@ export function addConsumable(run, id) {
   if (run.consumables.length < 3) run.consumables.push(id);
 }
 
+// 메타업글 전용: 브론즈 75% / 실버 25%, 골드·다이아 없음
+export function pickMetaRelic(run) {
+  const tier = Math.random() < 0.75 ? TIERS.BRONZE : TIERS.SILVER;
+  const excluded = new Set([...run.relics, ...EARNED_ONLY_RELICS, ...SHOP_ONLY_RELICS]);
+  const pool = Object.values(RELICS).filter(r => r.tier === tier && !excluded.has(r.id));
+  if (pool.length) return shuffle(pool)[0];
+  const fallback = Object.values(RELICS).filter(r => (r.tier === TIERS.BRONZE || r.tier === TIERS.SILVER) && !excluded.has(r.id));
+  return shuffle(fallback)[0] || null;
+}
+
+// 메타업글 전용: 브론즈 75% / 실버 25% 특수 카드, 골드·다이아 없음
+export function pickMetaCard() {
+  const tier = Math.random() < 0.75 ? TIERS.BRONZE : TIERS.SILVER;
+  const specials = Object.values(CARD_LIBRARY).filter(c => c.abilityId && c.abilityId !== 'none');
+  const pool = specials.filter(c => c.tier === tier);
+  if (pool.length) return shuffle(pool)[0];
+  const fallback = specials.filter(c => c.tier === TIERS.BRONZE || c.tier === TIERS.SILVER);
+  return shuffle(fallback)[0] || null;
+}
+
 export function grantEliteRelic(run) {
   const relic = pickByTier(RELICS, TIERS.GOLD, { elite: true, minTier: TIERS.SILVER, exclude: [...run.relics, ...EARNED_ONLY_RELICS, ...SHOP_ONLY_RELICS] });
   if (!relic) return null;
