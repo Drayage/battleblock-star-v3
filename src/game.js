@@ -82,7 +82,7 @@ const META_UPGRADES = [
   { id: 'rewardReroll',    icon: '🎲',  name: '보상 재굴리기', desc: '런 당 보상 재굴리기 +1회',           maxLevel: 4, costs: [1, 2, 3, 4] },
   { id: 'battleRecovery',  icon: '💉',  name: '전투 회복',    desc: '적 처치 후 가비지 1줄 회복',         maxLevel: 3, costs: [2, 3, 4] },
   { id: 'cardUpgrade',     icon: '🔧',  name: '카드 업그레이드', desc: '시작 덱 카드 1장을 특수 버전으로 업그레이드', maxLevel: 2, costs: [2, 4] },
-  { id: 'startMana',       icon: '⚡',  name: '전투 시작 마나', desc: '전투 시작 시 마나 +20',            maxLevel: 2, costs: [1, 2] },
+  { id: 'startMana',       icon: '⚡',  name: '전투 시작 마나', desc: '전투 시작 시 마나 +10',            maxLevel: 2, costs: [1, 2] },
 ];
 // 합계 포인트: 4+3+3+3+5+4+7+7+5+10+9+6+3 = 69 (업적 70개, 1P 여유)
 
@@ -2903,7 +2903,7 @@ class Game {
       }
     }
     // 전투 시작 마나
-    if (lvl('startMana')) run.startMana = lvl('startMana') * 20;
+    if (lvl('startMana')) run.startMana = lvl('startMana') * 10;
   }
 
   showMetaScreen() {
