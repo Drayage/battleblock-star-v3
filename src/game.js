@@ -2946,7 +2946,7 @@ class Game {
     const meta = this.loadMeta();
     const pts = meta.points || 0;
 
-    const rows = ACHIEVEMENTS.map(a => {
+    const makeRow = a => {
       const isUnlocked = unlocked.has(a.id);
       const name = lang === 'en' ? a.en : lang === 'ja' ? a.ja : a.ko;
       const desc = isUnlocked ? (lang === 'en' ? a.en_d : lang === 'ja' ? a.ja_d : a.ko_d) : '???';
@@ -2954,7 +2954,32 @@ class Game {
         <span class="ach-icon">${isUnlocked ? a.icon : '🔒'}</span>
         <div><strong>${name}</strong><small>${desc}</small></div>
       </div>`;
-    }).join('');
+    };
+    const catLabels = {
+      clear:    lang === 'en' ? '🏆 Clear / Ascension' : lang === 'ja' ? '🏆 クリア / 昇天' : '🏆 클리어 / 승천',
+      mission:  lang === 'en' ? '🎖️ Challenge / Mission' : lang === 'ja' ? '🎖️ 挑戦 / ミッション' : '🎖️ 도전 / 미션',
+      run:      lang === 'en' ? '⚔️ In-Run / Battle' : lang === 'ja' ? '⚔️ ラン内 / 戦闘' : '⚔️ 런 내 / 전투',
+      lifetime: lang === 'en' ? '📊 Lifetime' : lang === 'ja' ? '📊 累計' : '📊 평생 누적',
+      solo:     lang === 'en' ? '🕹️ Solo Mode' : lang === 'ja' ? '🕹️ ソロモード' : '🕹️ 솔로 모드',
+    };
+    const unlockedRows = ACHIEVEMENTS.filter(a => unlocked.has(a.id)).map(makeRow);
+    const lockedByCat = {};
+    for (const a of ACHIEVEMENTS) {
+      if (!unlocked.has(a.id)) {
+        const c = a.cat || 'run';
+        if (!lockedByCat[c]) lockedByCat[c] = [];
+        lockedByCat[c].push(makeRow(a));
+      }
+    }
+    let rows = '';
+    if (unlockedRows.length) {
+      const hdr = lang === 'en' ? '✅ Unlocked' : lang === 'ja' ? '✅ 解放済み' : '✅ 달성한 업적';
+      rows += `<div class="ach-cat-header">${hdr} (${unlockedRows.length})</div>` + unlockedRows.join('');
+    }
+    for (const cat of ['clear','mission','run','lifetime','solo']) {
+      const catRows = lockedByCat[cat];
+      if (catRows?.length) rows += `<div class="ach-cat-header locked-cat">${catLabels[cat]}</div>` + catRows.join('');
+    }
 
     const titleText = `${lang === 'ja' ? '実績' : lang === 'en' ? 'Achievements' : '업적'} ${count}/${total}`;
     const progressHtml = `
