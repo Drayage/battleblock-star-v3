@@ -1,0 +1,24 @@
+{
+  "extraKnownMarketplaces": {
+    "drayage-kit": {
+      "source": { "source": "github", "repo": "Drayage/game-baserule" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": { "game-kit@drayage-kit": true },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-js-syntax.cjs\"",
+            "timeout": 30,
+            "statusMessage": "JS 문법 검사 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

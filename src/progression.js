@@ -1,8 +1,8 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260829-ascension1';
-import { Deck, shuffle } from './deck.js?v=20260829-ascension1';
-import { SKILLS } from './skills.js?v=20260829-ascension1';
-import { CONSUMABLES } from './consumables.js?v=20260829-ascension1';
-import { wrapDataMap } from "./i18n-data.js?v=20260829-ascension1";
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260830-vs6';
+import { Deck, shuffle } from './deck.js?v=20260830-vs6';
+import { SKILLS } from './skills.js?v=20260830-vs6';
+import { CONSUMABLES } from './consumables.js?v=20260830-vs6';
+import { wrapDataMap } from "./i18n-data.js?v=20260830-vs6";
 
 const RELICS_KO = {
   combo_amp: {
@@ -334,6 +334,19 @@ const BOSS = {
   aiSkill: { mistakeRate: 0.001, noise: 0, hesitateRate: 0.08 }
 };
 
+[
+  'soft_starter', 'line_hunter', 'speed_drone', 'opener_script', 'stride_engine', 'plonk_gambler',
+  'infds_shell', 'bomb_adept', 'mana_thief', 'cleanse_warden', 'berserker', 'ward_mage',
+  'rush_drone', 'demolitionist', 'turtle_gatekeeper', 'glass_dancer', 'mirror_image'
+].forEach((key, i) => { if (ENEMIES[i]) ENEMIES[i].i18nKey = key; });
+
+[
+  'elite_ceiling', 'elite_power', 'elite_cross', 'elite_opener', 'elite_plonk', 'elite_aggro',
+  'elite_crusher', 'elite_polluter'
+].forEach((key, i) => { if (ELITES[i]) ELITES[i].i18nKey = key; });
+
+BOSS.i18nKey = 'boss_overload';
+
 export function tierLabel(tier) {
   return TIER_LABELS[tier] || TIER_LABELS[TIERS.BRONZE];
 }
@@ -582,6 +595,7 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
   return {
     id: `${elite ? 'elite' : 'mob'}-${round}-${Math.random().toString(16).slice(2)}`,
     type: elite ? 'elite' : 'normal',
+    i18nKey: base.i18nKey,
     name: base.name,
     tier: rewardTier,
     style: base.style,
@@ -1012,4 +1026,27 @@ export const ACHIEVEMENTS = [
   { id: 'gold_500',       icon: '💎', ko: '황금 부자',         en: 'Gold Hoarder',     ja: '黄金持ち',     ko_d: '한 런에서 500골드 이상 보유', en_d: 'Hold 500+ gold in one run', ja_d: '一ランで500G以上保有' },
   { id: 'win_streak_10',  icon: '🔥', ko: '10연승',            en: '10-Win Streak',    ja: '10連勝',       ko_d: '연속으로 10회 클리어', en_d: 'Clear 10 times in a row', ja_d: '連続10回クリア' },
   { id: 'cons_user',      icon: '🎒', ko: '소모품 애호가',     en: 'Item User',        ja: 'アイテム愛用者', ko_d: '한 런에서 소모품 5개 이상 사용', en_d: 'Use 5+ consumables in one run', ja_d: '一ランでアイテム5個以上使用' },
+  // 도전/미션
+  { id: 'challenge_great',  icon: '🥇', ko: '도전 대성공',   en: 'Perfect Mission',   ja: '挑戦大成功',   ko_d: '도전 대성공 1회 달성', en_d: 'Achieve a perfect mission once', ja_d: '挑戦大成功を1回達成' },
+  { id: 'challenge_10',     icon: '🏅', ko: '미션 마스터',   en: 'Mission Master',    ja: 'ミッションマスター', ko_d: '도전 성공 누적 10회', en_d: 'Complete 10 missions total', ja_d: 'ミッション成功累計10回' },
+  { id: 'challenge_run3',   icon: '🎖️', ko: '완전 정복',     en: 'Full Conquest',     ja: '完全制覇',     ko_d: '한 런에서 도전 3회 성공', en_d: 'Complete 3 missions in one run', ja_d: '一ランでミッション3回成功' },
+  // 승천 각 레벨
+  { id: 'asc_clear_2',  icon: '🌙', ko: 'A2 격전 클리어',   en: 'A2 Intense Clear',  ja: 'A2クリア', ko_d: '승천 A2(격전)에서 클리어', en_d: 'Clear at Ascension A2 (Intense)', ja_d: '昇天A2(激戦)でクリア' },
+  { id: 'asc_clear_4',  icon: '🔥', ko: 'A4 지옥 클리어',   en: 'A4 Inferno Clear',  ja: 'A4クリア', ko_d: '승천 A4(지옥)에서 클리어', en_d: 'Clear at Ascension A4 (Inferno)', ja_d: '昇天A4(地獄)でクリア' },
+  { id: 'asc_clear_6',  icon: '🌑', ko: 'A6 심연 클리어',   en: 'A6 Abyss Clear',    ja: 'A6クリア', ko_d: '승천 A6(심연)에서 클리어', en_d: 'Clear at Ascension A6 (Abyss)',   ja_d: '昇天A6(深淵)でクリア' },
+  { id: 'asc_clear_7',  icon: '🌀', ko: 'A7 혼돈 클리어',   en: 'A7 Chaos Clear',    ja: 'A7クリア', ko_d: '승천 A7(혼돈)에서 클리어', en_d: 'Clear at Ascension A7 (Chaos)',   ja_d: '昇天A7(混沌)でクリア' },
+  { id: 'asc_clear_9',  icon: '🖤', ko: 'A9 절망 클리어',   en: 'A9 Despair Clear',  ja: 'A9クリア', ko_d: '승천 A9(절망)에서 클리어', en_d: 'Clear at Ascension A9 (Despair)', ja_d: '昇天A9(絶望)でクリア' },
+  // 영구업글 없이 승천 클리어
+  { id: 'nometa_asc1',  icon: '💪', ko: '순수한 힘 A1',     en: 'Raw Power A1',      ja: '素の力A1', ko_d: '영구업글 없이 A1 이상 클리어', en_d: 'Clear A1+ without permanent upgrades', ja_d: '永久アップグレードなしでA1以上クリア' },
+  { id: 'nometa_asc3',  icon: '💪', ko: '순수한 힘 A3',     en: 'Raw Power A3',      ja: '素の力A3', ko_d: '영구업글 없이 A3 이상 클리어', en_d: 'Clear A3+ without permanent upgrades', ja_d: '永久アップグレードなしでA3以上クリア' },
+  { id: 'nometa_asc5',  icon: '💪', ko: '순수한 힘 A5',     en: 'Raw Power A5',      ja: '素の力A5', ko_d: '영구업글 없이 A5 이상 클리어', en_d: 'Clear A5+ without permanent upgrades', ja_d: '永久アップグレードなしでA5以上クリア' },
+  { id: 'nometa_asc8',  icon: '💪', ko: '순수한 힘 A8',     en: 'Raw Power A8',      ja: '素の力A8', ko_d: '영구업글 없이 A8 이상 클리어', en_d: 'Clear A8+ without permanent upgrades', ja_d: '永久アップグレードなしでA8以上クリア' },
+  { id: 'nometa_asc10', icon: '👑', ko: '무강화 신화',       en: 'Mythic Unaugmented',ja: '無強化神話', ko_d: '영구업글 없이 A10 클리어', en_d: 'Clear A10 without permanent upgrades', ja_d: '永久アップグレードなしでA10クリア' },
+  // 솔로모드 스피드런
+  { id: 'sprint_55s',     icon: '⚡', ko: '빛의 속도',       en: 'Speed of Light',    ja: '光速', ko_d: '40줄 스프린트 55초 이내 클리어', en_d: 'Clear 40-line sprint in under 55s', ja_d: '40ラインスプリント55秒以内クリア' },
+  { id: 'sprint_40s',     icon: '⚡', ko: '초광속',          en: 'Hyperspeed',         ja: '超光速', ko_d: '40줄 스프린트 40초 이내 클리어', en_d: 'Clear 40-line sprint in under 40s', ja_d: '40ラインスプリント40秒以内クリア' },
+  { id: 'marathon150_3m', icon: '🏃', ko: '마라톤 주자',     en: 'Marathon Runner',   ja: 'マラソン走者', ko_d: '마라톤 150줄 3분 이내 클리어', en_d: 'Clear marathon 150 in under 3 minutes', ja_d: 'マラソン150ライン3分以内クリア' },
+  { id: 'marathon300_6m', icon: '🏃', ko: '울트라 마라톤',   en: 'Ultra Marathon',    ja: 'ウルトラマラソン', ko_d: '마라톤 300줄 6분 이내 클리어', en_d: 'Clear marathon 300 in under 6 minutes', ja_d: 'マラソン300ライン6分以内クリア' },
+  { id: 'timeatk2_100',   icon: '💥', ko: '타임어택 고수',   en: 'Time Attack Pro',   ja: 'タイムアタック達人', ko_d: '타임어택 2분에서 100점 이상', en_d: 'Score 100+ in 2-minute time attack', ja_d: '2分タイムアタックで100点以上' },
+  { id: 'timeatk3_150',   icon: '💥', ko: '타임어택 달인',   en: 'Time Attack Master', ja: 'タイムアタック名人', ko_d: '타임어택 3분에서 150점 이상', en_d: 'Score 150+ in 3-minute time attack', ja_d: '3分タイムアタックで150点以上' },
 ];

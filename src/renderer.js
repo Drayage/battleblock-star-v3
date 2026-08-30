@@ -1,5 +1,6 @@
 import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260829-ascension1';
 import { GAMEPAD_LABELS } from './input.js?v=20260829-ascension1';
+import { dataName, trCardName, trEnemyName, ui } from './i18n.js?v=20260829-ascension1';
 import { tEnemyName } from './i18n-data.js?v=20260829-ascension1';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
@@ -8,7 +9,7 @@ const GLYPH_SCALE = { '✻': 1.2, '◷': 1.45, '⊘': 1.4, '▽': 1.3, '◈': 1.
 
 function blockTag(card) {
   const glyph = card && ABILITY_GLYPH[card.abilityId];
-  return glyph ? { glyph, name: card.name } : null;
+  return glyph ? { glyph, name: trCardName(card, card.name) } : null;
 }
 
 // Returns the effective next cards, substituting forced pieces (iPieceForce / forceCrushNext)
@@ -32,14 +33,17 @@ export class Renderer {
   }
 
   resize(playerRows, enemyRows) {
-    const mobile = window.innerWidth < 720;
-    const rows = Math.max(playerRows, enemyRows);
-    const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
+    const viewportW = Math.floor(window.visualViewport?.width || window.innerWidth);
     const viewportH = Math.floor(window.visualViewport?.height || window.innerHeight);
+    const mobile = viewportW < 720;
+    const rows = Math.max(playerRows, enemyRows);
+    const mobileWidth = Math.max(320, Math.min(430, viewportW));
     const mobileY = 68;
     const widthCell = Math.floor((mobileWidth - 44) / COLS);
     const heightCell = Math.floor((viewportH - 228) / playerRows);
-    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 25;
+    const desktopHeightCell = Math.floor((viewportH - 168) / rows);
+    const desktopWidthCell = Math.floor((viewportW - 72) / 38);
+    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : Math.max(18, Math.min(25, desktopHeightCell, desktopWidthCell));
     const mobileBoardBottom = mobileY + playerRows * cell;
     // mobileInfo 패널: 18px 갭 + 158px 패널 = 176px. 여유 4px 추가.
     const mobileInfoH = 180;
@@ -61,13 +65,14 @@ export class Renderer {
     this.canvas.style.height = `${this.layout.h}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const scale = mobile
-      ? Math.min(1, (window.innerWidth - 4) / this.layout.w, (viewportH - 190) / this.layout.h)
-      : Math.min(1, (window.innerWidth - 8) / this.layout.w, (window.innerHeight - 162) / this.layout.h);
+      ? Math.min(1, (viewportW - 4) / this.layout.w, (viewportH - 190) / this.layout.h)
+      : Math.min(1, (viewportW - 8) / this.layout.w, (viewportH - 128) / this.layout.h);
     this.canvas.style.transform = `scale(${scale})`;
     this.canvas.parentElement.style.height = `${Math.ceil(this.layout.h * scale)}px`;
   }
 
-  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0, alert = null }) {
+  draw({ player, enemy, run, battle, enemyCard, message, skillCooldowns = {}, effects = { player: [], enemy: [] }, playerFog = 0, alert = null, noFlash = false }) {
+    this.noFlash = noFlash;
     if (!this.layout) this.resize(player.rows, enemy.rows);
     const L = this.layout;
     const ctx = this.ctx;
@@ -76,14 +81,14 @@ export class Renderer {
     ctx.fillStyle = '#d7e5ff';
     ctx.font = 'bold 18px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText(`Round ${run.round} / 20`, L.w / 2, 26);
+    ctx.fillText(`${ui('round', run.round)} / 20`, L.w / 2, 26);
     ctx.font = '12px Courier New';
     ctx.fillStyle = '#7f8ca8';
     let stackH = 0;
     for (let r = 0; r < player.rows; r++) {
       if (player.grid[r] && player.grid[r].some(c => c)) { stackH = player.rows - r; break; }
     }
-    ctx.fillText(`${tEnemyName(enemyCard.name)} - Gold ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
+    ctx.fillText(`${trEnemyName(enemyCard, enemyCard.name)} - ${ui('gold')} ${run.gold} - HP ${run.hpRows - stackH}/${run.hpRows}`, L.w / 2, 47);
     ctx.textAlign = 'left';
     const curTag = blockTag(player.current?.card);
     const youLabel = L.mobile
@@ -200,7 +205,7 @@ export class Renderer {
       for (let c = 0; c < COLS; c++) {
         const cell = board.grid[r][c];
         if (!cell) continue;
-        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0);
+        this.cell(ox + c * cs, oy + r * cs, cs, cell.type, cell.fuse || 0, cell.shapeId, cell.abilityId);
         if (cell.hp > 0) {
           ctx.fillStyle = '#ffe27a';
           ctx.font = `bold ${Math.max(9, cs * 0.5)}px Courier New`;
@@ -214,13 +219,24 @@ export class Renderer {
       const gy = board.ghostY();
       const ghost = board.current.clone();
       ghost.y = gy;
-      ctx.strokeStyle = COLORS[board.current.card.id] || '#fff';
-      ctx.globalAlpha = 0.55;
-      for (const { x, y } of ghost.cells) if (y >= 0) ctx.strokeRect(ox + x * cs + 3, oy + y * cs + 3, cs - 6, cs - 6);
-      ctx.globalAlpha = 1;
-      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0);
+      const color = COLORS[board.current.card.id] || COLORS[board.current.card.shapeId] || '#fff';
+      const inset = 3;
+      const size = cs - inset * 2;
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = Math.max(4, Math.floor(cs * 0.24));
+      ctx.lineWidth = Math.max(1.25, Math.floor(cs * 0.07));
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.72;
+      for (const { x, y } of ghost.cells) if (y >= 0) {
+        const gx = ox + x * cs + inset;
+        const gyPx = oy + y * cs + inset;
+        ctx.strokeRect(gx, gyPx, size, size);
+      }
+      ctx.restore();
+      for (const { x, y } of board.current.cells) if (y >= 0) this.cell(ox + x * cs, oy + y * cs, cs, board.current.card.id, board.current.card.fuse || 0, board.current.card.shapeId, board.current.card.abilityId);
     }
-    if (board.flash > 0) {
+    if (board.flash > 0 && !this.noFlash) {
       ctx.fillStyle = `rgba(210,230,255,${Math.min(0.18, board.flash / 700)})`;
       ctx.fillRect(ox, oy, bw, bh);
     }
@@ -295,10 +311,10 @@ export class Renderer {
     }
   }
 
-  cell(x, y, cs, type, fuse = 0) {
+  cell(x, y, cs, type, fuse = 0, shapeId = null, abilityId = null) {
     const ctx = this.ctx;
     const pad = Math.max(1, Math.floor(cs * 0.08));
-    ctx.fillStyle = COLORS[type] || '#d9e0ef';
+    ctx.fillStyle = COLORS[type] || (shapeId ? COLORS[shapeId] : null) || '#d9e0ef';
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2);
     ctx.fillStyle = 'rgba(255,255,255,.16)';
     ctx.fillRect(x + pad, y + pad, cs - pad * 2, Math.max(2, Math.floor(cs * 0.15)));
@@ -306,7 +322,7 @@ export class Renderer {
     if (cs >= 16) {
       const mark = fuse > 0 ? String(fuse)
         : type === TYPES.CROSS ? '+'
-        : ABILITY_GLYPH[CARD_LIBRARY[type]?.abilityId] || '';
+        : ABILITY_GLYPH[abilityId ?? CARD_LIBRARY[type]?.abilityId] || '';
       if (mark) {
         ctx.fillStyle = '#06101d';
         ctx.font = `bold ${Math.floor(cs * 0.48 * (GLYPH_SCALE[mark] || 1))}px Courier New`;
@@ -390,7 +406,7 @@ export class Renderer {
       ctx.font = '9px Courier New';
       const gpKey = this.gpConnected ? GAMEPAD_LABELS[`skill${i}`] : null;
       const keyTag = gpKey ? ` (${gpKey})` : '';
-      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}.${keyTag} ${skill.name}`, ox + 5, slotY + 9);
+      ctx.fillText(`${skill.icon ? `${skill.icon} ` : ''}${i + 1}.${keyTag} ${dataName('skill', skill, skill.name)}`, ox + 5, slotY + 9);
       ctx.fillText(`${skill.cost}MP`, ox + 5, slotY + 17);
       ctx.globalAlpha = 1;
     });
@@ -404,7 +420,7 @@ export class Renderer {
       ctx.fillStyle = '#ded4ff';
       const gpC = this.gpConnected ? GAMEPAD_LABELS[`consumable${i}`] : null;
       const ct = gpC ? ` (${gpC})` : '';
-      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}.${ct} ${item?.name || id}`, ox + 5, oy + 289 + i * 22);
+      ctx.fillText(`${item?.icon ? `${item.icon} ` : ''}${i + 4}.${ct} ${dataName('consumable', item, item?.name || id)}`, ox + 5, oy + 289 + i * 22);
     });
   }
 
@@ -412,7 +428,7 @@ export class Renderer {
     const shape = card.shape[0];
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
-        if (shape[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, card.id);
+        if (shape[r][c]) this.cell(ox + c * cs, oy + r * cs, cs, card.id, 0, card.shapeId, card.abilityId);
       }
     }
   }

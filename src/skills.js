@@ -87,9 +87,9 @@ const SKILLS_KO = {
     tier: 'bronze',
     cost: 30,
     cooldown: 9000,
-    desc: '예정된 모든 쓰레기 공격을 즉시 차단합니다.',
+    desc: '게이지에 쌓인 적 공격을 즉시 4줄 차단합니다.',
     activate({ player }) {
-      player.garbageQueue = 0;
+      player.cancelGarbage(4);
       return true;
     }
   },
@@ -114,10 +114,11 @@ const SKILLS_KO = {
     tier: 'gold',
     cost: 55,
     cooldown: 12000,
-    desc: '1.5초 동안 적의 블록을 즉시 강제 낙하시켜 배치를 망칩니다.',
+    desc: '1.5초 동안 적의 블록을 일찍 강제 낙하시켜 배치를 흔듭니다.',
     activate({ game, enemy }) {
       if (!enemy || enemy.defeated) return false;
       game.enemyForceDropTimer = 1500;
+      game.enemyForceDropSteps = 0;
       game.applyEnemyDebuff?.('hyper', 1500);
       return true;
     }
@@ -239,12 +240,12 @@ const SKILLS_KO = {
     icon: '🛡️',
     name: '게이지 차단',
     tier: 'silver',
-    cost: 35,
-    cooldown: 9000,
-    desc: '게이지에 쌓인 적 공격을 즉시 4줄 차단합니다.',
+    cost: 75,
+    cooldown: 20000,
+    desc: '게이지에 쌓인 적 공격을 전부 차단합니다.',
     activate({ player }) {
       if (player.defeated) return false;
-      player.cancelGarbage(4);
+      player.garbageQueue = 0;
       return true;
     }
   },

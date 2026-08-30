@@ -90,6 +90,10 @@ const PRESETS = {
     arpeggio(ctx, [523, 659, 784, 1047], 0.10, 0.30, 'square', 0.22);
     arpeggio(ctx, [784, 988, 1175, 1568], 0.10, 0.30, 'triangle', 0.12);
   },
+  runClear: ctx => {
+    arpeggio(ctx, [523, 659, 784, 1047, 1318, 1568], 0.07, 0.26, 'square', 0.22);
+    setTimeout(() => arpeggio(ctx, [1047, 1318, 1568, 2093], 0.08, 0.32, 'triangle', 0.14), 180);
+  },
   defeat: ctx => beep(ctx, { freqStart: 440, freqEnd: 165, dur: 0.32, type: 'sawtooth', vol: 0.22 }),
   click: ctx => beep(ctx, { freq: 880, dur: 0.025, type: 'square', vol: 0.12 }),
   select: ctx => arpeggio(ctx, [659, 988], 0.03, 0.06, 'square', 0.16),

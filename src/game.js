@@ -37,6 +37,7 @@ import {
   grantEliteRelic,
   isRunComplete,
   isShopRound,
+  makeEnemy,
   makeEnemyChoices,
   makeEventChoices,
   makeStarterChoices,
@@ -59,6 +60,7 @@ window.BBS_RELICS = RELICS;
 
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
+const CODEX_KEY = 'battleBlockStar.codexSeen.v1';
 const ACHIEVEMENT_KEY = 'bbs.achievements.v1';
 const ASCENSION_KEY = 'bbs.ascension.v1';     // 선택된 레벨
 const ASCENSION_MAX_KEY = 'bbs.ascension.max.v1'; // 최대 해금 레벨
@@ -122,7 +124,7 @@ const ENEMY_ABILITIES = {
     cooldown: 18000,
     cast(g) {
       g.player.receiveGarbage(1);
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 쓰레기 급증 +1`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('spike', '쓰레기 급증')} +1`);
     }
   },
   slowPlayer: {
@@ -132,7 +134,7 @@ const ENEMY_ABILITIES = {
     cooldown: 22000,
     cast(g) {
       g.playerSlowTimer = 3000;
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 중력 둔화 (3초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('slowPlayer', '중력 둔화')} (3s)`);
     }
   },
   power: {
@@ -142,7 +144,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.player.receiveGarbage(2);
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 파워 폭발 +2`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('power', '파워 폭발')} +2`);
     }
   },
   rotateLockPlayer: {
@@ -155,7 +157,7 @@ const ENEMY_ABILITIES = {
       g.applyPlayerDebuff?.('rotate', 2000);
       const target = g.player;
       g.scheduleBattleTimeout(() => { if (g.player === target) target.rotateLocked = false; }, 2000);
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 회전 봉인 (2초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('rotateLockPlayer', '회전 봉인')} (2s)`);
     }
   },
   hyperBurst: {
@@ -165,7 +167,7 @@ const ENEMY_ABILITIES = {
     cooldown: 24000,
     cast(g) {
       g.playerHyperTimer = 5000;
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 하이퍼 낙하 (5초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('hyperBurst', '하이퍼 낙하')} (5s)`);
     }
   },
   polluteDeck: {
@@ -175,7 +177,7 @@ const ENEMY_ABILITIES = {
     cooldown: 26000,
     cast(g) {
       g.player.deck.pollute(TYPES.HEAVY_JUNK, 1);
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 덱 오염 (방해 블록 주입)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('polluteDeck', '덱 오염')}`);
     }
   },
   rushGauge: {
@@ -185,7 +187,7 @@ const ENEMY_ABILITIES = {
     cooldown: 20000,
     cast(g) {
       g.playerGaugeRushTimer = 5000;
-      g.flashAlert(`${tEnemyName(g.enemyCard?.name)} 능력: 게이지 가속 (5초)`);
+      g.flashAlert(`${trEnemyName(g.enemyCard, g.enemyCard.name)} ${ui('ability')}: ${trAbilityName('rushGauge', '게이지 가속')} (5s)`);
     }
   }
 };
@@ -197,6 +199,9 @@ class Game {
     this.input = new InputController(this);
     this.audio = new AudioManager();
     this.run = new RunState();
+    this.lastRunResult = null;
+    this.codexSeen = this.loadCodexSeen();
+    this.codexTab = 'cards';
     this.solo = null;
     this.soloPaused = false;
     this.vs = null;
@@ -243,9 +248,20 @@ class Game {
       // 동적 토글/메뉴 라벨도 갱신
       this.audio._emit?.();
       this.refreshMenu();
+      this.refreshCurrentScreenText();
     });
     this.refreshMenu();
     requestAnimationFrame(t => this.loop(t));
+  }
+
+  refreshCurrentScreenText() {
+    if (this.screen === 'mapScreen') this.showMap();
+    else if (this.screen === 'shopScreen') this.showShop();
+    else if (this.screen === 'gameScreen') {
+      document.getElementById('battleTitle').textContent = ui('round', this.run.round) + (this.run.practiceMode ? ' [Practice]' : '');
+      document.getElementById('battleMeta').textContent = trEnemyName(this.enemyCard, this.enemyCard?.name);
+      this.renderTouchSlots();
+    } else if (this.screen === 'menu') this.refreshMenu();
   }
 
   bindUi() {
@@ -258,7 +274,7 @@ class Game {
     // 페이지 진입 시 BGM이 막혀있다면 짧은 안내.
     setTimeout(() => {
       if (this.audio.isUninitialized() && this.audio.bgmEnabled) {
-        this.showToast?.('🔊 화면 클릭 시 음악 시작', 'elite');
+        this.showToast?.(t('screen.audioHint'), 'elite');
       }
     }, 800);
     // 음악·SFX 토글 버튼 (메뉴/일시정지 오버레이 공통)
@@ -294,6 +310,29 @@ class Game {
     document.querySelectorAll('.lang-btn').forEach(btn => {
       btn.addEventListener('click', () => { setLang(btn.dataset.lang); });
     });
+    document.getElementById('codexBtn')?.addEventListener('click', () => this.openCodex());
+    document.getElementById('recordsBtn')?.addEventListener('click', () => this.openMenuPanel('records'));
+    document.getElementById('settingsBtn')?.addEventListener('click', () => this.openMenuPanel('settings'));
+    document.getElementById('noFlashToggleBtn')?.addEventListener('click', () => {
+      const cur = localStorage.getItem('bbs.settings.noFlash') === '1';
+      localStorage.setItem('bbs.settings.noFlash', cur ? '0' : '1');
+      this._refreshNoFlashBtn();
+    });
+    document.getElementById('devCodeSubmitBtn')?.addEventListener('click', () => {
+      const val = document.getElementById('devCodeInput')?.value?.trim().toUpperCase();
+      if (val === 'LSDKK') {
+        const records = this.loadRecords();
+        if (!records.some(r => r.result === 'win')) {
+          records.unshift({ date: new Date().toISOString(), result: 'win', floor: 20, gold: 0, deckSize: 21, ascension: 0 });
+          localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 20)));
+        }
+        if (document.getElementById('devCodeInput')) document.getElementById('devCodeInput').value = '';
+        this.refreshMenu();
+        this.showToast('🔓 개발자 코드 적용: 클리어 해금', 'elite', 3000);
+      } else if (val) {
+        this.showToast('❌ 잘못된 코드', 'challenge-fail', 2000);
+      }
+    });
     document.getElementById('startRunBtn').addEventListener('click', () => this.newRun());
     document.getElementById('loadRunBtn').addEventListener('click', () => this.loadGame());
     document.getElementById('deleteSaveBtn').addEventListener('click', () => this.deleteSave());
@@ -317,6 +356,9 @@ class Game {
       this.refreshMenu();
       this.show('menu');
     });
+    document.querySelectorAll('.solo-lb-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.showSoloLeaderboard(btn.dataset.mode));
+    });
     document.querySelectorAll('.solo-start-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;
@@ -324,6 +366,7 @@ class Game {
         this.startSoloMode(mode, startLevel);
       });
     });
+    document.getElementById('soloPauseBtn')?.addEventListener('click', () => this.toggleSoloPause());
     document.getElementById('soloQuitBtn')?.addEventListener('click', () => {
       if (!this.solo) return;
       document.getElementById('gameScreen').classList.remove('solo-active');
@@ -375,7 +418,7 @@ class Game {
     if (id === 'mapScreen') return this.audio.setScene('select');
     if (id === 'eventScreen') return this.audio.setScene('select');
     if (id === 'shopScreen') return this.audio.setScene('shop');
-    if (id === 'endScreen') return this.audio.setScene('gameover');
+    if (id === 'endScreen') return this.audio.setScene(this.lastRunResult === 'win' ? 'clear' : 'gameover');
     if (id === 'gameScreen') {
       const e = this.enemyCard;
       if (e?.type === 'boss') return this.audio.setScene('boss');
@@ -385,18 +428,39 @@ class Game {
   }
 
   refreshMenu() {
+    const _c = document.getElementById('codexBtn'); if (_c) _c.textContent = this.menuText('codex');
+    const _r = document.getElementById('recordsBtn'); if (_r) _r.textContent = this.menuText('records');
+    const _s = document.getElementById('settingsBtn'); if (_s) _s.textContent = this.menuText('settings');
+    document.getElementById('startRunBtn').textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
     if (this.run) {
       document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
       document.getElementById('menuGold').textContent = this.run.gold;
       document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
       document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
+      this.discoverRunState();
     }
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
     this.refreshAscensionDisplay();
+    const cleared = this.hasEverCleared();
     const soloBtn = document.getElementById('soloModesBtn');
-    if (soloBtn) soloBtn.classList.toggle('hidden', !this.hasEverCleared());
+    if (soloBtn) soloBtn.classList.toggle('hidden', !cleared);
+    const vsBtn = document.getElementById('vsModeBtn');
+    if (vsBtn) vsBtn.classList.toggle('hidden', !cleared);
+    this._refreshNoFlashBtn();
+  }
+
+  menuText(key) {
+    const lang = getLang();
+    const map = {
+      codex: { ko: '도감', en: 'Codex', ja: '図鑑' },
+      records: { ko: '기록', en: 'Records', ja: '記録' },
+      settings: { ko: '설정', en: 'Settings', ja: '設定' },
+      close: { ko: '닫기', en: 'Close', ja: '閉じる' },
+      unknown: { ko: '???', en: '???', ja: '???' }
+    };
+    return map[key]?.[lang] || map[key]?.ko || key;
   }
 
   renderRecords() {
@@ -404,12 +468,219 @@ class Game {
     const records = this.loadRecords();
     const best = records.reduce((top, r) => Math.max(top, r.round), 0);
     if (!records.length) {
-      el.innerHTML = '<span class="muted">기록 없음.</span>';
+      el.innerHTML = `<span class="muted">${getLang() === 'ja' ? '記録なし。' : getLang() === 'en' ? 'No records.' : '기록 없음.'}</span>`;
       return;
     }
-    el.innerHTML = `<strong>최고 기록 ${best}라운드</strong>` + records.slice(0, 5).map(r =>
-      `<span>${r.round}라운드 · ${r.gold}G · ${r.result === 'win' ? '승리' : '패배'}</span>`
-    ).join('');
+    const bestText = getLang() === 'ja' ? `最高記録: ${best}ラウンド` : getLang() === 'en' ? `Best Record: Round ${best}` : `최고 기록 ${best}라운드`;
+    const resultText = r => r.result === 'win'
+      ? (getLang() === 'ja' ? '勝利' : getLang() === 'en' ? 'Win' : '승리')
+      : (getLang() === 'ja' ? '敗北' : getLang() === 'en' ? 'Loss' : '패배');
+    const locale = getLang() === 'ja' ? 'ja-JP' : getLang() === 'en' ? 'en-US' : 'ko-KR';
+    el.innerHTML = `<strong>${bestText}</strong>` + records.slice(0, 10).map(r => `
+      <div class="record-entry">
+        <strong><span>${resultText(r)} · ${ui('round', r.round)}</span><span>${r.gold}G</span></strong>
+        <small>HP ${r.hpRows ?? '-'} · ${ui('deck')} ${r.deckCount ?? '-'} · ${ui('skills')} ${r.skillCount ?? 0} · ${ui('relics')} ${r.relicCount ?? 0} · ${ui('consumables')} ${r.consumableCount ?? 0}</small>
+        <small>${r.at ? new Date(r.at).toLocaleString(locale) : ''}</small>
+      </div>
+    `).join('');
+  }
+
+  escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  loadCodexSeen() {
+    const empty = { cards: [], relics: [], consumables: [], skills: [], enemies: [] };
+    try { return { ...empty, ...JSON.parse(localStorage.getItem(CODEX_KEY) || '{}') }; }
+    catch { return empty; }
+  }
+
+  saveCodexSeen() {
+    localStorage.setItem(CODEX_KEY, JSON.stringify(this.codexSeen));
+  }
+
+  discover(kind, id) {
+    if (!id || !this.codexSeen[kind] || this.codexSeen[kind].includes(id)) return;
+    this.codexSeen[kind].push(id);
+    this.saveCodexSeen();
+  }
+
+  discoverItem(item) {
+    if (!item) return;
+    if (item.kind === 'card' || item.kind === 'contract' || item.kind === 'grantCard') this.discover('cards', item.id);
+    if (item.kind === 'relic' || item.kind === 'relicDig' || item.kind === 'setRelic') this.discover('relics', item.id);
+    if (item.kind === 'skill' || item.kind === 'starterSkill') this.discover('skills', item.id);
+    if (item.kind === 'consumable') this.discover('consumables', item.id);
+    if (item.kind === 'upgradeCard') { this.discover('cards', item.from); this.discover('cards', item.to); }
+    if (item.kind === 'hpForCurse') this.discover('cards', item.card);
+  }
+
+  discoverRunState() {
+    for (const id of this.run.deck.draw || []) this.discover('cards', id);
+    for (const id of this.run.deck.discard || []) this.discover('cards', id);
+    for (const id of this.run.deck.extraCards || []) this.discover('cards', id);
+    for (const id of this.run.relics || []) this.discover('relics', id);
+    for (const id of this.run.ownedSkills || []) this.discover('skills', id);
+    for (const id of this.run.equippedSkills || []) this.discover('skills', id);
+    for (const id of this.run.consumables || []) this.discover('consumables', id);
+  }
+
+  enemyCodexKey(enemy) {
+    return enemy?.i18nKey || enemy?.name || enemy?.id;
+  }
+
+  allCodexEnemies() {
+    const map = new Map();
+    for (let round = 1; round <= 20; round++) {
+      for (const enemy of makeEnemyChoices(round, [])) {
+        const key = this.enemyCodexKey(enemy);
+        if (!map.has(key) || (enemy.type === 'boss' && map.get(key).type !== 'boss')) map.set(key, enemy);
+      }
+    }
+    const typeRank = enemy => ({ normal: 0, elite: 1, boss: 2 }[enemy?.type] ?? 0);
+    return [...map.values()].sort((a, b) =>
+      typeRank(a) - typeRank(b)
+      || this.tierRank(a.tier) - this.tierRank(b.tier)
+      || trEnemyName(a, a.name).localeCompare(trEnemyName(b, b.name), this.currentLocale())
+    );
+  }
+
+  tierRank(tier) {
+    return { bronze: 0, silver: 1, gold: 2, diamond: 3 }[tier] ?? 9;
+  }
+
+  currentLocale() {
+    return getLang() === 'ja' ? 'ja-JP' : getLang() === 'en' ? 'en-US' : 'ko-KR';
+  }
+
+  sortByTierName(items, nameOf) {
+    return [...items].sort((a, b) =>
+      this.tierRank(a.tier) - this.tierRank(b.tier)
+      || String(nameOf(a)).localeCompare(String(nameOf(b)), this.currentLocale())
+    );
+  }
+
+  sortedCodexCards() {
+    const abilityOrder = [
+      'none',
+      'highPower', 'bomb', 'manaBonus', 'purgeGarbage', 'coolant', 'bounty', 'wardBlock', 'comboCharge',
+      'dispel', 'instantAttack', 'instantGuard', 'instantMana', 'instantPurge', 'oddPower'
+    ];
+    const shapeOrder = ['I', 'J', 'L', 'O', 'S', 'T', 'Z', 'CROSS5', 'HEAVY5', 'WIDE6', 'HOOK5', 'PENTA_T', 'OVERDRIVE6'];
+    const abilityRank = id => {
+      const rank = abilityOrder.indexOf(id);
+      return rank >= 0 ? rank : abilityOrder.length;
+    };
+    const shapeRank = id => {
+      const rank = shapeOrder.indexOf(id);
+      return rank >= 0 ? rank : shapeOrder.length;
+    };
+    return Object.values(CARD_LIBRARY).sort((a, b) =>
+      abilityRank(a.abilityId) - abilityRank(b.abilityId)
+      || shapeRank(a.shapeId) - shapeRank(b.shapeId)
+      || this.tierRank(a.tier) - this.tierRank(b.tier)
+      || trCardName(a, a.name).localeCompare(trCardName(b, b.name), this.currentLocale())
+    );
+  }
+
+  ensureMenuModal() {
+    let modal = document.getElementById('menuModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'menuModal';
+      modal.className = 'menu-modal';
+      modal.innerHTML = '<div class="menu-modal-inner"><div class="menu-modal-head"><h2></h2><button class="ghost" data-close="1"></button></div><div class="menu-modal-body"></div></div>';
+      document.body.appendChild(modal);
+      modal.addEventListener('click', e => {
+        if (e.target === modal || e.target.dataset.close) {
+          modal.classList.remove('active');
+          this.returnMenuPanels();
+        }
+      });
+    }
+    modal.querySelector('[data-close]').textContent = this.menuText('close');
+    return modal;
+  }
+
+  returnMenuPanels() {
+    const menu = document.getElementById('menu');
+    const anchor = document.getElementById('startRunBtn');
+    ['.menu-records-panel', '.menu-settings-panel'].forEach(selector => {
+      const panel = document.querySelector(selector);
+      if (!panel) return;
+      panel.classList.remove('in-modal');
+      if (panel.parentElement?.classList.contains('menu-modal-body')) menu.insertBefore(panel, anchor);
+    });
+  }
+
+  openMenuPanel(kind) {
+    const modal = this.ensureMenuModal();
+    const body = modal.querySelector('.menu-modal-body');
+    this.returnMenuPanels();
+    body.innerHTML = '';
+    if (kind === 'records') {
+      modal.querySelector('h2').textContent = this.menuText('records');
+      this.renderRecords();
+      const panel = document.querySelector('.menu-records-panel');
+      panel.classList.add('in-modal');
+      body.appendChild(panel);
+    } else {
+      modal.querySelector('h2').textContent = this.menuText('settings');
+      const panel = document.querySelector('.menu-settings-panel');
+      panel.classList.add('in-modal');
+      body.appendChild(panel);
+    }
+    modal.classList.add('active');
+    this.input?.resetMenuFocus();
+  }
+
+  openCodex() {
+    const modal = this.ensureMenuModal();
+    modal.querySelector('h2').textContent = this.menuText('codex');
+    const body = modal.querySelector('.menu-modal-body');
+    this.returnMenuPanels();
+    body.innerHTML = '<div class="codex-tabs"></div><div class="codex-grid"></div>';
+    this.renderCodex(body);
+    modal.classList.add('active');
+    this.input?.resetMenuFocus();
+  }
+
+  renderCodex(body) {
+    const tabs = [
+      ['cards', getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Blocks' : '블록'],
+      ['relics', ui('relics')],
+      ['consumables', ui('consumables')],
+      ['skills', ui('skills')],
+      ['enemies', getLang() === 'ja' ? 'モンスター' : getLang() === 'en' ? 'Monsters' : '몬스터']
+    ];
+    const tabWrap = body.querySelector('.codex-tabs');
+    const grid = body.querySelector('.codex-grid');
+    tabWrap.innerHTML = '';
+    for (const [key, label] of tabs) {
+      const btn = document.createElement('button');
+      btn.className = `ghost${this.codexTab === key ? ' active' : ''}`;
+      btn.textContent = label;
+      btn.addEventListener('click', () => { this.codexTab = key; this.renderCodex(body); });
+      tabWrap.appendChild(btn);
+    }
+    grid.innerHTML = '';
+    const seen = new Set(this.codexSeen[this.codexTab] || []);
+    const locked = () => `<div class="codex-card locked">${this.menuText('unknown')}</div>`;
+    if (this.codexTab === 'cards') this.sortedCodexCards().forEach(card => {
+      if (!seen.has(card.id)) return grid.insertAdjacentHTML('beforeend', locked());
+      const node = document.createElement('div');
+      node.className = `codex-card ${this.tierClass(card.tier)}`;
+      node.innerHTML = `<strong>${this.escapeHtml(trCardName(card, card.name))}</strong><span class="codex-meta">${card.cellCount} cells · ${card.shapeId}</span><small>${this.escapeHtml(trCardDesc(card, CARD_DESCRIPTIONS[card.id] || ''))}</small>`;
+      node.appendChild(this.blockPreview(card, 7));
+      grid.appendChild(node);
+    });
+    if (this.codexTab === 'relics') this.sortByTierName(Object.values(RELICS), relic => dataName('relic', relic, relic.name)).forEach(relic => grid.insertAdjacentHTML('beforeend', seen.has(relic.id) ? `<div class="codex-card ${this.tierClass(relic.tier)}"><strong>${relic.icon || 'R'} ${this.escapeHtml(dataName('relic', relic, relic.name))}</strong><span class="codex-meta">${relic.tier}</span><small>${this.escapeHtml(dataDesc('relic', relic, relic.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'consumables') this.sortByTierName(Object.values(CONSUMABLES), item => dataName('consumable', item, item.name)).forEach(item => grid.insertAdjacentHTML('beforeend', seen.has(item.id) ? `<div class="codex-card ${this.tierClass(item.tier)}"><strong>${item.icon || item.short} ${this.escapeHtml(dataName('consumable', item, item.name))}</strong><span class="codex-meta">${item.tier}</span><small>${this.escapeHtml(dataDesc('consumable', item, item.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'skills') this.sortByTierName(Object.values(SKILLS), skill => dataName('skill', skill, skill.name)).forEach(skill => grid.insertAdjacentHTML('beforeend', seen.has(skill.id) ? `<div class="codex-card ${this.tierClass(skill.tier)}"><strong>${skill.icon || 'S'} ${this.escapeHtml(dataName('skill', skill, skill.name))}</strong><span class="codex-meta">${skill.cost} MP · ${skill.tier}</span><small>${this.escapeHtml(dataDesc('skill', skill, skill.desc))}</small></div>` : locked()));
+    if (this.codexTab === 'enemies') this.allCodexEnemies().forEach(enemy => {
+      const key = this.enemyCodexKey(enemy);
+      grid.insertAdjacentHTML('beforeend', seen.has(key) ? `<div class="codex-card ${this.tierClass(enemy.tier)}"><strong>${enemy.icon || ''} ${this.escapeHtml(trEnemyName(enemy, enemy.name))}</strong><span class="codex-meta">${enemy.type.toUpperCase()} · HP ${enemy.startingRows} · ${enemy.rewardGold}G</span><small>${this.escapeHtml(trEnemyStyle(enemy, enemy.style))}</small><small>AI ${enemy.aiProfile} · Speed ${enemy.speed} · Garbage ${enemy.startingGarbage}</small></div>` : locked());
+    });
   }
 
   togglePracticeMode() {
@@ -423,18 +694,22 @@ class Game {
     if (!btn) return;
     btn.textContent = this.practiceMode ? 'ON' : 'OFF';
     btn.classList.toggle('practice-active', this.practiceMode);
+    const startBtn = document.getElementById('startRunBtn');
+    if (startBtn) startBtn.textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
   }
 
   newRun() {
     document.getElementById('endScreen').classList.remove('run-clear');
     this.run = new RunState();
     this.run.practiceMode = this.practiceMode;
+    this.discoverRunState();
     this.runShopSpent = 0;
     this.runBattleTetris = false;
     this.runGarbageNuke = false;
     this.runEliteKills = 0;
     this.runConsUsed = 0;
     this.runMaxGold = 0;
+    this.runChallengeSuccess = 0;
     const ascMod = this.currentAscMod();
     if (ascMod.playerStartHp != null) this.run.hpRows = ascMod.playerStartHp;
     for (let i = 0; i < (ascMod.startCurseCards ?? 0); i++) {
@@ -461,8 +736,8 @@ class Game {
     if (isRunComplete(this.run)) return this.endRun(true);
     if (isShopRound(this.run.round) && !this.run.visitedShops.has(this.run.round)) return this.showShop();
     this.show('mapScreen');
-    document.getElementById('mapTitle').textContent = `${this.run.round}라운드`;
-    document.getElementById('mapMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 덱 ${this.run.deckCount()}장`;
+    document.getElementById('mapTitle').textContent = ui('round', this.run.round);
+    document.getElementById('mapMeta').textContent = `${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · ${ui('deck')} ${this.run.deckCount()}${ui('cardsUnit')}`;
     document.getElementById('rewardPanel').classList.add('hidden');
     this.renderDeckViewer();
     const wrap = document.getElementById('enemyChoices');
@@ -470,6 +745,7 @@ class Game {
     wrap.innerHTML = '';
     const ascMod = this.currentAscMod();
     for (const enemy of makeEnemyChoices(this.run.round, this.run.relics, ascMod)) {
+      this.discover('enemies', this.enemyCodexKey?.(enemy) || enemy.id || '');
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
@@ -494,9 +770,9 @@ class Game {
       const stars = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
       const diffHtml = `<span class="diff-stars" title="난이도">${stars}</span>`;
       btn.innerHTML = `
-        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${tEnemyName(enemy.name)} ${diffHtml}</strong>
+        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${trEnemyName(enemy, enemy.name)} ${diffHtml}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
-        <small>${enemy.style}</small>
+        <small>${trEnemyStyle(enemy, enemy.style)}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
         ${abilityHtml}
         ${challengeHtml}
@@ -510,11 +786,11 @@ class Game {
     this.show('eventScreen');
     const completed = this.run.round - 1;
     if (eventKey === 'starter') {
-      document.getElementById('eventTitle').textContent = '시작 스킬 선택';
-      document.getElementById('eventMeta').textContent = '런을 시작할 스킬을 선택하세요.';
+      document.getElementById('eventTitle').textContent = ui('starterTitle');
+      document.getElementById('eventMeta').textContent = ui('starterMeta');
     } else {
-      document.getElementById('eventTitle').textContent = eventKey === 'start' ? '시작 이벤트' : `${completed}라운드 이후`;
-      document.getElementById('eventMeta').textContent = `골드 ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · 하나 선택`;
+      document.getElementById('eventTitle').textContent = eventKey === 'start' ? ui('startEvent') : ui('afterRound', completed);
+      document.getElementById('eventMeta').textContent = `${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows} · ${ui('oneChoice')}`;
     }
     const wrap = document.getElementById('eventChoices');
     wrap.innerHTML = '';
@@ -531,9 +807,10 @@ class Game {
       && choices.some(c => c.kind === 'gamble' && this.canUseEvent(c));
     if (!choices.length) choices = [{ kind: 'gold', amount: 10, title: '여분의 골드', desc: '소량의 골드를 가져갑니다.' }];
     for (const choice of choices) {
+      this.discoverItem(choice);
       const btn = document.createElement('button');
       btn.className = `choice event ${this.tierClass(choice.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${this.kindIcon(choice)}${choice.title}</strong><span>${this.eventName(choice)}</span><small>${choice.desc}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(choice.kind)}${this.kindIcon(choice)}${this.eventTitle(choice)}</strong><span>${this.eventName(choice)}</span><small>${this.eventDesc(choice)}</small>`;
       try {
         this.attachEventPreview(btn, choice);
       } catch {
@@ -560,31 +837,96 @@ class Game {
   }
 
   eventName(choice) {
-    if (choice.kind === 'removeCard') return `${choice.price}G · ${CARD_LIBRARY[choice.id].name} 제거`;
-    if (choice.kind === 'removeChoice') return `${choice.price}G · 카드 선택 제거`;
-    if (choice.kind === 'upgradeCard') return `${CARD_LIBRARY[choice.from].name} → ${CARD_LIBRARY[choice.to].name}${this.setTag(choice.to)}`;
-    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${CARD_LIBRARY[choice.card].name} 추가`;
-    if (choice.kind === 'consumable') return CONSUMABLES[choice.id].name;
-    if (choice.kind === 'skill') return `${SKILLS[choice.id].name} (MP ${SKILLS[choice.id].cost})`;
-    if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost} 소모`;
-    if (choice.kind === 'gold') return `${choice.amount}G 획득`;
-    if (choice.kind === 'cleanup') return '이월 쓰레기 제거';
-    if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${RELICS[choice.id].name}`;
-    if (choice.kind === 'gamble') return `${choice.bet}G 베팅`;
-    if (choice.kind === 'contract') return CARD_LIBRARY[choice.id].name;
-    if (choice.kind === 'setRelic') return RELICS[choice.id].name;
-    if (choice.kind === 'grantCard') return `${CARD_LIBRARY[choice.id].name} 획득`;
-    return '이벤트';
+    if (choice.kind === 'removeCard') return `${choice.price}G · ${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)} ${ui('remove')}`;
+    if (choice.kind === 'removeChoice') return `${choice.price}G · ${ui('cardPickRemove')}`;
+    if (choice.kind === 'upgradeCard') return `${trCardName(CARD_LIBRARY[choice.from], CARD_LIBRARY[choice.from]?.name)} → ${trCardName(CARD_LIBRARY[choice.to], CARD_LIBRARY[choice.to]?.name)}${this.setTag(choice.to)}`;
+    if (choice.kind === 'hpForCurse') return `HP +${choice.amount}, ${trCardName(CARD_LIBRARY[choice.card], CARD_LIBRARY[choice.card]?.name)} ${ui('added')}`;
+    if (choice.kind === 'consumable') return dataName('consumable', CONSUMABLES[choice.id], CONSUMABLES[choice.id]?.name);
+    if (choice.kind === 'skill') return `${dataName('skill', SKILLS[choice.id], SKILLS[choice.id]?.name)} (MP ${SKILLS[choice.id].cost})`;
+    if (choice.kind === 'starterSkill') return `MP ${SKILLS[choice.id].cost}`;
+    if (choice.kind === 'gold') return `${choice.amount}G ${ui('gain')}`;
+    if (choice.kind === 'cleanup') return ui('cleanup');
+    if (choice.kind === 'relicDig') return `HP -${choice.amount} · ${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)}`;
+    if (choice.kind === 'gamble') return `${choice.bet}G ${ui('bet')}`;
+    if (choice.kind === 'contract') return trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name);
+    if (choice.kind === 'setRelic') return dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name);
+    if (choice.kind === 'grantCard') return `${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)} ${ui('obtained')}`;
+    return ui('event');
+  }
+
+  eventTitle(choice) {
+    if (choice.kind === 'gamble') {
+      const labels = {
+        bronze: { en: 'Gamble', ja: '賭博' },
+        silver: { en: 'Silver Gamble', ja: 'シルバー賭博' },
+        gold: { en: 'Gold Gamble', ja: 'ゴールド賭博' }
+      };
+      return getLang() === 'ko' ? choice.title : labels[choice.gtier || 'bronze']?.[getLang()] || labels.bronze.en;
+    }
+    if (choice.kind === 'starterSkill') return dataName('skill', SKILLS[choice.id], choice.title);
+    if (choice.kind === 'skill') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'スキル教官' : 'Skill Trainer');
+    if (choice.kind === 'consumable') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '補給キャッシュ' : 'Supply Cache');
+    if (choice.kind === 'relicDig') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '遺物発掘' : 'Relic Dig');
+    if (choice.kind === 'setRelic') return getLang() === 'ko' ? choice.title : `${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)} ${getLang() === 'ja' ? 'セット完成' : 'Set Complete'}`;
+    if (choice.kind === 'upgradeCard') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'ブロック注入' : 'Block Injection');
+    if (choice.kind === 'removeCard') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'デッキ手術' : 'Deck Surgery');
+    if (choice.kind === 'removeChoice') return ui('cardPickRemove');
+    if (choice.kind === 'hpForCurse') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '強化フィールド' : 'Reinforced Field');
+    if (choice.kind === 'cleanup') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? 'フィールド清掃' : 'Field Cleanup');
+    if (choice.kind === 'gold') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '余分なゴールド' : 'Extra Gold');
+    if (choice.kind === 'contract') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '契約' : 'Contract');
+    if (choice.kind === 'grantCard') return getLang() === 'ko' ? choice.title : (getLang() === 'ja' ? '捨てられた重量機' : 'Abandoned Crusher');
+    if (choice.kind === 'gamble') return getLang() === 'ko' ? choice.title : (choice.gtier === 'gold' ? (getLang() === 'ja' ? 'ゴールド賭博' : 'Gold Gamble') : choice.gtier === 'silver' ? (getLang() === 'ja' ? 'シルバー賭博' : 'Silver Gamble') : (getLang() === 'ja' ? '賭博' : 'Gamble'));
+    return choice.title;
+  }
+
+  eventDesc(choice) {
+    if (getLang() === 'ko') return choice.desc;
+    if (choice.kind === 'gamble') {
+      const chance = Math.round((choice.chance ?? 0.55) * 100);
+      return getLang() === 'ja'
+        ? `${choice.bet}ゴールドを賭けます。成功率${chance}%で${choice.reward}ゴールドを受け取り、失敗すると失います。`
+        : `Bet ${choice.bet} gold. ${chance}% chance to win ${choice.reward} gold; lose it on failure.`;
+    }
+    if (choice.kind === 'starterSkill') return dataDesc('skill', SKILLS[choice.id], choice.desc);
+    if (choice.kind === 'removeCard') return getLang() === 'ja'
+      ? `デッキから${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}を1枚除去します。`
+      : `Remove 1 ${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)} from your deck.`;
+    if (choice.kind === 'removeChoice') return getLang() === 'ja' ? 'デッキから好きなカードを1枚選んで除去します。' : 'Choose 1 card from your deck and remove it.';
+    if (choice.kind === 'upgradeCard') return `${trCardName(CARD_LIBRARY[choice.from], CARD_LIBRARY[choice.from]?.name)} → ${trCardName(CARD_LIBRARY[choice.to], CARD_LIBRARY[choice.to]?.name)} · ${ui('specialEffect')}: ${trCardDesc(CARD_LIBRARY[choice.to], choice.desc)}`;
+    if (choice.kind === 'skill') return `${dataName('skill', SKILLS[choice.id], SKILLS[choice.id]?.name)} (MP ${SKILLS[choice.id].cost}): ${dataDesc('skill', SKILLS[choice.id], SKILLS[choice.id]?.desc)} ${ui('skillFull')}`;
+    if (choice.kind === 'hpForCurse') return getLang() === 'ja'
+      ? `最大HP行が増えますが、${trCardName(CARD_LIBRARY[choice.card], CARD_LIBRARY[choice.card]?.name)}がデッキに追加されます。`
+      : `Max HP rows increase, but ${trCardName(CARD_LIBRARY[choice.card], CARD_LIBRARY[choice.card]?.name)} is added to your deck.`;
+    if (choice.kind === 'consumable') return `${dataName('consumable', CONSUMABLES[choice.id], CONSUMABLES[choice.id]?.name)}: ${dataDesc('consumable', CONSUMABLES[choice.id], CONSUMABLES[choice.id]?.desc)} ${ui('itemFull')}`;
+    if (choice.kind === 'relicDig') return `${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)}: ${dataDesc('relic', RELICS[choice.id], RELICS[choice.id]?.desc)} ${ui('spendRows', choice.amount)}`;
+    if (choice.kind === 'contract') return `${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}: ${trCardDesc(CARD_LIBRARY[choice.id], choice.desc)} ${getLang() === 'ja' ? 'デッキに永続追加されます。' : 'Permanently added to your deck.'}`;
+    if (choice.kind === 'grantCard') return `${trCardName(CARD_LIBRARY[choice.id], CARD_LIBRARY[choice.id]?.name)}: ${trCardDesc(CARD_LIBRARY[choice.id], choice.desc)}`;
+    if (choice.kind === 'cleanup') return getLang() === 'ja' ? '持ち越しフィールドのゴミ行を最大5行除去し、残りのゴミ行を下へ整列します。' : 'Remove up to 5 carried garbage rows and align the remaining garbage rows downward.';
+    if (choice.kind === 'gold') return getLang() === 'ja' ? '少量のゴールドを受け取ります。' : 'Take a small amount of gold.';
+    if (choice.kind === 'setRelic') return `${dataName('relic', RELICS[choice.id], RELICS[choice.id]?.name)}: ${dataDesc('relic', RELICS[choice.id], RELICS[choice.id]?.desc)}`;
+    if (choice.kind === 'gamble') return getLang() === 'ja'
+      ? `${choice.bet}ゴールドを賭けます。成功率${Math.round(choice.chance * 100)}%で${choice.reward}ゴールドを受け取り、失敗すると失います。`
+      : `Bet ${choice.bet} gold. ${Math.round(choice.chance * 100)}% chance to win ${choice.reward} gold; lose it on failure.`;
+    return choice.desc;
   }
 
   kindLabel(kind) {
     const map = {
-      card: '블록', grantCard: '블록', contract: '블록', upgradeCard: '블록',
-      skill: '스킬', starterSkill: '스킬',
-      consumable: '소모품',
-      relic: '유물', relicDig: '유물', setRelic: '유물',
+      card: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      grantCard: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      contract: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      upgradeCard: getLang() === 'ja' ? 'ブロック' : getLang() === 'en' ? 'Block' : '블록',
+      skill: getLang() === 'ja' ? 'スキル' : getLang() === 'en' ? 'Skill' : '스킬',
+      starterSkill: getLang() === 'ja' ? 'スキル' : getLang() === 'en' ? 'Skill' : '스킬',
+      consumable: getLang() === 'ja' ? '消耗品' : getLang() === 'en' ? 'Item' : '소모품',
+      relic: getLang() === 'ja' ? '遺物' : getLang() === 'en' ? 'Relic' : '유물',
+      relicDig: getLang() === 'ja' ? '遺物' : getLang() === 'en' ? 'Relic' : '유물',
+      setRelic: getLang() === 'ja' ? '遺物' : getLang() === 'en' ? 'Relic' : '유물',
       hp: 'HP', hpForCurse: 'HP',
-      removeCard: '제거', removeChoice: '제거', gamble: '도박', cleanup: '정리', gold: '골드'
+      removeCard: ui('remove'), removeChoice: ui('remove'), gamble: getLang() === 'ja' ? '賭博' : getLang() === 'en' ? 'Gamble' : '도박',
+      cleanup: getLang() === 'ja' ? '整理' : getLang() === 'en' ? 'Clean' : '정리',
+      gold: ui('gold')
     };
     return map[kind] ? `<em class="kind-tag">[${tKindLabel(map[kind])}]</em> ` : '';
   }
@@ -703,6 +1045,7 @@ class Game {
     }
     if (choice.kind === 'gamble') {
       const tier = choice.gtier || 'bronze';
+      let alchemyResult = null;
       this.run.gold -= choice.bet;
       const won = Math.random() < (choice.chance ?? 0.55);
       if (won) {
@@ -712,7 +1055,8 @@ class Game {
         else if (tier === 'silver') this.run.gambleNext = 'gold';
         else if (tier === 'gold') {
           if (!this.run.relics.includes('alchemy_core')) this.run.relics.push('alchemy_core');
-          this.applyAlchemyCore();
+          this.discover('relics', 'alchemy_core');
+          alchemyResult = this.applyAlchemyCore();
           this.run.gambleNext = null;
           this.run.gambleClosed = true;
         }
@@ -720,23 +1064,54 @@ class Game {
         if (tier !== 'bronze') this.run.gambleClosed = true;
         this.run.gambleNext = null;
       }
-      return this.playGambleEffect(won, choice.bet, done, choice.reward ?? 60);
+      return this.playGambleEffect(won, choice.bet, () => {
+        if (alchemyResult) this.showAlchemyCoreToast(alchemyResult);
+        done();
+      }, choice.reward ?? 60);
     }
     if (choice.kind === 'contract') this.run.deck.addCard(choice.id);
     done();
   }
 
   applyAlchemyCore() {
+    let transformed = 0;
+    const added = [];
+    const removed = new Map();
+    for (const id of this.run.deck.removedBase || []) removed.set(id, (removed.get(id) || 0) + 1);
     for (const base of BASE_TYPES) {
       const pool = BLOCK_UPGRADES[base];
       if (!pool || !pool.length) continue;
-      const to = pool[Math.floor(Math.random() * pool.length)];
-      this.run.deck.replaceCard(base, to);
+      const remaining = Math.max(0, 3 - (removed.get(base) || 0));
+      for (let i = 0; i < remaining; i++) {
+        const to = pool[Math.floor(Math.random() * pool.length)];
+        this.run.deck.removedBase.push(base);
+        this.run.deck.extraCards.push(to);
+        this.discover('cards', to);
+        added.push(to);
+        transformed++;
+      }
     }
     this.run.deck.refill();
+    return { transformed, added };
+  }
+
+  showAlchemyCoreToast(result = {}) {
+    const relic = RELICS.alchemy_core;
+    const count = result.transformed || 0;
+    const text = getLang() === 'ja'
+      ? `${relic.icon ?? ''}${dataName('relic', relic, relic.name)}獲得! 基本ブロック${count}枚を特殊ブロックに変換`
+      : getLang() === 'en'
+        ? `${relic.icon ?? ''}${dataName('relic', relic, relic.name)} obtained! Transformed ${count} basic blocks into special blocks`
+        : `${relic.icon ?? ''}${relic.name} 획득! 기본 블록 ${count}장을 특수 블록으로 변환`;
+    this.showToast(text, 'elite', 3600);
+    this.renderDeckViewer();
   }
 
   playGambleEffect(won, bet, done = () => {}, reward = 60) {
+    const lang = getLang();
+    const rollingText = lang === 'ja' ? '運命をめくっています…' : lang === 'en' ? 'Turning fate...' : '운명을 뒤집는 중…';
+    const winText = lang === 'ja' ? '大当たり! 賭け成功' : lang === 'en' ? 'Jackpot! Bet won' : '대박! 베팅 성공';
+    const loseText = lang === 'ja' ? 'ハズレ… 賭け失敗' : lang === 'en' ? 'Bust... Bet lost' : '꽝… 베팅 실패';
     const host = document.getElementById('app') || document.body;
     const overlay = document.createElement('div');
     overlay.className = 'gamble-overlay';
@@ -745,7 +1120,7 @@ class Game {
     card.textContent = '?';
     const label = document.createElement('div');
     label.className = 'gamble-result';
-    label.textContent = '운명을 뒤집는 중…';
+    label.textContent = rollingText;
     overlay.append(card, label);
     host.appendChild(overlay);
 
@@ -755,7 +1130,7 @@ class Game {
       finished = true;
       card.classList.add('reveal', won ? 'win' : 'lose');
       card.textContent = won ? `+${reward}G` : `-${bet}G`;
-      label.textContent = won ? '대박! 베팅 성공' : '꽝… 베팅 실패';
+      label.textContent = won ? winText : loseText;
       label.classList.add(won ? 'win' : 'lose');
       setTimeout(() => { overlay.remove(); done(); }, 1150);
     };
@@ -765,8 +1140,8 @@ class Game {
 
   showShop() {
     this.show('shopScreen');
-    document.getElementById('leaveShopBtn').textContent = '다음 전투';
-    document.getElementById('shopGold').textContent = `골드 ${this.run.gold}`;
+    document.getElementById('leaveShopBtn').textContent = ui('nextBattle');
+    document.getElementById('shopGold').textContent = `${ui('gold')} ${this.run.gold}`;
     const wrap = document.getElementById('shopItems');
     wrap.innerHTML = '';
     const shopKey = String(this.run.round);
@@ -786,6 +1161,7 @@ class Game {
       }
     }
     for (const item of items) {
+      this.discoverItem(item);
       const key = shopItemKey(item);
       const soldOut = sold.has(key);
       const isDeal = dealKeys.has(key) && !soldOut;
@@ -794,7 +1170,7 @@ class Game {
       slot.className = `shop-slot${locked.has(key) ? ' locked' : ''}${isDeal ? ' deal' : ''}`;
       const btn = document.createElement('button');
       btn.className = `choice shop ${this.tierClass(item.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${item.title}</strong><span>${soldOut ? 'Sold Out' : `${isDeal ? '특가 ' : ''}${price} Gold`}</span><small>${this.itemDesc(item)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(item.kind)}${this.kindIcon(item)}${this.shopItemTitle(item)}</strong><span>${soldOut ? ui('soldOut') : `${isDeal ? ui('deal') : ''}${price} ${ui('gold')}`}</span><small>${this.itemDesc(item)}</small>`;
       this.attachItemPreview(btn, item);
       btn.disabled = soldOut || this.run.gold < price || (item.kind === 'skill' && this.run.ownedSkills.includes(item.id));
       btn.addEventListener('click', () => {
@@ -804,7 +1180,7 @@ class Game {
       });
       const lockBtn = document.createElement('button');
       lockBtn.className = 'shop-lock';
-      lockBtn.textContent = locked.has(key) ? '잠금됨' : '잠금';
+      lockBtn.textContent = locked.has(key) ? ui('locked') : ui('lock');
       lockBtn.disabled = soldOut;
       lockBtn.addEventListener('click', () => { this.audio.playSfx('click'); this.toggleShopLock(item); });
       slot.appendChild(btn);
@@ -814,7 +1190,7 @@ class Game {
     const rerollCost = this.shopRerollCost();
     const rerollBtn = document.createElement('button');
     rerollBtn.className = 'choice shop';
-    rerollBtn.innerHTML = `<strong>리롤</strong><span>${rerollCost} Gold</span><small>상점 물건을 새로 뽑습니다. 리롤할 때마다 비용이 10G 증가합니다.</small>`;
+    rerollBtn.innerHTML = `<strong>${ui('reroll')}</strong><span>${rerollCost} ${ui('gold')}</span><small>${ui('rerollDesc')}</small>`;
     rerollBtn.disabled = this.run.gold < rerollCost;
     rerollBtn.addEventListener('click', () => {
       if (this.run.gold < rerollCost) return;
@@ -823,6 +1199,16 @@ class Game {
     });
     wrap.appendChild(rerollBtn);
     this.input?.resetMenuFocus();
+  }
+
+  shopItemTitle(item) {
+    if (item.kind === 'card') return `${ui('buy')} ${trCardName(CARD_LIBRARY[item.id], CARD_LIBRARY[item.id]?.name)}`;
+    if (item.kind === 'skill') return `${ui('skills')}: ${dataName('skill', SKILLS[item.id], SKILLS[item.id]?.name)} (MP ${SKILLS[item.id].cost})`;
+    if (item.kind === 'relic') return `${ui('relics')}: ${dataName('relic', RELICS[item.id], RELICS[item.id]?.name)}`;
+    if (item.kind === 'consumable') return `${ui('consumables')}: ${dataName('consumable', CONSUMABLES[item.id], CONSUMABLES[item.id]?.name)}`;
+    if (item.kind === 'removeChoice') return ui('cardPickRemove');
+    if (item.kind === 'hp') return `Max HP +${item.amount}`;
+    return item.title;
   }
 
   effectivePrice(item, isDeal = false) {
@@ -874,15 +1260,20 @@ class Game {
       ov = document.createElement('div');
       ov.id = 'deckModal';
       ov.innerHTML = '<div class="deck-modal-inner">'
-        + '<button class="ghost wide" data-close="1">닫기</button>'
-        + '<div class="deck-section"><h3>덱</h3><div id="mDeckList" class="deck-list"></div></div>'
-        + '<div class="deck-section"><h3>스킬</h3><div id="mSkillList" class="loadout-list"></div></div>'
-        + '<div class="deck-section"><h3>소모품</h3><div id="mConsumableList" class="loadout-list"></div></div>'
-        + '<div class="deck-section"><h3>유물</h3><div id="mRelicList" class="loadout-list"></div></div>'
+        + '<button class="ghost wide" data-close="1"></button>'
+        + '<div class="deck-section"><h3 data-section="deck"></h3><div id="mDeckList" class="deck-list"></div></div>'
+        + '<div class="deck-section"><h3 data-section="skills"></h3><div id="mSkillList" class="loadout-list"></div></div>'
+        + '<div class="deck-section"><h3 data-section="consumables"></h3><div id="mConsumableList" class="loadout-list"></div></div>'
+        + '<div class="deck-section"><h3 data-section="relics"></h3><div id="mRelicList" class="loadout-list"></div></div>'
         + '</div>';
       document.body.appendChild(ov);
       ov.addEventListener('click', e => { if (e.target === ov || e.target.dataset.close) ov.classList.remove('active'); });
     }
+    ov.querySelector('[data-close]').textContent = ui('close');
+    ov.querySelector('[data-section="deck"]').textContent = ui('deck');
+    ov.querySelector('[data-section="skills"]').textContent = ui('skills');
+    ov.querySelector('[data-section="consumables"]').textContent = ui('consumables');
+    ov.querySelector('[data-section="relics"]').textContent = ui('relics');
     this.renderDeckSections({
       deck: ov.querySelector('#mDeckList'),
       skill: ov.querySelector('#mSkillList'),
@@ -893,6 +1284,7 @@ class Game {
   }
 
   renderDeckSections({ deck, skill, consumable, relic }) {
+    this.discoverRunState();
     if (deck) {
       const counts = new Map();
       for (const id of this.run.deck.draw) counts.set(id, (counts.get(id) || 0) + 1);
@@ -900,7 +1292,11 @@ class Game {
       for (const id of this.run.deck.extraCards) counts.set(id, Math.max(counts.get(id) || 0, 1));
       deck.innerHTML = '';
       // 모양별 요약 (모든 shapeId 표시)
-      const SHAPE_LABEL = { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'십자', HEAVY5:'중량', WIDE6:'6칸', HOOK5:'훅', PENTA_T:'펜T' };
+      const SHAPE_LABEL = getLang() === 'ja'
+        ? { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'クロス', HEAVY5:'重量', WIDE6:'6セル', HOOK5:'フック', PENTA_T:'ペンT' }
+        : getLang() === 'en'
+          ? { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'Cross', HEAVY5:'Heavy', WIDE6:'6-cell', HOOK5:'Hook', PENTA_T:'PenT' }
+          : { I:'I', J:'J', L:'L', O:'O', S:'S', T:'T', Z:'Z', CROSS5:'십자', HEAVY5:'중량', WIDE6:'6칸', HOOK5:'훅', PENTA_T:'펜T' };
       const SHAPE_ORDER = ['I','J','L','O','S','T','Z','CROSS5','HEAVY5','WIDE6','HOOK5','PENTA_T'];
       const shapeCounts = new Map();
       for (const [id, cnt] of counts) {
@@ -914,12 +1310,12 @@ class Game {
         summary.textContent = parts.join('  ');
         deck.appendChild(summary);
       }
-      [...counts.entries()].sort((a, b) => CARD_LIBRARY[a[0]].name.localeCompare(CARD_LIBRARY[b[0]].name)).forEach(([id, count]) => {
+      [...counts.entries()].sort((a, b) => trCardName(CARD_LIBRARY[a[0]], CARD_LIBRARY[a[0]].name).localeCompare(trCardName(CARD_LIBRARY[b[0]], CARD_LIBRARY[b[0]].name))).forEach(([id, count]) => {
         const card = CARD_LIBRARY[id];
         const item = document.createElement('div');
         item.className = `deck-card ${this.tierClass(card.tier)}`;
         item.appendChild(this.blockPreview(card, 7));
-        item.insertAdjacentHTML('beforeend', `<span>${card.name}${this.setTag(id)}</span><strong>x${count}</strong>`);
+        item.insertAdjacentHTML('beforeend', `<span>${trCardName(card, card.name)}${this.setTag(id)}</span><strong>x${count}</strong>`);
         deck.appendChild(item);
       });
     }
@@ -933,40 +1329,40 @@ class Game {
     relicWrap.innerHTML = '';
 
     if (!this.run.equippedSkills.length) {
-      skillWrap.innerHTML = '<span class="muted">장착된 스킬 없음.</span>';
+      skillWrap.innerHTML = `<span class="muted">${ui('noneSkills')}</span>`;
     } else {
       this.run.equippedSkills.forEach((id, index) => {
         const skill = SKILLS[id];
         if (!skill) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(skill.tier)}`;
-        item.innerHTML = `<span class="item-chip">${skill.icon || index + 1}</span><span><strong>${index + 1}. ${skill.name}</strong><small>${skill.desc}</small><small class="cost">${skill.cost} MP</small></span>`;
+        item.innerHTML = `<span class="item-chip">${skill.icon || index + 1}</span><span><strong>${index + 1}. ${dataName('skill', skill, skill.name)}</strong><small>${dataDesc('skill', skill, skill.desc)}</small><small class="cost">${skill.cost} MP</small></span>`;
         skillWrap.appendChild(item);
       });
     }
 
     if (!this.run.consumables.length) {
-      consumableWrap.innerHTML = '<span class="muted">보유 소모품 없음.</span>';
+      consumableWrap.innerHTML = `<span class="muted">${ui('noneConsumables')}</span>`;
     } else {
       this.run.consumables.forEach((id, index) => {
         const itemDef = CONSUMABLES[id];
         if (!itemDef) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(itemDef.tier)}`;
-        item.innerHTML = `<span class="item-chip">${itemDef.icon || itemDef.short}</span><span><strong>${index + 4}. ${itemDef.name}</strong><small>${itemDef.desc}</small></span>`;
+        item.innerHTML = `<span class="item-chip">${itemDef.icon || itemDef.short}</span><span><strong>${index + 4}. ${dataName('consumable', itemDef, itemDef.name)}</strong><small>${dataDesc('consumable', itemDef, itemDef.desc)}</small></span>`;
         consumableWrap.appendChild(item);
       });
     }
 
     if (!this.run.relics.length) {
-      relicWrap.innerHTML = '<span class="muted">보유 유물 없음.</span>';
+      relicWrap.innerHTML = `<span class="muted">${ui('noneRelics')}</span>`;
     } else {
       this.run.relics.forEach(id => {
         const relic = RELICS[id];
         if (!relic) return;
         const item = document.createElement('div');
         item.className = `loadout-card ${this.tierClass(relic.tier)}`;
-        item.innerHTML = `<span class="item-chip">${relic.icon || 'R'}</span><span><strong>${relic.name}</strong><small>${relic.desc}</small></span>`;
+        item.innerHTML = `<span class="item-chip">${relic.icon || 'R'}</span><span><strong>${dataName('relic', relic, relic.name)}</strong><small>${dataDesc('relic', relic, relic.desc)}</small></span>`;
         relicWrap.appendChild(item);
       });
     }
@@ -975,13 +1371,13 @@ class Game {
   itemDesc(item) {
     if (item.kind === 'card') {
       const card = CARD_LIBRARY[item.id];
-      return `${card.name}${this.setTag(item.id)} (${card.cellCount}칸): ${CARD_DESCRIPTIONS[item.id] || '이 블록을 덱에 추가합니다.'}`;
+      return `${trCardName(card, card.name)}${this.setTag(item.id)} (${card.cellCount}${getLang() === 'ja' ? 'セル' : getLang() === 'en' ? ' cells' : '칸'}): ${trCardDesc(card, CARD_DESCRIPTIONS[item.id] || ui('fallbackCardDesc'))}`;
     }
-    if (item.kind === 'skill') return SKILLS[item.id].desc;
-    if (item.kind === 'consumable') return `${CONSUMABLES[item.id].name}: ${CONSUMABLES[item.id].desc}`;
-    if (item.kind === 'relic') return RELICS[item.id].desc;
-    if (item.kind === 'removeChoice') return '덱에서 원하는 카드 1장을 선택해 제거합니다.';
-    return `생존 공간 ${item.amount}줄 추가.`;
+    if (item.kind === 'skill') return dataDesc('skill', SKILLS[item.id], SKILLS[item.id].desc);
+    if (item.kind === 'consumable') return `${dataName('consumable', CONSUMABLES[item.id], CONSUMABLES[item.id].name)}: ${dataDesc('consumable', CONSUMABLES[item.id], CONSUMABLES[item.id].desc)}`;
+    if (item.kind === 'relic') return dataDesc('relic', RELICS[item.id], RELICS[item.id].desc);
+    if (item.kind === 'removeChoice') return getLang() === 'ja' ? 'デッキから好きなカードを1枚選んで除去します。' : getLang() === 'en' ? 'Choose 1 card from your deck and remove it.' : '덱에서 원하는 카드 1장을 선택해 제거합니다.';
+    return getLang() === 'ja' ? `生存空間を${item.amount}行追加。` : getLang() === 'en' ? `Add ${item.amount} rows of survival space.` : `생존 공간 ${item.amount}줄 추가.`;
   }
 
   attachItemPreview(node, item) {
@@ -1061,6 +1457,7 @@ class Game {
       const price = this.effectivePrice(item, stock.dealKey === shopItemKey(item));
       return this.chooseRemoveCard(price, () => finish(true, 0), () => finish(false));
     }
+    this.discoverItem(item);
     applyReward(this.run, item);
     finish(true);
   }
@@ -1072,12 +1469,12 @@ class Game {
     const counts = new Map();
     for (const id of allCards) counts.set(id, (counts.get(id) || 0) + 1);
     this.showSlotPicker({
-      title: '카드 제거',
-      desc: `${price}G를 지불하고 덱에서 카드 1장을 제거합니다.`,
+      title: ui('removeCardTitle'),
+      desc: ui('removeCardDesc', price),
       slots: cards,
-      labels: id => { const cnt = counts.get(id) || 1; const name = CARD_LIBRARY[id]?.name || id; return cnt > 1 ? `${name} x${cnt}` : name; },
+      labels: id => { const cnt = counts.get(id) || 1; const name = trCardName(CARD_LIBRARY[id], CARD_LIBRARY[id]?.name || id); return cnt > 1 ? `${name} x${cnt}` : name; },
       preview: id => this.blockPreview(CARD_LIBRARY[id], 8),
-      slotLabel: '카드',
+      slotLabel: getLang() === 'ja' ? 'カード' : getLang() === 'en' ? 'Card' : '카드',
       onPick: index => {
         const id = cards[index];
         if (!id || this.run.gold < price) return skipped(false);
@@ -1094,6 +1491,7 @@ class Game {
 
   acquireSkill(id, done = () => {}, skipped = done) {
     if (this.run.ownedSkills.includes(id)) return skipped(false);
+    this.discover('skills', id);
     const add = slot => {
       this.run.ownedSkills.push(id);
       if (slot == null && this.run.equippedSkills.length < 3) this.run.equippedSkills.push(id);
@@ -1102,17 +1500,18 @@ class Game {
     };
     if (this.run.equippedSkills.length < 3) return add(null);
     this.showSlotPicker({
-      title: `${SKILLS[id].name} 장착`,
-      desc: SKILLS[id].desc,
+      title: `${dataName('skill', SKILLS[id], SKILLS[id].name)} ${ui('equip')}`,
+      desc: dataDesc('skill', SKILLS[id], SKILLS[id].desc),
       slots: this.run.equippedSkills,
-      labels: slotId => SKILLS[slotId]?.name || '비어있음',
+      labels: slotId => dataName('skill', SKILLS[slotId], SKILLS[slotId]?.name) || ui('empty'),
       onPick: add,
       onSkip: () => skipped(false)
     });
   }
 
   acquireConsumable(id, done = () => {}, skipped = done) {
-    this.trackSeenConsumable(id);
+    this.discover('consumables', id);
+    this.trackSeenConsumable?.(id);
     const add = slot => {
       if (slot == null && this.run.consumables.length < 3) this.run.consumables.push(id);
       else if (slot != null) this.run.consumables[slot] = id;
@@ -1120,16 +1519,16 @@ class Game {
     };
     if (this.run.consumables.length < 3) return add(null);
     this.showSlotPicker({
-      title: `${CONSUMABLES[id].name} 획득`,
-      desc: CONSUMABLES[id].desc,
+      title: `${dataName('consumable', CONSUMABLES[id], CONSUMABLES[id].name)} ${ui('acquire')}`,
+      desc: dataDesc('consumable', CONSUMABLES[id], CONSUMABLES[id].desc),
       slots: this.run.consumables,
-      labels: slotId => CONSUMABLES[slotId]?.name || '비어있음',
+      labels: slotId => dataName('consumable', CONSUMABLES[slotId], CONSUMABLES[slotId]?.name) || ui('empty'),
       onPick: add,
       onSkip: () => skipped(false)
     });
   }
 
-  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = '슬롯', preview = null }) {
+  showSlotPicker({ title, desc, slots, labels, onPick, onSkip, slotLabel = ui('slot'), preview = null }) {
     let overlay = document.getElementById('slotPicker');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -1155,7 +1554,7 @@ class Game {
       });
       options.appendChild(btn);
     });
-    overlay.querySelector('[data-skip]').textContent = '건너뛰기';
+    overlay.querySelector('[data-skip]').textContent = ui('skip');
     overlay.querySelector('[data-skip]').onclick = () => {
       overlay.classList.remove('active');
       this.input?.resetMenuFocus();
@@ -1168,6 +1567,7 @@ class Game {
   startBattle(enemyCard) {
     this.clearBattleTimeouts();
     this.enemyCard = enemyCard;
+    this.discover('enemies', this.enemyCodexKey(enemyCard));
     if (this.run.relics.includes('steel_heart')) {
       this.run.hpRows = Math.min(28, this.run.hpRows + 1);
     }
@@ -1228,6 +1628,7 @@ class Game {
     this.playerHyperTimer = 0;
     this.playerInvertTimer = 0;
     this.enemyForceDropTimer = 0;
+    this.enemyForceDropSteps = 0;
     this.bossOverloadCharge = 0;
     this.bossRhythmSent = 0;
     this.bossRhythmRestTimer = 0;
@@ -1250,9 +1651,11 @@ class Game {
     this.paused = false;
     this.autoSaveTimer = 0;
     this.skillCooldowns = {};
-    this.message = '전투 시작';
-    document.getElementById('battleTitle').textContent = `${this.run.round}라운드${this.run.practiceMode ? ' [연습]' : ''}`;
-    document.getElementById('battleMeta').textContent = tEnemyName(this.enemyCard?.name);
+    this.message = getLang() === 'ja' ? '戦闘開始' : getLang() === 'en' ? 'Battle start' : '전투 시작';
+    document.getElementById('battleTitle').textContent = `${ui('round', this.run.round)}${this.run.practiceMode ? ' [Practice]' : ''}`;
+    document.getElementById('battleMeta').textContent = trEnemyName(enemyCard, enemyCard.name);
+    document.getElementById('pauseBtn').textContent = t('screen.pause');
+    document.getElementById('forfeitBtn').textContent = t('screen.forfeit');
     this.renderTouchSlots();
     this.renderer.resize(this.player.rows, this.enemy.rows);
     this.show('gameScreen');
@@ -1267,7 +1670,7 @@ class Game {
       const btn = document.createElement('button');
       btn.dataset.skillId = id;
       btn.dataset.skillIdx = i;
-      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${skill.name}<b class="key-label"></b></span><small>${skill.cost}MP</small>`;
+      btn.innerHTML = `<span>${skill.icon ? `${skill.icon} ` : ''}${i + 1}. ${dataName('skill', skill, skill.name)}<b class="key-label"></b></span><small>${skill.cost}MP</small>`;
       btn.addEventListener('pointerdown', e => {
         e.preventDefault();
         this.useSkill(i);
@@ -1302,28 +1705,72 @@ class Game {
   refreshSoloRecords() {
     let records = {};
     try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    const fmtMs = ms => {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const cs = Math.floor((ms % 1000) / 10);
+      return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    };
     for (const [key, cfg] of Object.entries(SOLO_MODES)) {
       const el = document.getElementById(`rec-${key}`);
       if (!el) continue;
       const rec = records[key];
       if (!rec) { el.textContent = '기록 없음'; continue; }
-      if (cfg.unit === 'time') {
-        if (rec.topOut) { el.textContent = `미완료 · ${rec.value}줄`; continue; }
-        const ms = rec.value;
-        const min = Math.floor(ms / 60000);
-        const sec = Math.floor((ms % 60000) / 1000);
-        const cs = Math.floor((ms % 1000) / 10);
-        el.textContent = `최고: ${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-      } else {
-        el.textContent = `최고: ${rec.value}줄`;
+      const parts = [];
+      if (cfg.unit === 'time' && rec.timeTop10?.length) {
+        parts.push(`⏱ ${fmtMs(rec.timeTop10[0].ms)}`);
       }
+      if (rec.scoreTop10?.length) {
+        parts.push(`💥 ${rec.scoreTop10[0].score}`);
+      }
+      el.textContent = parts.length ? parts.join(' · ') : '기록 없음';
     }
+  }
+
+  showSoloLeaderboard(modeKey) {
+    const modeConfig = SOLO_MODES[modeKey];
+    if (!modeConfig) return;
+    let records = {};
+    try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    const rec = records[modeKey] || {};
+    const fmtMs = ms => {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const cs = Math.floor((ms % 1000) / 10);
+      return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    };
+    const rowHtml = (entries, cols) => {
+      if (!entries?.length) return '<p style="color:#8590ac;font-size:13px">기록 없음</p>';
+      return `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="color:#8590ac">${cols.map(c => `<th style="text-align:left;padding:3px 6px;border-bottom:1px solid #2a3458">${c}</th>`).join('')}</tr>
+        ${entries.map((e, i) => `<tr style="color:${i === 0 ? '#ffe082' : '#d7e5ff'}">
+          <td style="padding:3px 6px">${i + 1}</td>
+          <td style="padding:3px 6px">💥 ${e.score}</td>
+          ${e.ms != null ? `<td style="padding:3px 6px">⏱ ${fmtMs(e.ms)}</td>` : ''}
+          <td style="padding:3px 6px">${e.date || ''}</td>
+        </tr>`).join('')}
+      </table>`;
+    };
+    const hasTime = modeConfig.unit === 'time';
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    modal.innerHTML = `
+      <div class="deck-modal-inner" style="min-width:320px;max-width:480px">
+        <h3>🏆 ${modeConfig.name} 순위</h3>
+        ${hasTime ? `<h4 style="color:#8dcfff;margin:12px 0 6px">⏱ 시간 Top 10 (완료 기준)</h4>
+          ${rowHtml(rec.timeTop10, ['#', '점수', '시간', '날짜'])}` : ''}
+        <h4 style="color:#ffe082;margin:12px 0 6px">💥 점수 Top 10</h4>
+        ${rowHtml(rec.scoreTop10, ['#', '점수', '시간', '날짜'])}
+        <button class="ghost" id="soloLbCloseBtn" style="margin-top:14px">닫기</button>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('soloLbCloseBtn').addEventListener('click', () => modal.remove());
   }
 
   startSoloMode(modeKey, startLevel = 0) {
     const modeConfig = SOLO_MODES[modeKey];
     if (!modeConfig) return;
-    this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, ended: false, topOut: false };
+    this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, score: 0, ended: false, topOut: false };
     this.player = new Board({ rows: 20, deck: new Deck() });
     this.fallTimer = 0;
     this.lockTimer = 0;
@@ -1331,6 +1778,9 @@ class Game {
     this.groundTouched = false;
     this.soloPaused = false;
     document.getElementById('soloModeName').textContent = modeConfig.name;
+    const pauseBtn = document.getElementById('soloPauseBtn');
+    if (pauseBtn) pauseBtn.textContent = '⏸';
+    document.getElementById('soloScore').textContent = '💥 0';
     document.getElementById('gameScreen').classList.add('solo-active');
     this.show('gameScreen');
     this.renderer.resizeSolo(20);
@@ -1351,6 +1801,7 @@ class Game {
       : `${this.solo.linesCleared}줄`;
     const lvlStr = modeConfig.speedRamp ? ` · Lv.${this.solo.level + 1}` : '';
     document.getElementById('soloStats').textContent = `${timeStr} · ${linesStr}${lvlStr}`;
+    document.getElementById('soloScore').textContent = `💥 ${Math.round((this.solo.score || 0) * 100) / 100}`;
   }
 
   updateSolo(dt, now) {
@@ -1377,6 +1828,7 @@ class Game {
   resolveSolo(result) {
     if (!result || !this.solo || this.solo.ended) return;
     this.emitPlaceSfx(result);
+    this.solo.score = (this.solo.score || 0) + (result.attack || 0);
     if (result.cleared > 0) {
       this.solo.linesCleared += result.cleared;
       const modeConfig = SOLO_MODES[this.solo.mode];
@@ -1396,63 +1848,96 @@ class Game {
     this.solo.ended = true;
     this.solo.topOut = topOut;
     const modeConfig = SOLO_MODES[this.solo.mode];
+    const date = new Date().toISOString().slice(0, 10);
     let records = {};
     try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
-    const existing = records[this.solo.mode];
-    let isBest = false;
-    if (modeConfig.unit === 'time') {
-      if (!topOut) {
-        if (!existing || existing.topOut || existing.value > this.solo.elapsed) {
-          records[this.solo.mode] = { value: this.solo.elapsed, topOut: false };
-          isBest = true;
-        }
-      } else if (!existing || (existing.topOut && existing.value < this.solo.linesCleared)) {
-        records[this.solo.mode] = { value: this.solo.linesCleared, topOut: true };
-      }
-    } else {
-      if (!existing || existing.value < this.solo.linesCleared) {
-        records[this.solo.mode] = { value: this.solo.linesCleared, topOut };
-        isBest = true;
-      }
+    const modeRec = records[this.solo.mode] || { timeTop10: [], scoreTop10: [] };
+    let isBestTime = false, isBestScore = false;
+
+    // scoreTop10: all modes, sorted DESC by score
+    const scoreEntry = { score: Math.round((this.solo.score || 0) * 100) / 100, ms: this.solo.elapsed, lines: this.solo.linesCleared, topOut, date };
+    modeRec.scoreTop10 = [...(modeRec.scoreTop10 || []), scoreEntry]
+      .sort((a, b) => b.score - a.score || a.ms - b.ms)
+      .slice(0, 10);
+    if (modeRec.scoreTop10[0] === scoreEntry) isBestScore = true;
+
+    // timeTop10: only for time-unit modes and only completed runs
+    if (modeConfig.unit === 'time' && !topOut) {
+      const timeEntry = { ms: this.solo.elapsed, score: this.solo.score || 0, lines: this.solo.linesCleared, date };
+      modeRec.timeTop10 = [...(modeRec.timeTop10 || []), timeEntry]
+        .sort((a, b) => a.ms - b.ms)
+        .slice(0, 10);
+      if (modeRec.timeTop10[0] === timeEntry) isBestTime = true;
     }
+
+    records[this.solo.mode] = modeRec;
     try { localStorage.setItem(SOLO_RECORD_KEY, JSON.stringify(records)); } catch {}
+    const isBest = isBestTime || isBestScore;
+    // solo achievements
+    if (!topOut) this._checkSoloAchievements(this.solo.mode, this.solo.elapsed, this.solo.score || 0);
     // draw final frame with end overlay
     this.renderer.drawSolo(this.player, this.solo, modeConfig, true);
     // show result overlay after short delay
-    setTimeout(() => this.showSoloResult(isBest), 800);
+    setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore), 800);
   }
 
-  showSoloResult(isBest = false) {
+  _checkSoloAchievements(mode, ms, score) {
+    if (mode === 'sprint40') {
+      if (ms <= 55000) this.unlockAchievement('sprint_55s');
+      if (ms <= 40000) this.unlockAchievement('sprint_40s');
+    } else if (mode === 'marathon150') {
+      if (ms <= 180000) this.unlockAchievement('marathon150_3m');
+    } else if (mode === 'marathon300') {
+      if (ms <= 360000) this.unlockAchievement('marathon300_6m');
+    } else if (mode === 'timeatk2') {
+      if (score >= 100) this.unlockAchievement('timeatk2_100');
+    } else if (mode === 'timeatk3') {
+      if (score >= 150) this.unlockAchievement('timeatk3_150');
+    }
+  }
+
+  showSoloResult(isBest = false, isBestTime = false, isBestScore = false) {
     const modeConfig = SOLO_MODES[this.solo.mode];
     const topOut = this.solo.topOut;
     const modal = document.createElement('div');
     modal.className = 'deck-modal active';
-    const timeStr = (() => {
-      const ms = this.solo.elapsed;
+    const fmtMs = ms => {
       const min = Math.floor(ms / 60000);
       const sec = Math.floor((ms % 60000) / 1000);
       const cs = Math.floor((ms % 1000) / 10);
       return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-    })();
+    };
+    const timeStr = fmtMs(this.solo.elapsed);
     const resultLine = topOut
-      ? `게임 오버 · ${this.solo.linesCleared}줄 클리어`
+      ? `게임 오버 · ${this.solo.linesCleared}줄`
       : modeConfig.unit === 'time'
         ? `${modeConfig.name} 클리어! · ${timeStr}`
-        : `${modeConfig.name} 종료 · ${this.solo.linesCleared}줄`;
+        : `${modeConfig.name} 종료 · ${this.solo.linesCleared}줄 · ${timeStr}`;
+    const bestTag = isBestTime && isBestScore ? '⏱+💥 신기록!'
+      : isBestTime ? '⏱ 최고 기록 (시간)!'
+      : isBestScore ? '💥 최고 기록 (점수)!'
+      : '';
     modal.innerHTML = `
       <div class="deck-modal-inner">
         <h3>${topOut ? '💀 게임 오버' : '🎉 ' + (isBest ? '신기록!' : '완료!')}</h3>
         <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
-        ${isBest ? '<p style="color:#ffe082;font-size:13px">✨ 개인 최고 기록!</p>' : ''}
-        <div style="display:flex;gap:10px;margin-top:14px">
+        <p style="color:#ffe082;font-size:14px;margin:4px 0">💥 점수: ${Math.round((this.solo.score || 0) * 100) / 100}</p>
+        ${bestTag ? `<p style="color:#ffe082;font-size:13px">✨ ${bestTag}</p>` : ''}
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
           <button class="ghost" id="soloRetryBtn">다시 하기</button>
+          <button class="ghost" id="soloLbResultBtn">순위 보기</button>
           <button class="ghost" id="soloMenuBtn">모드 선택</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
+    const savedMode = this.solo.mode;
+    const savedStartLevel = this.solo.startLevel;
     document.getElementById('soloRetryBtn').addEventListener('click', () => {
       modal.remove();
-      this.startSoloMode(this.solo.mode, this.solo.startLevel);
+      this.startSoloMode(savedMode, savedStartLevel);
+    });
+    document.getElementById('soloLbResultBtn').addEventListener('click', () => {
+      this.showSoloLeaderboard(savedMode);
     });
     document.getElementById('soloMenuBtn').addEventListener('click', () => {
       modal.remove();
@@ -1465,8 +1950,11 @@ class Game {
 
   action(action) {
     if (!this.inBattle() && !this.inSolo()) return;
-    if (action === 'pause') return this.togglePause();
-    if (this.paused) return;
+    if (action === 'pause') {
+      if (this.inSolo()) return this.toggleSoloPause();
+      return this.togglePause();
+    }
+    if (this.paused || this.soloPaused) return;
     if (this.playerInvertTimer > 0) {
       if (action === 'left') action = 'right';
       else if (action === 'right') action = 'left';
@@ -1526,19 +2014,19 @@ class Game {
     const skill = SKILLS[id];
     if (!skill || this.player.mp < skill.cost) return;
     if ((this.skillCooldowns[id] || 0) > 0) {
-      this.message = `${skill.name} 쿨타임`;
+      this.message = getLang() === 'ja' ? `${dataName('skill', skill, skill.name)} クールタイム` : getLang() === 'en' ? `${dataName('skill', skill, skill.name)} cooldown` : `${skill.name} 쿨타임`;
       return;
     }
     const ok = skill.activate({ game: this, player: this.player, enemy: this.enemy, resolve: (result, attacker) => this.resolve(result, attacker) }) !== false;
     if (!ok) {
-      this.message = `${skill.name} 실패`;
+      this.message = getLang() === 'ja' ? `${dataName('skill', skill, skill.name)} 失敗` : getLang() === 'en' ? `${dataName('skill', skill, skill.name)} failed` : `${skill.name} 실패`;
       return;
     }
     this.battleUsedSkill = true;
     this.player.mp -= skill.cost;
     const cdFactor = this.run.relics.includes('set_manawell') ? 0.5 : 1;
     this.skillCooldowns[id] = (skill.cooldown || 0) * cdFactor;
-    this.message = `${skill.name} 발동`;
+    this.message = getLang() === 'ja' ? `${dataName('skill', skill, skill.name)} 発動` : getLang() === 'en' ? `${dataName('skill', skill, skill.name)} activated` : `${skill.name} 발동`;
     this.audio.playSfx(SKILL_SFX[id] || 'strike');
   }
 
@@ -1573,7 +2061,7 @@ class Game {
     if (attacker === this.player && result.cleared > 0 && !this.battleFirstClearUsed && this.run.relics.includes('first_strike')) {
       mult *= 3;
       this.battleFirstClearUsed = true;
-      this.message = '첫수 보너스!';
+      this.message = getLang() === 'ja' ? '初手ボーナス!' : getLang() === 'en' ? 'First-move bonus!' : '첫수 보너스!';
     }
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('first_aid')) {
       const gRows = this.player.grid.filter(row => row.some(c => c?.traits?.includes('garbage'))).length;
@@ -1609,7 +2097,7 @@ class Game {
     }
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.instant?.dispelEnemy && attacker === this.player) this.dispelEnemyAbilities();
-    if (result.comboBreak && attacker === this.player) this.message = `${result.comboBreak}콤보 종료`;
+    if (result.comboBreak && attacker === this.player) this.message = getLang() === 'ja' ? `${result.comboBreak}コンボ終了` : getLang() === 'en' ? `${result.comboBreak} combo ended` : `${result.comboBreak}콤보 종료`;
     const manaFactor = this.currentAscMod().manaFactor ?? 1.0;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
       const gain = result.mana * 0.35 * manaFactor;
@@ -1690,7 +2178,7 @@ class Game {
     this.enemyAbilityTimer = 0;
     this.bossOverloadCharge = 0;
     this.enemyAbilitySuppressTimer = 8000;
-    this.flashAlert('적 특수능력 해제!');
+    this.flashAlert(getLang() === 'ja' ? '敵の特殊能力を解除!' : getLang() === 'en' ? 'Enemy special ability dispelled!' : '적 특수능력 해제!');
   }
 
   playerSurvivesLethal() {
@@ -1699,7 +2187,7 @@ class Game {
     this.player.defeated = false;
     if (!this.player.current) this.player.spawn();
     this.run.relics = this.run.relics.filter(r => r !== 'phoenix_feather');
-    this.message = '불사조 깃털 발동! 한 번 버팁니다';
+    this.message = getLang() === 'ja' ? '不死鳥の羽発動! 一度耐えます' : getLang() === 'en' ? 'Phoenix Feather activated! You survive once' : '불사조 깃털 발동! 한 번 버팁니다';
     return true;
   }
 
@@ -1708,7 +2196,9 @@ class Game {
     this.battleEndResult = result;
     this.clearBattleTimeouts();
     this.battleEndDelay = result === 'win' ? GAME_TIMING.BATTLE_WIN_DELAY : GAME_TIMING.BATTLE_LOSS_DELAY;
-    this.message = result === 'win' ? '적 처치' : '전투 패배';
+    this.message = result === 'win'
+      ? (getLang() === 'ja' ? '敵撃破' : getLang() === 'en' ? 'Enemy defeated' : '적 처치')
+      : (getLang() === 'ja' ? '戦闘敗北' : getLang() === 'en' ? 'Battle lost' : '전투 패배');
     this.input.vibrate(result === 'win' ? 'win' : 'hurt');
     this.audio.playSfx(result === 'win' ? 'victory' : 'defeat');
     this.autoSave();
@@ -1744,13 +2234,20 @@ class Game {
         const isGreat = !st.grade || st.grade === 'great';
         const reward = isGreat ? this.activeChallenge.reward : (this.activeChallenge.rewardOk || this.activeChallenge.reward);
         const rewardDesc = this.grantChallengeReward(reward);
-        const gradeLabel = isGreat ? '대성공' : '성공';
-        this.pendingChallengeText = ` · 도전 ${gradeLabel}! ${rewardDesc}`;
-        this.showToast(`🏆 도전 ${gradeLabel}!  ${rewardDesc}`, 'challenge-ok');
+        const gradeLabel = isGreat
+          ? (getLang() === 'ja' ? '大成功' : getLang() === 'en' ? 'Complete' : '대성공')
+          : (getLang() === 'ja' ? '成功' : getLang() === 'en' ? 'OK' : '성공');
+        // challenge achievement tracking
+        if (isGreat) this.unlockAchievement('challenge_great');
+        this.runChallengeSuccess = (this.runChallengeSuccess || 0) + 1;
+        if (this.runChallengeSuccess >= 3) this.unlockAchievement('challenge_run3');
+        this.incrementLifetime('challengeSuccesses', 10, 'challenge_10');
+        this.pendingChallengeText = getLang() === 'ja' ? ` · 挑戦${gradeLabel}! ${rewardDesc}` : getLang() === 'en' ? ` · Challenge ${gradeLabel}! ${rewardDesc}` : ` · 도전 ${gradeLabel}! ${rewardDesc}`;
+        this.showToast(getLang() === 'ja' ? `🏆 挑戦${gradeLabel}!  ${rewardDesc}` : getLang() === 'en' ? `🏆 Challenge ${gradeLabel}!  ${rewardDesc}` : `🏆 도전 ${gradeLabel}!  ${rewardDesc}`, 'challenge-ok');
         this.audio.playSfx('challengeWin');
       } else {
-        this.pendingChallengeText = ' · 도전 실패(보너스 없음)';
-        this.showToast('❌ 도전 실패 — 보너스 없음', 'challenge-fail');
+        this.pendingChallengeText = getLang() === 'ja' ? ' · 挑戦失敗(ボーナスなし)' : getLang() === 'en' ? ' · Challenge failed (no bonus)' : ' · 도전 실패(보너스 없음)';
+        this.showToast(getLang() === 'ja' ? '❌ 挑戦失敗 — ボーナスなし' : getLang() === 'en' ? '❌ Challenge failed — no bonus' : '❌ 도전 실패 — 보너스 없음', 'challenge-fail');
         this.audio.playSfx('challengeFail');
       }
     }
@@ -1761,22 +2258,33 @@ class Game {
     this.runMaxGold = Math.max(this.runMaxGold || 0, this.run.gold);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     if (relicId) {
+      this.discover('relics', relicId);
       const r = RELICS[relicId];
-      this.showToast(`⚔️ 엘리트 격파!  ${r.icon ?? ''}${r.name} 유물 획득`, 'elite');
+      this.showToast(getLang() === 'ja'
+        ? `⚔️ エリート撃破!  ${r.icon ?? ''}${dataName('relic', r, r.name)} 遺物獲得`
+        : getLang() === 'en'
+          ? `⚔️ Elite defeated!  ${r.icon ?? ''}${dataName('relic', r, r.name)} relic obtained`
+          : `⚔️ 엘리트 격파!  ${r.icon ?? ''}${r.name} 유물 획득`, 'elite');
     }
     this.run.persistentGrid = this.player.grid.map(row => row.map(cell => cell?.type === 'garbage' ? { ...cell } : null));
     this.run.hpRows = this.player.rows;
     this.run.deck.refill();
-    this.checkSetAchievements();
+    if (this.enemyCard?.type === 'boss' || isRunComplete(this.run)) {
+      this.run.round = Math.max(this.run.round, 20);
+      this.checkSetAchievements?.();
+      this.endRun(true);
+      return;
+    }
+    this.checkSetAchievements?.();
     this.showRewards(makeRewards(this.enemyCard.rewardPool, this.currentAscMod().rewardTierPenalty ?? 0), relicId);
     this.autoSave();
   }
 
   showRewards(rewards, grantedRelic = null) {
     this.show('mapScreen');
-    document.getElementById('mapTitle').textContent = `${this.run.round}라운드 클리어`;
-    const relicText = grantedRelic ? ` · 유물 획득: ${RELICS[grantedRelic].name}` : '';
-    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText}${this.pendingChallengeText || ''} · 보상 선택`;
+    document.getElementById('mapTitle').textContent = ui('roundClear', this.run.round);
+    const relicText = grantedRelic ? ` · ${ui('relics')} ${ui('obtained')}: ${dataName('relic', RELICS[grantedRelic], RELICS[grantedRelic].name)}` : '';
+    document.getElementById('mapMeta').textContent = `+${this.enemyCard.rewardGold}G${relicText}${this.pendingChallengeText || ''} · ${ui('reward')} ${ui('chooseOne')}`;
     document.getElementById('enemyChoices').innerHTML = '';
     this.renderDeckViewer();
     const panel = document.getElementById('rewardPanel');
@@ -1785,12 +2293,14 @@ class Game {
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
     rewards.forEach(reward => {
+      this.discoverItem(reward);
       const btn = document.createElement('button');
       btn.className = `choice reward ${this.tierClass(reward.tier)}`;
-      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${reward.title}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
+      btn.innerHTML = `<strong>${this.kindLabel(reward.kind)}${this.kindIcon(reward)}${this.rewardTitle(reward)}</strong><span>${this.rewardName(reward)}</span><small>${this.itemDesc(reward)}</small>`;
       this.attachItemPreview(btn, reward);
       btn.addEventListener('click', () => {
         this.audio.playSfx('select');
+        this.discoverItem(reward);
         applyReward(this.run, reward);
         this.normalizePersistentGrid();
         this.run.round++;
@@ -1803,11 +2313,18 @@ class Game {
   }
 
   rewardName(reward) {
-    if (reward.kind === 'card') return CARD_LIBRARY[reward.id].name;
-    if (reward.kind === 'skill') return `${SKILLS[reward.id].name} (MP ${SKILLS[reward.id].cost})`;
-    if (reward.kind === 'consumable') return CONSUMABLES[reward.id].name;
-    if (reward.kind === 'relic') return RELICS[reward.id].name;
-    return `HP +${reward.amount}줄`;
+    if (reward.kind === 'card') return trCardName(CARD_LIBRARY[reward.id], CARD_LIBRARY[reward.id].name);
+    if (reward.kind === 'skill') return `${dataName('skill', SKILLS[reward.id], SKILLS[reward.id].name)} (MP ${SKILLS[reward.id].cost})`;
+    if (reward.kind === 'consumable') return dataName('consumable', CONSUMABLES[reward.id], CONSUMABLES[reward.id].name);
+    if (reward.kind === 'relic') return dataName('relic', RELICS[reward.id], RELICS[reward.id].name);
+    return ui('hpRows', reward.amount);
+  }
+
+  rewardTitle(reward) {
+    if (getLang() === 'ko') return reward.title;
+    if (reward.kind === 'card') return ui('blockReward');
+    if (reward.kind === 'hp') return ui('hpRows', reward.amount);
+    return ui('reward');
   }
 
   normalizePersistentGrid() {
@@ -1855,33 +2372,34 @@ class Game {
       return;
     }
     this.clearBattleTimeouts();
+    this.lastRunResult = win ? 'win' : 'loss';
+    if (win) this.audio.playSfx('runClear');
     if (!this.run?.practiceMode) {
-      this.updateLifetimeSeen(this.run);
-      this.checkCompendiumAchievements();
+      this.updateLifetimeSeen?.(this.run);
+      this.checkCompendiumAchievements?.();
     }
-    const prevCleared = this.hasEverCleared();
+    const prevCleared = this.hasEverCleared?.() || false;
     this.saveRecord(win);
     this.deleteSave(true);
     document.getElementById('endScreen').classList.toggle('run-clear', win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
-    document.getElementById('endSummary').textContent = `${Math.min(this.run.round, 20)}라운드 · 골드 ${this.run.gold} · HP ${this.run.hpRows}줄`;
+    document.getElementById('endSummary').textContent = `${ui('round', Math.min(this.run.round, 20))} · ${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' rows' : '줄'}`;
     if (!win && !this.run?.practiceMode) {
-      const lt = this.loadLifetime();
-      lt.winStreak = 0;
-      this.saveLifetime(lt);
+      const lt = this.loadLifetime?.();
+      if (lt) { lt.winStreak = 0; this.saveLifetime?.(lt); }
     }
     if (win) {
-      const lvl = this.getAscensionLevel();
-      this.checkRunAchievements(lvl);
+      const lvl = this.getAscensionLevel?.() ?? 0;
+      this.checkRunAchievements?.(lvl);
       // 단계별 해금: 이번 레벨 클리어 시 다음 레벨 해금
-      const prevMax = this.getMaxAscension();
+      const prevMax = this.getMaxAscension?.() ?? 0;
       if (!prevCleared) {
-        this.setMaxAscension(1); // 첫 클리어 → A1 해금
+        this.setMaxAscension?.(1); // 첫 클리어 → A1 해금
       } else if (lvl >= prevMax && lvl < 10) {
-        this.setMaxAscension(lvl + 1);
+        this.setMaxAscension?.(lvl + 1);
       }
-      const newMax = this.getMaxAscension();
+      const newMax = this.getMaxAscension?.() ?? 0;
       const box = document.getElementById('ascensionUnlockBox');
       if (box) {
         if (!prevCleared) {
@@ -1890,7 +2408,7 @@ class Game {
           setTimeout(() => box.classList.add('hidden'), 6000);
         } else if (newMax > prevMax && lvl < 10) {
           box.classList.remove('hidden');
-          box.textContent = `🌟 ${ASCENSION_MODS[lvl].label} 클리어! ${ASCENSION_MODS[newMax]?.label ?? 'A10'} 해금!`;
+          box.textContent = `🌟 ${ASCENSION_MODS[lvl]?.label} 클리어! ${ASCENSION_MODS[newMax]?.label ?? 'A10'} 해금!`;
           setTimeout(() => box.classList.add('hidden'), 4000);
         } else if (lvl >= 10) {
           box.classList.remove('hidden');
@@ -1904,14 +2422,20 @@ class Game {
   }
 
   saveRecord(win) {
+    if (this.run.practiceMode) return;
     const records = this.loadRecords();
     records.unshift({
       round: Math.min(this.run.round, 20),
       gold: this.run.gold,
       result: win ? 'win' : 'loss',
+      hpRows: this.run.hpRows,
+      deckCount: this.run.deckCount(),
+      relicCount: this.run.relics.length,
+      skillCount: this.run.ownedSkills.length,
+      consumableCount: this.run.consumables.length,
       at: Date.now()
     });
-    localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 5)));
+    localStorage.setItem(RECORD_KEY, JSON.stringify(records.slice(0, 20)));
   }
 
   loadRecords() {
@@ -2101,10 +2625,25 @@ class Game {
     }
     if (Object.values(shapeCounts).some(n => n >= 10)) this.unlockAchievement('mono_deck');
     if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
+    if (ascensionLevel >= 2) this.unlockAchievement('asc_clear_2');
     if (ascensionLevel >= 3) this.unlockAchievement('ascension_3');
+    if (ascensionLevel >= 4) this.unlockAchievement('asc_clear_4');
     if (ascensionLevel >= 5) this.unlockAchievement('ascension_5');
+    if (ascensionLevel >= 6) this.unlockAchievement('asc_clear_6');
+    if (ascensionLevel >= 7) this.unlockAchievement('asc_clear_7');
     if (ascensionLevel >= 8) this.unlockAchievement('ascension_8');
+    if (ascensionLevel >= 9) this.unlockAchievement('asc_clear_9');
     if (ascensionLevel >= 10) this.unlockAchievement('ascension_10');
+    // 영구업글 없이 승천 클리어
+    const metaUpgs = this.loadMeta().upgrades || {};
+    const hasMetaUpgrades = Object.values(metaUpgs).some(v => v > 0);
+    if (!hasMetaUpgrades) {
+      if (ascensionLevel >= 1) this.unlockAchievement('nometa_asc1');
+      if (ascensionLevel >= 3) this.unlockAchievement('nometa_asc3');
+      if (ascensionLevel >= 5) this.unlockAchievement('nometa_asc5');
+      if (ascensionLevel >= 8) this.unlockAchievement('nometa_asc8');
+      if (ascensionLevel >= 10) this.unlockAchievement('nometa_asc10');
+    }
     const lt = this.loadLifetime();
     lt.totalWins = (lt.totalWins || 0) + 1;
     lt.winStreak = (lt.winStreak || 0) + 1;
@@ -2307,6 +2846,12 @@ class Game {
   showAchievementsModal() {
     const unlocked = this.loadAchievements();
     const lang = getLang();
+    const count = unlocked.size;
+    const total = ACHIEVEMENTS.length;
+    const pct = Math.round(count / total * 100);
+    const meta = this.loadMeta();
+    const pts = meta.points || 0;
+
     const rows = ACHIEVEMENTS.map(a => {
       const isUnlocked = unlocked.has(a.id);
       const name = lang === 'en' ? a.en : lang === 'ja' ? a.ja : a.ko;
@@ -2316,19 +2861,30 @@ class Game {
         <div><strong>${name}</strong><small>${desc}</small></div>
       </div>`;
     }).join('');
-    const count = unlocked.size;
-    const total = ACHIEVEMENTS.length;
-    const title = `${lang === 'ja' ? '実績' : lang === 'en' ? 'Achievements' : '업적'} (${count}/${total})`;
+
+    const titleText = `${lang === 'ja' ? '実績' : lang === 'en' ? 'Achievements' : '업적'} ${count}/${total}`;
+    const progressHtml = `
+      <div class="ach-progress-wrap">
+        <div class="ach-progress-bar" style="width:${pct}%"></div>
+      </div>
+      <div class="ach-progress-label">${pct}% 달성 · 포인트 보유 ${pts}P</div>`;
+
     let ov = document.getElementById('achievementsModal');
     if (!ov) {
       ov = document.createElement('div');
       ov.id = 'achievementsModal';
       ov.className = 'deck-modal';
-      ov.innerHTML = '<div class="deck-modal-inner"><button class="ghost wide" data-close="1">✕ 닫기</button><h2 id="achModalTitle"></h2><div id="achModalList" class="achievements-list"></div></div>';
+      ov.innerHTML = `<div class="deck-modal-inner">
+        <button class="ghost wide" data-close="1">✕ 닫기</button>
+        <h2 id="achModalTitle"></h2>
+        <div id="achProgress"></div>
+        <div id="achModalList" class="achievements-list"></div>
+      </div>`;
       document.body.appendChild(ov);
       ov.addEventListener('click', e => { if (e.target === ov || e.target.dataset.close) ov.classList.remove('active'); });
     }
-    ov.querySelector('#achModalTitle').textContent = title;
+    ov.querySelector('#achModalTitle').textContent = titleText;
+    ov.querySelector('#achProgress').innerHTML = progressHtml;
     ov.querySelector('#achModalList').innerHTML = rows;
     ov.classList.add('active');
   }
@@ -2429,6 +2985,7 @@ class Game {
         playerHyperTimer: this.playerHyperTimer || 0,
         playerInvertTimer: this.playerInvertTimer || 0,
         enemyForceDropTimer: this.enemyForceDropTimer || 0,
+        enemyForceDropSteps: this.enemyForceDropSteps || 0,
         bossOverloadCharge: this.bossOverloadCharge || 0,
         bossRhythmSent: this.bossRhythmSent || 0,
         bossRhythmRestTimer: this.bossRhythmRestTimer || 0,
@@ -2496,6 +3053,7 @@ class Game {
         this.playerHyperTimer = state.battle.playerHyperTimer || 0;
         this.playerInvertTimer = state.battle.playerInvertTimer || 0;
         this.enemyForceDropTimer = state.battle.enemyForceDropTimer || 0;
+        this.enemyForceDropSteps = state.battle.enemyForceDropSteps || 0;
         this.bossOverloadCharge = state.battle.bossOverloadCharge || 0;
         this.bossRhythmSent = state.battle.bossRhythmSent || 0;
         this.bossRhythmRestTimer = state.battle.bossRhythmRestTimer || 0;
@@ -2503,9 +3061,9 @@ class Game {
         this.enemyDebuffs = { ...(state.battle.enemyDebuffs || {}) };
         this.syncTimedLocks();
         this.paused = state.battle.paused ?? true;
-        this.message = state.battle.message || '불러옴';
-        document.getElementById('battleTitle').textContent = `${this.run.round}라운드`;
-        document.getElementById('battleMeta').textContent = this.enemyCard?.name || 'Enemy';
+        this.message = state.battle.message || (getLang() === 'ja' ? '読み込み済み' : getLang() === 'en' ? 'Loaded' : '불러옴');
+        document.getElementById('battleTitle').textContent = ui('round', this.run.round);
+        document.getElementById('battleMeta').textContent = trEnemyName(this.enemyCard, this.enemyCard?.name || 'Enemy');
         this.renderTouchSlots();
         this.renderer.resize(this.player.rows, this.enemy.rows);
         this.show('gameScreen');
@@ -2517,6 +3075,8 @@ class Game {
         this.paused = false;
         this.routeNextScreen();
       }
+      this.discoverRunState();
+      this.discover('enemies', this.enemyCodexKey(this.enemyCard));
       this.refreshMenu();
     } catch (err) {
       console.warn('Save load failed', err);
@@ -2547,11 +3107,19 @@ class Game {
   togglePause() {
     if (!this.inBattle() || this.battleEndResult) return;
     this.paused = !this.paused;
-    document.getElementById('pauseBtn').textContent = this.paused ? '재개' : '일시정지';
+    document.getElementById('pauseBtn').textContent = this.paused ? t('screen.resume') : t('screen.pause');
     document.getElementById('pauseOverlay')?.classList.toggle('hidden', !this.paused);
-    this.message = this.paused ? '일시정지' : '재개';
+    this.message = this.paused ? t('screen.pauseTitle') : t('screen.resume');
     this.audio.playSfx(this.paused ? 'pause' : 'resume');
     this.autoSave();
+  }
+
+  toggleSoloPause() {
+    if (!this.solo || this.solo.ended) return;
+    this.soloPaused = !this.soloPaused;
+    const btn = document.getElementById('soloPauseBtn');
+    if (btn) btn.textContent = this.soloPaused ? '▶' : '⏸';
+    this.audio.playSfx(this.soloPaused ? 'pause' : 'resume');
   }
 
   // 즉발 효과(onPlace)에 따른 SFX. result.instant는 board.applyOnPlace에서 채워진다.
@@ -2657,6 +3225,7 @@ class Game {
         playerFog: this.playerFogTimer,
         alert: this.alertTimer > 0 ? this.alertText : null
       });
+      this.input.update(now);
       return;
     }
     this.battleElapsedSec += dt / 1000;
@@ -2688,6 +3257,7 @@ class Game {
     this.playerHyperTimer = Math.max(0, (this.playerHyperTimer || 0) - dt);
     this.playerInvertTimer = Math.max(0, (this.playerInvertTimer || 0) - dt);
     this.enemyForceDropTimer = Math.max(0, (this.enemyForceDropTimer || 0) - dt);
+    if (this.enemyForceDropTimer <= 0) this.enemyForceDropSteps = 0;
     this.alertTimer = Math.max(0, (this.alertTimer || 0) - dt);
     this.tickDebuffs(dt);
     Object.keys(this.skillCooldowns).forEach(id => {
@@ -2715,8 +3285,9 @@ class Game {
       message: this.message,
       skillCooldowns: this.skillCooldowns,
       effects: this.currentEffectBadges(),
-        playerFog: this.playerFogTimer,
-        alert: this.alertTimer > 0 ? this.alertText : null
+      playerFog: this.playerFogTimer,
+      alert: this.alertTimer > 0 ? this.alertText : null,
+      noFlash: this.isNoFlash()
     });
     this.message = '';
   }
@@ -2815,34 +3386,37 @@ class Game {
     for (const [k, ms] of Object.entries(this.enemyDebuffs || {})) if (k !== 'rotate') enemy.push(`${k.toUpperCase()} ${fmt(ms)}`);
     // 활성 패시브 유물(눈에 잘 안 보이는 효과)을 확인할 수 있게 표시. 디버프 뒤에 붙여 우선순위 양보.
     const relics = this.run?.relics || [];
-    if (relics.includes('set_goldhand')) player.push(`금화+${Math.round(Math.min(1, this.run.gold / 200) * 100)}%`);
-    if (relics.includes('set_overload')) player.push('과부하');
-    if (relics.includes('set_abszero') && this.enemySlowTimer > 0) player.push('절대영도');
-    if (relics.includes('set_sanctuary')) player.push('성소');
+    if (relics.includes('set_goldhand')) player.push(`${getLang() === 'ja' ? '金貨' : getLang() === 'en' ? 'GOLD' : '금화'}+${Math.round(Math.min(1, this.run.gold / 200) * 100)}%`);
+    if (relics.includes('set_overload')) player.push(getLang() === 'ja' ? '過負荷' : getLang() === 'en' ? 'OVERLOAD' : '과부하');
+    if (relics.includes('set_abszero') && this.enemySlowTimer > 0) player.push(getLang() === 'ja' ? '絶対零度' : getLang() === 'en' ? 'ABS ZERO' : '절대영도');
+    if (relics.includes('set_sanctuary')) player.push(getLang() === 'ja' ? '聖域' : getLang() === 'en' ? 'SANCTUARY' : '성소');
     const ch = this.challengeStatus();
-    if (ch) player.unshift(`도전 ${ch.text}`);
+    if (ch) player.unshift(`${ui('challenge')} ${ch.text}`);
     return { player, enemy };
   }
 
   challengeStatus() {
     const c = this.activeChallenge;
     if (!c) return null;
-    if (c.id === 'noHold') return { ok: !this.battleUsedHold, grade: 'great', text: `${c.label}(${this.battleUsedHold ? '실패' : '유지'})` };
-    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, grade: 'great', text: `${c.label}(${this.battleUsedSkill ? '실패' : '유지'})` };
-    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, grade: 'great', text: `${c.label}(${this.battleUsedHardDrop ? '실패' : '유지'})` };
-    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, grade: 'great', text: `${c.label}(${this.battleUsedCounterClockwise ? '실패' : '유지'})` };
-    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, grade: 'great', text: `${c.label}(${this.battleUsedClockwise ? '실패' : '유지'})` };
+    const fail = getLang() === 'ja' ? '失敗' : getLang() === 'en' ? 'fail' : '실패';
+    const keep = getLang() === 'ja' ? '維持' : getLang() === 'en' ? 'ok' : '유지';
+    const label = trChallengeLabel(c, c.label);
+    if (c.id === 'noHold') return { ok: !this.battleUsedHold, grade: 'great', text: `${label}(${this.battleUsedHold ? fail : keep})` };
+    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, grade: 'great', text: `${label}(${this.battleUsedSkill ? fail : keep})` };
+    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, grade: 'great', text: `${label}(${this.battleUsedHardDrop ? fail : keep})` };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, grade: 'great', text: `${label}(${this.battleUsedCounterClockwise ? fail : keep})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, grade: 'great', text: `${label}(${this.battleUsedClockwise ? fail : keep})` };
     if (c.id === 'timeAttack') {
       const great = this.battleElapsedSec <= c.params.limit;
       const ok = c.paramsOk ? this.battleElapsedSec <= c.paramsOk.limit : great;
       const grade = great ? 'great' : ok ? 'ok' : null;
-      return { ok: !!grade, grade, text: `${c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
+      return { ok: !!grade, grade, text: `${getLang() === 'ja' ? 'タイムアタック' : getLang() === 'en' ? 'Time Attack' : label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
     }
     if (c.id === 'clearLines') {
       const great = this.battlePlayerClearedLines >= c.params.target;
       const ok = c.paramsOk ? this.battlePlayerClearedLines >= c.paramsOk.target : great;
       const grade = great ? 'great' : ok ? 'ok' : null;
-      return { ok: !!grade, grade, text: `${c.label} ${this.battlePlayerClearedLines}/${c.params.target}줄` };
+      return { ok: !!grade, grade, text: `${getLang() === 'ja' ? 'ラインラッシュ' : getLang() === 'en' ? 'Line Rush' : label} ${this.battlePlayerClearedLines}/${c.params.target}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' lines' : '줄'}` };
     }
     return null;
   }
@@ -2859,13 +3433,24 @@ class Game {
         if (this.run.equippedSkills.length < 3) this.run.equippedSkills.push(reward.id);
       } else this.run.gold += Math.round(30 * gf);
     }
-    return reward.label;
+    return trRewardLabel(reward, reward.label);
   }
 
   resolveEnemyStep() {
     if (this.enemyForceDropTimer > 0 && this.enemy?.current && !this.enemy.defeated) {
-      this.ai.queue = [];
-      return this.enemy.hardDrop();
+      const result = this.ai.step(this.enemy);
+      if (result) {
+        this.enemyForceDropSteps = 0;
+        this.enemyActionStall = 0;
+        return result;
+      }
+      this.enemyForceDropSteps = (this.enemyForceDropSteps || 0) + 1;
+      if (this.enemyForceDropSteps >= 3) {
+        this.enemyForceDropSteps = 0;
+        this.ai.queue = [];
+        return this.enemy.hardDrop();
+      }
+      return null;
     }
     const result = this.ai.step(this.enemy);
     if (result) {
@@ -3092,6 +3677,18 @@ class Game {
     if (el) el.textContent = relayBest ? `최고: ${relayBest}킬` : '기록 없음';
   }
 
+  _refreshNoFlashBtn() {
+    const btn = document.getElementById('noFlashToggleBtn');
+    if (!btn) return;
+    const on = localStorage.getItem('bbs.settings.noFlash') === '1';
+    btn.textContent = on ? 'ON' : 'OFF';
+    btn.classList.toggle('active', on);
+  }
+
+  isNoFlash() {
+    return localStorage.getItem('bbs.settings.noFlash') === '1';
+  }
+
   startVsMode(mode, difficulty = 1) {
     this.vs = { mode, difficulty, wins: [0, 0], game: 1, relayKills: 0, ended: false };
     this._vsGameEndHandled = false;
@@ -3100,7 +3697,7 @@ class Game {
 
   _makeVsDummyRun() {
     return {
-      relics: [], skills: [], consumables: [], equippedSkills: [],
+      relics: [], consumables: [], equippedSkills: [],
       ownedSkills: [], gold: 0, round: 1, hpRows: 20,
       deckCount: () => 21, persistentGrid: null, practiceMode: false
     };
@@ -3112,27 +3709,39 @@ class Game {
     this._vsGameEndHandled = false;
     const { mode, difficulty } = this.vs;
 
-    // Fake enemy card (no roguelike-specific fields needed)
-    const speeds = [280, 200, 140];
-    this.enemyCard = {
-      type: 'normal', name: 'VS 배틀', aiProfile: 'balanced',
-      speed: speeds[difficulty] ?? 200, mirror: false, ability: null,
-      rewardGold: 0, rewardPool: 'normal', startingRows: 20,
-      startingGarbage: 0, vsMode: true
-    };
+    // Build enemy card
+    const seed = Date.now();
+    if (mode === 'relay') {
+      const firstEnemy = makeEnemy(1);
+      this.enemyCard = { ...firstEnemy, vsMode: true, rewardGold: 0, startingRows: 20 };
+    } else {
+      const speeds = [280, 200, 140];
+      this.enemyCard = {
+        type: 'normal', name: 'VS 배틀', aiProfile: 'balanced',
+        speed: speeds[difficulty] ?? 200, mirror: false, ability: null,
+        rewardGold: 0, rewardPool: 'normal', startingRows: 20,
+        startingGarbage: 0, deckExtras: [], vsMode: true
+      };
+    }
 
     // Build decks
-    const seed = Date.now();
     const playerDeck = mode === 'random' ? this.makeRandomDeck(seed) : new Deck();
-    const enemyDeck  = mode === 'random' ? this.makeRandomDeck((seed ^ 0xdeadbeef) >>> 0) : new Deck();
+    const enemyDeckCards = mode === 'relay' ? (this.enemyCard.deckExtras || []) : (mode === 'random' ? [] : []);
+    const enemyDeck = mode === 'random' ? this.makeRandomDeck((seed ^ 0xdeadbeef) >>> 0) : new Deck(enemyDeckCards);
 
     this.player = new Board({ rows: 20, deck: playerDeck });
     this.player.delaysGarbageOnClear = true;
     this.player.onGarbageLanded = () => this.input.vibrate('garbage');
     this.enemy = new Board({ rows: 20, deck: enemyDeck });
     this.enemy.delaysGarbageOnClear = false;
+    if (mode === 'relay' && this.enemyCard.startingGarbage > 0) {
+      this.enemy.receiveGarbage(Math.min(this.enemyCard.startingGarbage, 5));
+      for (const entry of this.enemy.garbageEntries) { entry.timer = 0; entry.instant = true; }
+    }
 
-    this.ai = new AI('balanced', {}, difficulty);
+    this.ai = mode === 'relay'
+      ? new AI(this.enemyCard.aiProfile || 'balanced', this.enemyCard.aiSkill || {})
+      : new AI('balanced', {}, difficulty);
 
     // Reset all battle state
     this.fallTimer = 0; this.lockTimer = 0; this.lockResets = 0; this.groundTouched = false;
@@ -3187,9 +3796,13 @@ class Game {
         const baseCard = CARD_LIBRARY[s];
         const donor = allCards[Math.floor(rand() * allCards.length)];
         const ability = ABILITY_LIBRARY[donor.abilityId] || ABILITY_LIBRARY.none;
+        const exactCard = allCards.find(c => c.shapeId === s && c.abilityId === ability.id);
+        const cardName = exactCard ? exactCard.name
+          : ability.id === 'none' ? (baseCard.name || s)
+          : `${ability.name} ${baseCard.shapeName || s}`;
         cards.push({
           id: `rnd_${s}_${r}`,
-          name: `랜덤 ${s}`,
+          name: cardName,
           shapeId: s,
           shapeName: baseCard.shapeName,
           abilityId: ability.id,
@@ -3218,7 +3831,7 @@ class Game {
     if (this.vs.mode === 'relay') {
       if (playerWon) {
         this.vs.relayKills++;
-        if (this.vs.relayKills % 3 === 0) this._relayDrop();
+        this._relayKillReward();
         setTimeout(() => this._startNextRelayEnemy(), 800);
       } else {
         this.vs.ended = true;
@@ -3242,41 +3855,67 @@ class Game {
     }
   }
 
-  _relayDrop() {
-    const allRelicIds = Object.keys(RELICS);
-    const allConsIds = Object.keys(CONSUMABLES);
-    const pool = [
-      ...allRelicIds.map(r => ({ type: 'relic', id: r })),
-      ...allConsIds.map(c => ({ type: 'cons', id: c }))
-    ];
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    if (pick.type === 'relic' && !this.run.relics.includes(pick.id)) {
-      this.run.relics.push(pick.id);
-      this.flashAlert(`유물 획득: ${RELICS[pick.id]?.name || pick.id}`);
-    } else if (pick.type === 'cons') {
-      if (this.run.consumables.length < 3) {
-        this.run.consumables.push(pick.id);
-        this.renderTouchSlots();
-        this.flashAlert(`소모품 획득: ${CONSUMABLES[pick.id]?.name || pick.id}`);
-      } else {
-        // Try relic instead
-        const relicId = allRelicIds.find(r => !this.run.relics.includes(r));
-        if (relicId) {
-          this.run.relics.push(relicId);
-          this.flashAlert(`유물 획득: ${RELICS[relicId]?.name || relicId}`);
+  _relayKillReward() {
+    const kills = this.vs.relayKills;
+    const EXCLUDED_RELICS = new Set(['merchant_token', 'warehouse_key', 'greed', 'bounty_market', 'set_goldhand', 'instant_gauge']);
+
+    // 매 킬: 랜덤 특수 카드
+    const specialCards = Object.values(CARD_LIBRARY).filter(c => c.abilityId && c.abilityId !== 'none');
+    if (specialCards.length) {
+      const card = specialCards[Math.floor(Math.random() * specialCards.length)];
+      this.player.deck.addCard(card.id);
+      this.showToast(`🃏 카드 획득: ${card.name}`, 'normal', 2500);
+    }
+
+    // 매 킬: 랜덤 소모품
+    const consIds = Object.keys(CONSUMABLES);
+    if (consIds.length && this.run.consumables.length < 3) {
+      const consId = consIds[Math.floor(Math.random() * consIds.length)];
+      this.run.consumables.push(consId);
+      this.renderTouchSlots();
+      this.showToast(`💊 소모품 획득: ${CONSUMABLES[consId]?.name || consId}`, 'normal', 2500);
+    }
+
+    // 1킬, 3킬, 5킬... (홀수 킬): 랜덤 스킬
+    if (kills === 1 || (kills > 1 && (kills - 1) % 2 === 0)) {
+      const skillIds = Object.keys(SKILLS);
+      const available = skillIds.filter(id => !this.run.ownedSkills.includes(id));
+      if (available.length) {
+        const skillId = available[Math.floor(Math.random() * available.length)];
+        this.run.ownedSkills.push(skillId);
+        if (this.run.equippedSkills.length < 3) {
+          this.run.equippedSkills.push(skillId);
+          this.renderTouchSlots();
         }
+        this.showToast(`✨ 스킬 획득: ${SKILLS[skillId]?.name || skillId}`, 'elite', 3000);
+      }
+    }
+
+    // 3킬마다: 전투용 유물
+    if (kills % 3 === 0) {
+      const relicIds = Object.keys(RELICS).filter(id => !EXCLUDED_RELICS.has(id) && !this.run.relics.includes(id));
+      if (relicIds.length) {
+        const relicId = relicIds[Math.floor(Math.random() * relicIds.length)];
+        this.run.relics.push(relicId);
+        this.showToast(`🎁 유물 획득: ${RELICS[relicId]?.name || relicId}`, 'elite', 3500);
       }
     }
   }
 
   _startNextRelayEnemy() {
     if (!this.vs || this.vs.ended) return;
-    const { difficulty } = this.vs;
-    const speeds = [280, 200, 140];
-    this.enemyCard.speed = speeds[difficulty] ?? 200;
-    this.enemy = new Board({ rows: 20, deck: new Deck() });
+    const kills = this.vs.relayKills;
+    const isElite = kills > 0 && kills % 5 === 0;
+    const round = Math.min(kills + 1, 18);
+    const nextEnemy = makeEnemy(round, isElite);
+    this.enemyCard = { ...nextEnemy, vsMode: true, rewardGold: 0, startingRows: 20 };
+    this.enemy = new Board({ rows: 20, deck: new Deck(nextEnemy.deckExtras || []) });
     this.enemy.delaysGarbageOnClear = false;
-    this.ai = new AI('balanced', {}, difficulty);
+    if (nextEnemy.startingGarbage > 0) {
+      this.enemy.receiveGarbage(Math.min(nextEnemy.startingGarbage, 6));
+      for (const entry of this.enemy.garbageEntries) { entry.timer = 0; entry.instant = true; }
+    }
+    this.ai = new AI(nextEnemy.aiProfile || 'balanced', nextEnemy.aiSkill || {});
     this._vsGameEndHandled = false;
     this.battleEndResult = null;
     this.battleEndDelay = 0;
@@ -3286,11 +3925,11 @@ class Game {
     this.bossRhythmSent = 0; this.bossRhythmRestTimer = 0;
     this.enemyDebuffs = {}; this.battleEnemyPieces = 0; this.battleEnemyAttacks = 0;
     this.aiFocusActivations = 0; this.aiFocusInEpisode = false;
-    this.message = `${this.vs.relayKills}킬! 다음 적 등장`;
-    const modeName = '이어달리기';
-    const seriesLabel = `${this.vs.relayKills}킬`;
-    document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
+    this.message = `${kills}킬! 다음 적 등장`;
+    document.getElementById('battleMeta').textContent = `이어달리기 · ${kills}킬`;
     this.renderer.resize(this.player.rows, this.enemy.rows);
+    const typeLabel = isElite ? '⭐ 엘리트' : '⚔️';
+    this.showToast(`${typeLabel} ${kills}번째 적: ${nextEnemy.name}`, 'elite', 3500);
   }
 
   _showVsInterGame(playerWon) {
@@ -3340,30 +3979,30 @@ class Game {
   }
 
   castBossDebuff() {
-    const name = tEnemyName(this.enemyCard?.name);
+    const name = trEnemyName(this.enemyCard, this.enemyCard?.name);
     const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'fog') {
       this.playerFogTimer = 4000;
-      this.flashAlert(`${name} OVERLOAD: 안개 (4초)`);
+      this.flashAlert(`${name} OVERLOAD: ${getLang() === 'ja' ? '霧' : getLang() === 'en' ? 'Fog' : '안개'} (4s)`);
     } else if (kind === 'invert') {
       this.playerInvertTimer = 3500;
-      this.flashAlert(`${name} OVERLOAD: 좌우 반전 (3.5초)`);
+      this.flashAlert(`${name} OVERLOAD: ${getLang() === 'ja' ? '左右反転' : getLang() === 'en' ? 'Invert controls' : '좌우 반전'} (3.5s)`);
     } else if (kind === 'rotate') {
       this.player.rotateLocked = true;
       this.applyPlayerDebuff('rotate', 3000);
       const target = this.player;
       this.scheduleBattleTimeout(() => { if (this.player === target) target.rotateLocked = false; }, 3000);
-      this.flashAlert(`${name} OVERLOAD: 회전 봉인 (3초)`);
+      this.flashAlert(`${name} OVERLOAD: ${trAbilityName('rotateLockPlayer', '회전 봉인')} (3s)`);
     } else if (kind === 'hyper') {
       this.playerHyperTimer = 5000;
-      this.flashAlert(`${name} OVERLOAD: 하이퍼 낙하 (5초)`);
+      this.flashAlert(`${name} OVERLOAD: ${trAbilityName('hyperBurst', '하이퍼 낙하')} (5s)`);
     } else if (kind === 'slow') {
       this.playerSlowTimer = 3500;
-      this.flashAlert(`${name} OVERLOAD: 중력 둔화 (3.5초)`);
+      this.flashAlert(`${name} OVERLOAD: ${trAbilityName('slowPlayer', '중력 둔화')} (3.5s)`);
     } else {
       this.player.addDurableGarbage(2, 2);
-      this.flashAlert(`${name} OVERLOAD: 지속 가비지 2줄`);
+      this.flashAlert(`${name} OVERLOAD: ${getLang() === 'ja' ? '持続ゴミ2行' : getLang() === 'en' ? '2 durable garbage rows' : '지속 가비지 2줄'}`);
     }
   }
 }
