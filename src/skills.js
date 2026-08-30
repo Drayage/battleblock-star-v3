@@ -9,8 +9,11 @@ const SKILLS_KO = {
     cost: 28,
     cooldown: 9000,
     desc: '가장 낮은 쓰레기 행 1줄을 제거합니다.',
-    activate({ player }) {
-      return player.purgeGarbageRows(1) > 0;
+    activate({ player, resolve }) {
+      const purged = player.purgeGarbageRows(1);
+      if (purged === 0) return false;
+      if (player.sanctuaryActive) resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      return true;
     }
   },
   double_shot: {
@@ -131,8 +134,11 @@ const SKILLS_KO = {
     cost: 38,
     cooldown: 11000,
     desc: '피해 없이 가장 낮은 쓰레기 행 3줄을 제거합니다.',
-    activate({ player }) {
-      return player.purgeGarbageRows(3) > 0;
+    activate({ player, resolve }) {
+      const purged = player.purgeGarbageRows(3);
+      if (purged === 0) return false;
+      if (player.sanctuaryActive) resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      return true;
     }
   },
   all_i_mode: {
@@ -158,7 +164,7 @@ const SKILLS_KO = {
     cooldown: 12000,
     desc: '5초 동안 적의 행동 속도를 늦춥니다.',
     activate({ game }) {
-      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 5000);
+      game.enemySlowTimer = (game.enemySlowTimer || 0) + 5000;
       return true;
     }
   },
@@ -278,7 +284,8 @@ const SKILLS_KO = {
       if (player.defeated) return false;
       const purged = player.purgeGarbageRows(99);
       if (purged === 0) return false;
-      resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      const mult = player.sanctuaryActive ? 1.0 : 0.5;
+      resolve({ attack: Number((purged * mult).toFixed(2)), cleared: 0, slow: 0 }, player);
       return true;
     }
   },
@@ -294,7 +301,7 @@ const SKILLS_KO = {
       if (!enemy || enemy.defeated) return false;
       enemy.receiveGarbage(5);
       game.battlePlayerAttacks = (game.battlePlayerAttacks || 0) + 5;
-      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 3000);
+      game.enemySlowTimer = (game.enemySlowTimer || 0) + 3000;
       return true;
     }
   },

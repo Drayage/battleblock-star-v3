@@ -143,7 +143,7 @@ const RELICS_KO = {
     icon: '💣',
     name: '대폭발 신관',
     tier: TIERS.DIAMOND,
-    desc: '[봄브 세트] 모든 폭발 반경이 +1 증가합니다.'
+    desc: '[봄브 세트] 모든 폭발 반경이 +1 증가하고, 폭발로 파괴된 셀당 +0.05 추가 공격력을 얻습니다(폭발당 최대 1.5).'
   },
   set_manawell: {
     id: 'set_manawell',

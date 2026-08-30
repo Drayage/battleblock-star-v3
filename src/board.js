@@ -152,7 +152,7 @@ export class Board {
     board.armDelayBonus = 0;
     board.clearDelayBonus = 0;
     board.delaysGarbageOnClear = true;
-    board.instantGarbage = false;
+    board.instantGarbage = !!state.instantGarbage;
     // 구버전 세이브 호환: {x, y, radius} → {col: x, maxY: y+radius}
     board.pendingDrops = (state.pendingDrops || []).map(d => {
       if (d.col != null && d.maxY != null) return { col: d.col, maxY: d.maxY };
@@ -961,6 +961,7 @@ export class Board {
       forceCrushNext: this.forceCrushNext,
       explodeRadiusBonus: this.explodeRadiusBonus,
       sanctuaryActive: this.sanctuaryActive,
+      instantGarbage: this.instantGarbage,
       comboEngine: this.comboEngine,
       chargeCapBonus: this.chargeCapBonus,
       chargeCarryOver: this.chargeCarryOver,
