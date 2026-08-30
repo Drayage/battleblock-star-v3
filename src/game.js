@@ -2524,6 +2524,10 @@ class Game {
     const pts = meta.points || 0;
     const totalEarned = meta.totalEarned || 0;
     const maxPts = ACHIEVEMENTS.length;
+    const spentTotal = META_UPGRADES.reduce((sum, upg) => {
+      const cur = upgs[upg.id] || 0;
+      return sum + upg.costs.slice(0, cur).reduce((a, b) => a + b, 0);
+    }, 0);
 
     const modal = document.createElement('div');
     modal.className = 'deck-modal active';
@@ -2559,7 +2563,10 @@ class Game {
         <h3>🌟 영구 업그레이드</h3>
         <div class="meta-pts">포인트: <strong>${pts}</strong> / ${maxPts} &nbsp;(총 획득 ${totalEarned})</div>
         <div class="meta-upg-list">${rows}</div>
-        <button class="ghost wide" id="metaCloseBtn" style="margin-top:12px">닫기</button>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="ghost wide" id="metaCloseBtn">닫기</button>
+          <button class="ghost wide danger" id="metaRefundBtn" ${spentTotal === 0 ? 'disabled' : ''}>↩ 전체 환불 (+${spentTotal}P)</button>
+        </div>
       </div>`;
     document.body.appendChild(modal);
 
@@ -2581,6 +2588,13 @@ class Game {
       });
     });
     document.getElementById('metaCloseBtn').addEventListener('click', () => modal.remove());
+    document.getElementById('metaRefundBtn')?.addEventListener('click', () => {
+      meta.points = (meta.totalEarned || 0);
+      meta.upgrades = {};
+      this.saveMeta(meta);
+      modal.remove();
+      this.showMetaScreen();
+    });
   }
 
   _metaStartCardRemFlow(count, onDone) {
