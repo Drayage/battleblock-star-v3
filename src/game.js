@@ -363,13 +363,6 @@ class Game {
     });
   }
 
-  refreshLangButtons() {
-    const cur = getLang();
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.lang === cur);
-    });
-  }
-
   show(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
     document.documentElement.classList.toggle('in-game', id === 'gameScreen');
@@ -397,19 +390,19 @@ class Game {
   }
 
   refreshMenu() {
-    document.getElementById('codexBtn').textContent = this.menuText('codex');
-    document.getElementById('recordsBtn').textContent = this.menuText('records');
-    document.getElementById('settingsBtn').textContent = this.menuText('settings');
+    const _c = document.getElementById('codexBtn'); if (_c) _c.textContent = this.menuText('codex');
+    const _r = document.getElementById('recordsBtn'); if (_r) _r.textContent = this.menuText('records');
+    const _s = document.getElementById('settingsBtn'); if (_s) _s.textContent = this.menuText('settings');
     document.getElementById('startRunBtn').textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
     if (this.run) {
       document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
       document.getElementById('menuGold').textContent = this.run.gold;
       document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
       document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
+      this.discoverRunState();
     }
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
-    this.discoverRunState();
     this.renderRecords();
     this.refreshAscensionDisplay();
     const soloBtn = document.getElementById('soloModesBtn');
@@ -426,20 +419,6 @@ class Game {
       unknown: { ko: '???', en: '???', ja: '???' }
     };
     return map[key]?.[lang] || map[key]?.ko || key;
-  }
-
-  renderRecords() {
-    const el = document.getElementById('recordList');
-    const records = this.loadRecords();
-    const best = records.reduce((top, r) => Math.max(top, r.round), 0);
-    if (!records.length) {
-      el.innerHTML = `<span class="muted">${getLang() === 'ja' ? '記録なし。' : getLang() === 'en' ? 'No records.' : '기록 없음.'}</span>`;
-      return;
-    }
-    const bestText = getLang() === 'ja' ? `最高記録 ${best}ラウンド` : getLang() === 'en' ? `Best Record: Round ${best}` : `최고 기록 ${best}라운드`;
-    el.innerHTML = `<strong>${bestText}</strong>` + records.slice(0, 5).map(r =>
-      `<span>${ui('round', r.round)} · ${r.gold}G · ${r.result === 'win' ? (getLang() === 'ja' ? '勝利' : getLang() === 'en' ? 'Win' : '승리') : (getLang() === 'ja' ? '敗北' : getLang() === 'en' ? 'Loss' : '패배')}</span>`
-    ).join('');
   }
 
   renderRecords() {
