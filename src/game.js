@@ -767,6 +767,28 @@ class Game {
         },
         key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z')&&valid(piece.type,nr,piece.x,piece.y))piece.rot=nr; if(k===' '){piece.y=ghostY(piece.type,piece.rot,piece.x,piece.y);const c=lock();if(c>0&&!stepDone)done();else if(!piece)spawn('I',2);} if(k==='ArrowDown'&&valid(piece.type,piece.rot,piece.x,piece.y+1))piece.y++; }
       },
+      { info:true,
+        ko:{t:'업적',h:'특정 조건을 달성하면 업적을 획득합니다.\n업적마다 승천 포인트를 지급해요.\n포인트가 쌓이면 승천 레벨이 오릅니다.\n메인 메뉴 → [업적] 버튼에서 확인하세요!',
+          art:`<div style="font-size:26px;margin-bottom:10px">🏆</div><div style="display:flex;flex-direction:column;gap:5px;text-align:left;background:#0b1220;border:1px solid #263d72;border-radius:6px;padding:10px 14px;font-size:12px;width:100%"><div style="color:#22cc66">✓ 처음으로 10줄 제거 — +5 pt</div><div style="color:#22cc66">✓ 첫 전투 승리 — +10 pt</div><div style="color:#7988a5">□ 20라운드 클리어 — +50 pt</div><div style="color:#7988a5">□ 콤보 x5 달성 — +8 pt</div></div><div style="margin-top:8px;font-size:12px;color:#5585d4">업적 포인트 → 승천 레벨 상승</div>`
+        },
+        en:{t:'Achievements',h:'Complete special conditions to earn achievements.\nEach achievement grants Ascension Points.\nPoints accumulate to raise your Ascension Level.\nCheck them with the [Achievements] button!',
+          art:`<div style="font-size:26px;margin-bottom:10px">🏆</div><div style="display:flex;flex-direction:column;gap:5px;text-align:left;background:#0b1220;border:1px solid #263d72;border-radius:6px;padding:10px 14px;font-size:12px;width:100%"><div style="color:#22cc66">✓ Clear 10 lines for the first time — +5 pt</div><div style="color:#22cc66">✓ Win your first battle — +10 pt</div><div style="color:#7988a5">□ Clear all 20 rounds — +50 pt</div><div style="color:#7988a5">□ Achieve combo ×5 — +8 pt</div></div><div style="margin-top:8px;font-size:12px;color:#5585d4">Achievement Points → Ascension Level Up</div>`
+        },
+        ja:{t:'実績',h:'特定の条件を達成すると実績を獲得できます。\n実績ごとに昇天ポイントが付与されます。\nポイントが溜まると昇天レベルが上がります。\nメインメニュー → [実績]ボタンで確認しましょう！',
+          art:`<div style="font-size:26px;margin-bottom:10px">🏆</div><div style="display:flex;flex-direction:column;gap:5px;text-align:left;background:#0b1220;border:1px solid #263d72;border-radius:6px;padding:10px 14px;font-size:12px;width:100%"><div style="color:#22cc66">✓ 初めて10ライン消去 — +5 pt</div><div style="color:#22cc66">✓ 初めてバトル勝利 — +10 pt</div><div style="color:#7988a5">□ 20ラウンドクリア — +50 pt</div><div style="color:#7988a5">□ コンボ×5達成 — +8 pt</div></div><div style="margin-top:8px;font-size:12px;color:#5585d4">実績ポイント → 昇天レベルアップ</div>`
+        },
+      },
+      { info:true,
+        ko:{t:'성장 (승천)',h:'업적 포인트로 승천 레벨을 올리세요.\n[성장] 버튼에서 영구 강화를 구매합니다.\n런이 거듭될수록 시작 HP·골드·덱이 강해져요!\n런을 클리어해도 강화 효과는 영구히 유지됩니다.',
+          art:`<div style="font-size:26px;margin-bottom:10px">⬆️</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px"><div style="background:#1a2640;border:1px solid #263d72;border-radius:6px;padding:6px 12px;font-size:12px;color:#a8d0ff;text-align:center">Lv.0<br><span style="font-size:10px;color:#7988a5">기본</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#263d72;border:1px solid #5585d4;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.1<br><span style="font-size:10px;color:#7dc8ff">HP +2</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#1e3060;border:1px solid #7d92d6;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.2<br><span style="font-size:10px;color:#7dc8ff">Gold +3</span></div></div><div style="font-size:12px;color:#5585d4">메인 메뉴 → [성장] 버튼</div>`
+        },
+        en:{t:'Meta Progression',h:'Spend Ascension Points to raise your Ascension Level.\nBuy permanent upgrades from the [Meta] button.\nHP, Gold, and Deck bonuses carry over to every run!\nClearing a run keeps all upgrades permanently.',
+          art:`<div style="font-size:26px;margin-bottom:10px">⬆️</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px"><div style="background:#1a2640;border:1px solid #263d72;border-radius:6px;padding:6px 12px;font-size:12px;color:#a8d0ff;text-align:center">Lv.0<br><span style="font-size:10px;color:#7988a5">Base</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#263d72;border:1px solid #5585d4;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.1<br><span style="font-size:10px;color:#7dc8ff">HP +2</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#1e3060;border:1px solid #7d92d6;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.2<br><span style="font-size:10px;color:#7dc8ff">Gold +3</span></div></div><div style="font-size:12px;color:#5585d4">Main Menu → [Meta] button</div>`
+        },
+        ja:{t:'成長（昇天）',h:'昇天ポイントで昇天レベルを上げましょう。\n[成長]ボタンから永続強化を購入できます。\nHP・ゴールド・デッキ強化は毎ランに持続！\nランをクリアしても強化効果は永続します。',
+          art:`<div style="font-size:26px;margin-bottom:10px">⬆️</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px"><div style="background:#1a2640;border:1px solid #263d72;border-radius:6px;padding:6px 12px;font-size:12px;color:#a8d0ff;text-align:center">Lv.0<br><span style="font-size:10px;color:#7988a5">基本</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#263d72;border:1px solid #5585d4;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.1<br><span style="font-size:10px;color:#7dc8ff">HP +2</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#1e3060;border:1px solid #7d92d6;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.2<br><span style="font-size:10px;color:#7dc8ff">Gold +3</span></div></div><div style="font-size:12px;color:#5585d4">メインメニュー → [成長]ボタン</div>`
+        },
+      },
     ];
 
     let keyHandler=null, touchState={};
@@ -799,29 +821,46 @@ class Game {
       overlay.querySelector('#tutorialSlideTitle').textContent=ld.t||'';
       overlay.querySelector('#tutorialSlideBody').textContent=ld.h;
       updateDots();
-      s.setup();
-      draw();
-      updateHold();
+      const gameArea=artDiv.querySelector('#tutGameArea');
+      const infoArea=artDiv.querySelector('#tutInfoArea');
+      const nav=overlay.querySelector('.tutorial-nav');
+      if(s.info){
+        gameArea.style.display='none';
+        infoArea.style.display='flex';
+        infoArea.innerHTML=ld.art||'';
+        nav.style.display='';
+        const nb=overlay.querySelector('#tutorialNextBtn');
+        nb.textContent=idx===STEPS.length-1?t('tutorial.done'):t('tutorial.next');
+        nb.style.visibility='';
+        overlay.querySelector('#tutorialPrevBtn').style.visibility='hidden';
+      } else {
+        gameArea.style.display='flex';
+        infoArea.style.display='none';
+        nav.style.display='none';
+        s.setup(); draw(); updateHold();
+      }
     };
 
     // Build UI into artDiv
     const artDiv = overlay.querySelector('#tutorialArt');
     artDiv.style.cssText='display:flex;flex-direction:column;gap:6px;background:transparent;border:none;padding:0;min-height:unset';
-    // Hold indicator + canvas
-    artDiv.innerHTML=`<div style="display:flex;gap:8px;align-items:flex-start">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px">
-        <div style="font-size:10px;color:#5585d4">HOLD</div>
-        <div id="tutHold" style="width:38px;height:38px;border:1px solid #263d72;border-radius:4px;background:#1a2640;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold"></div>
+    artDiv.innerHTML=`<div id="tutGameArea" style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px">
+          <div style="font-size:10px;color:#5585d4">HOLD</div>
+          <div id="tutHold" style="width:38px;height:38px;border:1px solid #263d72;border-radius:4px;background:#1a2640;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold"></div>
+        </div>
+        <div id="tutCanvasWrap"></div>
       </div>
-      <div id="tutCanvasWrap"></div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:2px">
+        <button class="ghost tut-btn" data-act="left" style="padding:6px 12px">◀</button>
+        <button class="ghost tut-btn" data-act="rot" style="padding:6px 12px">↻</button>
+        <button class="ghost tut-btn" data-act="right" style="padding:6px 12px">▶</button>
+        <button class="ghost tut-btn" data-act="drop" style="padding:6px 14px">▼▼</button>
+        <button class="ghost tut-btn" data-act="hold" style="padding:6px 10px">HOLD</button>
+      </div>
     </div>
-    <div style="display:flex;gap:6px;justify-content:center;margin-top:2px">
-      <button class="ghost tut-btn" data-act="left" style="padding:6px 12px">◀</button>
-      <button class="ghost tut-btn" data-act="rot" style="padding:6px 12px">↻</button>
-      <button class="ghost tut-btn" data-act="right" style="padding:6px 12px">▶</button>
-      <button class="ghost tut-btn" data-act="drop" style="padding:6px 14px">▼▼</button>
-      <button class="ghost tut-btn" data-act="hold" style="padding:6px 10px">HOLD</button>
-    </div>`;
+    <div id="tutInfoArea" style="display:none;flex-direction:column;align-items:center;background:#0b1220;border:1px solid #263d72;border-radius:8px;padding:16px 12px;min-height:160px;text-align:center"></div>`;
     artDiv.querySelector('#tutCanvasWrap').appendChild(canvas);
 
     // Touch button wiring
@@ -837,17 +876,20 @@ class Game {
     keyHandler=(e)=>{
       if(!overlay.classList.contains('active'))return;
       if(e.key==='Escape'){closeOverlay();return;}
-      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault();
-      if(!stepDone)STEPS[stepIndex]?.key?.(e.key);
-      draw(); updateHold();
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)&&!STEPS[stepIndex]?.info)e.preventDefault();
+      if(!STEPS[stepIndex]?.info&&!stepDone)STEPS[stepIndex]?.key?.(e.key);
+      if(!STEPS[stepIndex]?.info){draw();updateHold();}
     };
     document.addEventListener('keydown',keyHandler);
+
+    // Next button (for info steps)
+    overlay.querySelector('#tutorialNextBtn').onclick=()=>{if(!stepDone)done();};
+    overlay.querySelector('#tutorialPrevBtn').style.visibility='hidden';
 
     // Dots & close
     overlay.querySelector('#tutorialDots').innerHTML=STEPS.map((_,i)=>`<span class="tutorial-dot${i===0?' active':''}"></span>`).join('');
     overlay.querySelector('#tutorialCloseBtn').onclick=closeOverlay;
     overlay.onclick=e=>{if(e.target===overlay)closeOverlay();};
-    overlay.querySelector('.tutorial-nav').style.display='none';
 
     // Launch
     overlay.classList.add('active');
