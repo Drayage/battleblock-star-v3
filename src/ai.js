@@ -1,5 +1,5 @@
-import { Mino } from './board.js?v=20260524-audio4';
-import { COLS } from './constants.js?v=20260524-audio4';
+import { Mino } from './board.js?v=20260829-ascension1';
+import { COLS } from './constants.js?v=20260829-ascension1';
 
 function analyzeGrid(grid) {
   const rows = grid.length;
@@ -146,8 +146,9 @@ function simulate(board, mino, profile) {
 }
 
 export class AI {
-  constructor(profile = 'balanced', skill = {}) {
+  constructor(profile = 'balanced', skill = {}, difficulty = 1) {
     this.profile = profile;
+    this.difficulty = difficulty; // 0=easy 1=normal 2=hard
     this.mistakeRate = skill.mistakeRate || 0;
     this.mistakeGap = skill.mistakeGap || 12;
     this.hesitateRate = skill.hesitateRate || 0;
@@ -235,12 +236,17 @@ export class AI {
     candidates.sort((a, b) => b.s - a.s);
     let best = candidates[0];
     if (!best) return;
-    const effectiveMistake = (this.mistakeRate + this.mistakePressure) * (1 - this.focus);
-    if (this.mistakeCooldown === 0 && effectiveMistake > 0 && Math.random() < effectiveMistake) {
-      const alt = this.pickSafeMistake(candidates);
-      if (alt) {
-        best = alt;
-        this.mistakeCooldown = this.mistakeGap;
+    // Easy mode: 30% chance to pick a random legal move instead of optimal
+    if (this.difficulty === 0 && candidates.length > 1 && Math.random() < 0.30) {
+      best = candidates[Math.floor(Math.random() * candidates.length)];
+    } else {
+      const effectiveMistake = (this.mistakeRate + this.mistakePressure) * (1 - this.focus);
+      if (this.mistakeCooldown === 0 && effectiveMistake > 0 && Math.random() < effectiveMistake) {
+        const alt = this.pickSafeMistake(candidates);
+        if (alt) {
+          best = alt;
+          this.mistakeCooldown = this.mistakeGap;
+        }
       }
     }
     this.queue = [];

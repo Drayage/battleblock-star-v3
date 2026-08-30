@@ -1,10 +1,10 @@
-import { Board } from './board.js?v=20260524-audio4';
-import { ABILITY_GLYPH, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, TYPES } from './constants.js?v=20260524-audio4';
-import { Deck } from './deck.js?v=20260524-audio4';
-import { AI } from './ai.js?v=20260524-audio4';
-import { Renderer } from './renderer.js?v=20260524-audio4';
-import { InputController } from './input.js?v=20260524-audio4';
-import { AudioManager } from './audio.js?v=20260524-audio4';
+import { Board } from './board.js?v=20260829-ascension1';
+import { ABILITY_GLYPH, ABILITY_LIBRARY, BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, COLORS, GAME_TIMING, SET_DEFINITIONS, SET_LABELS, TYPES } from './constants.js?v=20260829-ascension1';
+import { Deck } from './deck.js?v=20260829-ascension1';
+import { AI } from './ai.js?v=20260829-ascension1';
+import { Renderer } from './renderer.js?v=20260829-ascension1';
+import { InputController } from './input.js?v=20260829-ascension1';
+import { AudioManager } from './audio.js?v=20260829-ascension1';
 import {
   t,
   getLang,
@@ -25,9 +25,10 @@ import {
   trChallengeCond,
   trRewardLabel,
   trRewardDetail
-} from './i18n.js?v=20260524-audio4';
-import { SKILLS } from './skills.js?v=20260526-wardbalance1';
-import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
+} from './i18n.js?v=20260829-ascension1';
+import { tEnemyName, tKindLabel } from './i18n-data.js?v=20260829-ascension1';
+import { SKILLS } from './skills.js?v=20260829-ascension1';
+import { CONSUMABLES } from './consumables.js?v=20260829-ascension1';
 import {
   RunState,
   RELICS,
@@ -47,8 +48,10 @@ import {
   shopItemKey,
   shouldShowEvent,
   setProgress,
-  abilityOf
-} from './progression.js?v=20260524-audio4';
+  abilityOf,
+  ACHIEVEMENTS,
+  ASCENSION_MODS
+} from './progression.js?v=20260829-ascension1';
 
 window.BBS_SKILLS = SKILLS;
 window.BBS_CONSUMABLES = CONSUMABLES;
@@ -57,6 +60,22 @@ window.BBS_RELICS = RELICS;
 const RECORD_KEY = 'battleBlockStar.records.v1';
 const SAVE_KEY = 'battleBlockStar.save.v1';
 const CODEX_KEY = 'battleBlockStar.codexSeen.v1';
+const ACHIEVEMENT_KEY = 'bbs.achievements.v1';
+const ASCENSION_KEY = 'bbs.ascension.v1';     // 선택된 레벨
+const ASCENSION_MAX_KEY = 'bbs.ascension.max.v1'; // 최대 해금 레벨
+const LIFETIME_KEY = 'bbs.lifetime.v1';
+
+// Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
+const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
+const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
+const SOLO_MODES = {
+  sprint40:    { name: '40줄 스프린트', goalLines: 40,  timeLimit: 0,      speedRamp: true,  unit: 'time'  },
+  timeatk2:   { name: '타임어택 2분',  goalLines: 0,   timeLimit: 120000, speedRamp: true,  unit: 'lines' },
+  timeatk3:   { name: '타임어택 3분',  goalLines: 0,   timeLimit: 180000, speedRamp: true,  unit: 'lines' },
+  marathon150: { name: '마라톤 150줄', goalLines: 150, timeLimit: 0,      speedRamp: true,  unit: 'time'  },
+  marathon300: { name: '마라톤 300줄', goalLines: 300, timeLimit: 0,      speedRamp: true,  unit: 'time'  },
+  endless:    { name: '엔드리스',     goalLines: 0,   timeLimit: 0,      speedRamp: false, unit: 'lines' },
+};
 
 // 적 능력은 마나 게이지에 묶인다. 비용/쿨다운은 플레이어 스킬보다 크게 잡고,
 // 스킬/소모품 → SFX 카테고리 매핑. 신규 스킬 추가 시 여기에 등록한다.
@@ -170,6 +189,10 @@ class Game {
     this.lastRunResult = null;
     this.codexSeen = this.loadCodexSeen();
     this.codexTab = 'cards';
+    this.solo = null;
+    this.soloPaused = false;
+    this.vs = null;
+    this._vsGameEndHandled = false;
     this.practiceMode = localStorage.getItem('bbs_practice') === '1';
     this.screen = 'menu';
     this.player = null;
@@ -290,12 +313,53 @@ class Game {
       this.showMap();
       this.autoSave();
     });
+    document.getElementById('achievementsBtn')?.addEventListener('click', () => this.showAchievementsModal());
+    document.getElementById('soloModesBtn')?.addEventListener('click', () => this.showSoloSelect());
+    document.getElementById('soloBackBtn')?.addEventListener('click', () => {
+      this.solo = null;
+      document.getElementById('gameScreen').classList.remove('solo-active');
+      if (!this.run) this.run = new RunState();
+      this.refreshMenu();
+      this.show('menu');
+    });
+    document.querySelectorAll('.solo-start-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        const startLevel = mode === 'endless' ? parseInt(document.getElementById('endlessSpeedSelect')?.value || '0', 10) : 0;
+        this.startSoloMode(mode, startLevel);
+      });
+    });
+    document.getElementById('soloQuitBtn')?.addEventListener('click', () => {
+      if (!this.solo) return;
+      document.getElementById('gameScreen').classList.remove('solo-active');
+      this.solo = null;
+      this.player = null;
+      this.showSoloSelect();
+    });
+    document.getElementById('vsModeBtn')?.addEventListener('click', () => this.showVsSelect());
+    document.getElementById('vsBackBtn')?.addEventListener('click', () => { this.show('menu'); });
+    document.querySelectorAll('.vs-start-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        const diffSel = document.querySelector(`.vs-diff-select[data-mode="${mode}"]`);
+        const diff = diffSel ? parseInt(diffSel.value, 10) : 1;
+        this.startVsMode(mode, diff);
+      });
+    });
     document.getElementById('forfeitBtn').addEventListener('click', () => this.endRun(false));
     document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
     document.getElementById('shopDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
     document.getElementById('eventDeckBtn')?.addEventListener('click', () => this.openDeckOverlay());
     window.addEventListener('resize', () => {
       if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
+      else if (this.solo && this.player) this.renderer.resizeSolo(this.player.rows);
+    });
+  }
+
+  refreshLangButtons() {
+    const cur = getLang();
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === cur);
     });
   }
 
@@ -337,14 +401,19 @@ class Game {
     document.getElementById('recordsBtn').textContent = this.menuText('records');
     document.getElementById('settingsBtn').textContent = this.menuText('settings');
     document.getElementById('startRunBtn').textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
-    document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
-    document.getElementById('menuGold').textContent = this.run.gold;
-    document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
-    document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
+    if (this.run) {
+      document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
+      document.getElementById('menuGold').textContent = this.run.gold;
+      document.getElementById('menuHp').textContent = `${this.run.hpRows - this.garbageRowCount()}/${this.run.hpRows}`;
+      document.getElementById('menuDeck').textContent = `${this.run.deckCount()} ${t('menu.cards')}`;
+    }
     document.getElementById('loadRunBtn').disabled = !localStorage.getItem(SAVE_KEY);
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.discoverRunState();
     this.renderRecords();
+    this.refreshAscensionDisplay();
+    const soloBtn = document.getElementById('soloModesBtn');
+    if (soloBtn) soloBtn.classList.toggle('hidden', !this.hasEverCleared());
   }
 
   menuText(key) {
@@ -613,6 +682,17 @@ class Game {
     this.run = new RunState();
     this.run.practiceMode = this.practiceMode;
     this.discoverRunState();
+    this.runShopSpent = 0;
+    this.runBattleTetris = false;
+    this.runGarbageNuke = false;
+    this.runEliteKills = 0;
+    this.runConsUsed = 0;
+    this.runMaxGold = 0;
+    const ascMod = this.currentAscMod();
+    if (ascMod.playerStartHp != null) this.run.hpRows = ascMod.playerStartHp;
+    for (let i = 0; i < (ascMod.startCurseCards ?? 0); i++) {
+      this.run.deck.addCard(i % 2 === 0 ? 'HEAVY_JUNK' : 'WIDE_JUNK');
+    }
     this.routeNextScreen();
     this.autoSave();
   }
@@ -634,19 +714,34 @@ class Game {
     const wrap = document.getElementById('enemyChoices');
     wrap.classList.remove('single-choice');
     wrap.innerHTML = '';
-    for (const enemy of makeEnemyChoices(this.run.round, this.run.relics)) {
-      this.discover('enemies', this.enemyCodexKey(enemy));
+    const ascMod = this.currentAscMod();
+    for (const enemy of makeEnemyChoices(this.run.round, this.run.relics, ascMod)) {
+      this.discover('enemies', this.enemyCodexKey?.(enemy) || enemy.id || '');
       const btn = document.createElement('button');
       btn.className = `choice ${enemy.type} ${this.tierClass(enemy.tier)}`;
       const challengeHtml = enemy.challenge
-        ? `<small class="challenge-tag">🏆 ${ui('challenge')}: ${trChallengeCond(enemy.challenge, enemy.challenge.cond)}<br>　└ ${ui('reward')} ${trRewardLabel(enemy.challenge.reward, enemy.challenge.reward.label)}${enemy.challenge.reward.detail ? ` — ${trRewardDetail(enemy.challenge.reward, enemy.challenge.reward.detail)}` : ''}</small>`
+        ? (enemy.challenge.condOk
+          ? `<small class="challenge-tag">🏆 도전:<br>　🥇 대성공: ${enemy.challenge.cond} → ${enemy.challenge.reward.label}<br>　🥈 성공: ${enemy.challenge.condOk} → ${enemy.challenge.rewardOk?.label || ''}</small>`
+          : `<small class="challenge-tag">🏆 도전: ${enemy.challenge.cond}<br>　└ 보상 ${enemy.challenge.reward.label}${enemy.challenge.reward.detail ? ` — ${enemy.challenge.reward.detail}` : ''}</small>`)
         : '';
       const abilityDef = enemy.ability && enemy.ability !== 'overload' ? ENEMY_ABILITIES[enemy.ability] : null;
       const abilityHtml = abilityDef
-        ? `<small class="ability-tag">⚔️ ${ui('ability')}: [${trAbilityName(enemy.ability, abilityDef.label)}] ${trAbilityDesc(enemy.ability, abilityDef.desc)}</small>`
-        : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ ${ui('ability')}: [${trAbilityName('overload', 'OVERLOAD')}] ${trAbilityDesc('overload', '게이지가 차면 무작위 디버프를 시전합니다.')}</small>` : '');
+        ? `<small class="ability-tag">⚔️ 능력: [${abilityDef.label}] ${abilityDef.desc}</small>`
+        : (enemy.ability === 'overload' ? `<small class="ability-tag">⚔️ 능력: [OVERLOAD] 게이지가 차면 무작위 디버프를 시전합니다.</small>` : '');
+      let starCount;
+      if (enemy.type === 'boss') {
+        starCount = 5;
+      } else {
+        const speedScore = Math.max(0, Math.min(1, (430 - enemy.speed) / 348));
+        const hpScore = Math.max(0, Math.min(1, (enemy.startingRows - 10) / 18));
+        const eliteBonus = enemy.type === 'elite' ? 0.2 : 0;
+        const diffScore = speedScore * 0.6 + hpScore * 0.4 + eliteBonus;
+        starCount = Math.max(1, Math.min(4, Math.ceil(diffScore * 4)));
+      }
+      const stars = '★'.repeat(starCount) + '☆'.repeat(5 - starCount);
+      const diffHtml = `<span class="diff-stars" title="난이도">${stars}</span>`;
       btn.innerHTML = `
-        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${trEnemyName(enemy, enemy.name)}</strong>
+        <strong>${enemy.icon ? `${enemy.icon} ` : ''}${trEnemyName(enemy, enemy.name)} ${diffHtml}</strong>
         <span>${enemy.type.toUpperCase()} - ${enemy.rewardGold}G - HP ${enemy.startingRows}</span>
         <small>${trEnemyStyle(enemy, enemy.style)}</small>
         <small>AI ${enemy.aiProfile} - Speed ${enemy.speed} - Garbage ${enemy.startingGarbage}</small>
@@ -804,7 +899,7 @@ class Game {
       cleanup: getLang() === 'ja' ? '整理' : getLang() === 'en' ? 'Clean' : '정리',
       gold: ui('gold')
     };
-    return map[kind] ? `<em class="kind-tag">[${map[kind]}]</em> ` : '';
+    return map[kind] ? `<em class="kind-tag">[${tKindLabel(map[kind])}]</em> ` : '';
   }
 
   kindIcon(choice) {
@@ -888,6 +983,8 @@ class Game {
       this.run.gold -= choice.price;
       this.run.deck.removeCard(choice.id);
       this.run.deck.refill();
+      this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
+      if (CARD_LIBRARY[choice.id]?.shapeId === 'L') this.unlockAchievement('l_clear');
     }
     if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
@@ -904,7 +1001,7 @@ class Game {
       return this.acquireSkill(choice.id, done);
     }
     if (choice.kind === 'consumable') return this.acquireConsumable(choice.id, done);
-    if (choice.kind === 'gold') this.run.gold += choice.amount;
+    if (choice.kind === 'gold') this.run.gold += Math.round(choice.amount * (this.currentAscMod().goldFactor ?? 1.0));
     if (choice.kind === 'cleanup') this.cleanCarriedGarbageRow();
     if (choice.kind === 'relicDig') {
       this.run.hpRows = Math.max(8, this.run.hpRows - choice.amount);
@@ -923,6 +1020,7 @@ class Game {
       this.run.gold -= choice.bet;
       const won = Math.random() < (choice.chance ?? 0.55);
       if (won) {
+        this.incrementLifetime('gambleWins', 1, 'lucky_gambler');
         this.run.gold += choice.reward ?? 60;
         if (tier === 'bronze') this.run.gambleNext = 'silver';
         else if (tier === 'silver') this.run.gambleNext = 'gold';
@@ -1296,7 +1394,9 @@ class Game {
       if (!this.run.shopStock[shopKey]) this.run.shopStock[shopKey] = { items: makeShopItems(this.run), sold: [], locked: [] };
       const stock = this.run.shopStock[shopKey];
       const key = shopItemKey(item);
-      this.run.gold -= priceOverride ?? this.effectivePrice(item, stock.dealKey === key);
+      const paidPrice = priceOverride ?? this.effectivePrice(item, stock.dealKey === key);
+      this.run.gold -= paidPrice;
+      this.runShopSpent = (this.runShopSpent || 0) + paidPrice;
       stock.locked = (stock.locked || []).filter(lockedKey => lockedKey !== key);
       if (this.run.relics.includes('warehouse_key')) {
         const idx = stock.items.findIndex(it => shopItemKey(it) === key);
@@ -1342,6 +1442,8 @@ class Game {
         this.run.gold -= price;
         this.run.deck.removeCard(id);
         this.run.deck.refill();
+        this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
+        if (CARD_LIBRARY[id]?.shapeId === 'L') this.unlockAchievement('l_clear');
         done(true);
       },
       onSkip: () => skipped(false)
@@ -1370,6 +1472,7 @@ class Game {
 
   acquireConsumable(id, done = () => {}, skipped = done) {
     this.discover('consumables', id);
+    this.trackSeenConsumable?.(id);
     const add = slot => {
       if (slot == null && this.run.consumables.length < 3) this.run.consumables.push(id);
       else if (slot != null) this.run.consumables[slot] = id;
@@ -1432,6 +1535,8 @@ class Game {
     this.run.deck.beginBattle();
     this.run.deck.exhaustImmune = this.run.relics.includes('preservation_seal');
     this.player = new Board({ rows: this.run.hpRows, deck: this.run.deck, persistentGrid: this.run.persistentGrid });
+    const ascMod = this.currentAscMod();
+    if (ascMod.purgeFactor != null) this.player.purgeFactor = ascMod.purgeFactor;
     const enemyDeck = enemyCard.mirror ? new Deck([...this.run.deck.extraCards]) : new Deck(enemyCard.deckExtras || []);
     this.enemy = new Board({ rows: enemyCard.startingRows, deck: enemyDeck });
     this.enemy.receiveGarbage(enemyCard.startingGarbage);
@@ -1495,6 +1600,13 @@ class Game {
     this.battleUsedHardDrop = false;
     this.battleUsedCounterClockwise = false;
     this.battleUsedClockwise = false;
+    this.battleMaxSingleAttack = 0;
+    this.battleMaxExplodeCells = 0;
+    this.battleMaxManaGain = 0;
+    this.battleTotalSlow = 0;
+    this.battleBountyGold = 0;
+    this.battleWardCanceled = 0;
+    this.battleMaxCombo = 0;
     this.activeChallenge = enemyCard.challenge || null;
     this.challengeRewarded = false;
     this.paused = false;
@@ -1544,8 +1656,179 @@ class Game {
     return this.screen === 'gameScreen' && this.player && this.enemy;
   }
 
+  inSolo() { return this.screen === 'gameScreen' && !!this.solo && !this.solo.ended; }
+
+  showSoloSelect() {
+    this.show('soloSelectScreen');
+    this.refreshSoloRecords();
+  }
+
+  refreshSoloRecords() {
+    let records = {};
+    try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    for (const [key, cfg] of Object.entries(SOLO_MODES)) {
+      const el = document.getElementById(`rec-${key}`);
+      if (!el) continue;
+      const rec = records[key];
+      if (!rec) { el.textContent = '기록 없음'; continue; }
+      if (cfg.unit === 'time') {
+        if (rec.topOut) { el.textContent = `미완료 · ${rec.value}줄`; continue; }
+        const ms = rec.value;
+        const min = Math.floor(ms / 60000);
+        const sec = Math.floor((ms % 60000) / 1000);
+        const cs = Math.floor((ms % 1000) / 10);
+        el.textContent = `최고: ${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+      } else {
+        el.textContent = `최고: ${rec.value}줄`;
+      }
+    }
+  }
+
+  startSoloMode(modeKey, startLevel = 0) {
+    const modeConfig = SOLO_MODES[modeKey];
+    if (!modeConfig) return;
+    this.solo = { mode: modeKey, linesCleared: 0, elapsed: 0, level: startLevel, startLevel, ended: false, topOut: false };
+    this.player = new Board({ rows: 20, deck: new Deck() });
+    this.fallTimer = 0;
+    this.lockTimer = 0;
+    this.lockResets = 0;
+    this.groundTouched = false;
+    this.soloPaused = false;
+    document.getElementById('soloModeName').textContent = modeConfig.name;
+    document.getElementById('gameScreen').classList.add('solo-active');
+    this.show('gameScreen');
+    this.renderer.resizeSolo(20);
+    this.updateSoloStats();
+  }
+
+  updateSoloStats() {
+    if (!this.solo) return;
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    const isCountdown = modeConfig.timeLimit > 0;
+    const displayMs = isCountdown ? Math.max(0, modeConfig.timeLimit - this.solo.elapsed) : this.solo.elapsed;
+    const min = Math.floor(displayMs / 60000);
+    const sec = Math.floor((displayMs % 60000) / 1000);
+    const cs = Math.floor((displayMs % 1000) / 10);
+    const timeStr = `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    const linesStr = modeConfig.goalLines > 0
+      ? `${this.solo.linesCleared} / ${modeConfig.goalLines}줄`
+      : `${this.solo.linesCleared}줄`;
+    const lvlStr = modeConfig.speedRamp ? ` · Lv.${this.solo.level + 1}` : '';
+    document.getElementById('soloStats').textContent = `${timeStr} · ${linesStr}${lvlStr}`;
+  }
+
+  updateSolo(dt, now) {
+    if (this.soloPaused) {
+      this.renderer.drawSolo(this.player, this.solo, SOLO_MODES[this.solo.mode]);
+      return;
+    }
+    this.solo.elapsed += dt;
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    if (modeConfig.timeLimit > 0 && this.solo.elapsed >= modeConfig.timeLimit) {
+      return this.finishSolo(false);
+    }
+    this.input.update(now);
+    this.player.flash = Math.max(0, this.player.flash - dt);
+    this.player.tickEffects(dt);
+    this.player.comboBreakFlash = Math.max(0, this.player.comboBreakFlash - dt);
+    this.player.clearTextFlash = Math.max(0, this.player.clearTextFlash - dt);
+    this.updatePlayerGravity(dt);
+    if (this.player.defeated) return this.finishSolo(true);
+    this.updateSoloStats();
+    this.renderer.drawSolo(this.player, this.solo, modeConfig);
+  }
+
+  resolveSolo(result) {
+    if (!result || !this.solo || this.solo.ended) return;
+    this.emitPlaceSfx(result);
+    if (result.cleared > 0) {
+      this.solo.linesCleared += result.cleared;
+      const modeConfig = SOLO_MODES[this.solo.mode];
+      if (modeConfig.speedRamp) {
+        this.solo.level = Math.min(SOLO_FALL_SPEEDS.length - 1, Math.floor(this.solo.linesCleared / 10));
+      }
+      if (modeConfig.goalLines > 0 && this.solo.linesCleared >= modeConfig.goalLines) {
+        this.solo.linesCleared = modeConfig.goalLines;
+        return this.finishSolo(false);
+      }
+    }
+    if (this.player.defeated) this.finishSolo(true);
+  }
+
+  finishSolo(topOut = false) {
+    if (!this.solo || this.solo.ended) return;
+    this.solo.ended = true;
+    this.solo.topOut = topOut;
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    let records = {};
+    try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
+    const existing = records[this.solo.mode];
+    let isBest = false;
+    if (modeConfig.unit === 'time') {
+      if (!topOut) {
+        if (!existing || existing.topOut || existing.value > this.solo.elapsed) {
+          records[this.solo.mode] = { value: this.solo.elapsed, topOut: false };
+          isBest = true;
+        }
+      } else if (!existing || (existing.topOut && existing.value < this.solo.linesCleared)) {
+        records[this.solo.mode] = { value: this.solo.linesCleared, topOut: true };
+      }
+    } else {
+      if (!existing || existing.value < this.solo.linesCleared) {
+        records[this.solo.mode] = { value: this.solo.linesCleared, topOut };
+        isBest = true;
+      }
+    }
+    try { localStorage.setItem(SOLO_RECORD_KEY, JSON.stringify(records)); } catch {}
+    // draw final frame with end overlay
+    this.renderer.drawSolo(this.player, this.solo, modeConfig, true);
+    // show result overlay after short delay
+    setTimeout(() => this.showSoloResult(isBest), 800);
+  }
+
+  showSoloResult(isBest = false) {
+    const modeConfig = SOLO_MODES[this.solo.mode];
+    const topOut = this.solo.topOut;
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    const timeStr = (() => {
+      const ms = this.solo.elapsed;
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const cs = Math.floor((ms % 1000) / 10);
+      return `${min}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+    })();
+    const resultLine = topOut
+      ? `게임 오버 · ${this.solo.linesCleared}줄 클리어`
+      : modeConfig.unit === 'time'
+        ? `${modeConfig.name} 클리어! · ${timeStr}`
+        : `${modeConfig.name} 종료 · ${this.solo.linesCleared}줄`;
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>${topOut ? '💀 게임 오버' : '🎉 ' + (isBest ? '신기록!' : '완료!')}</h3>
+        <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
+        ${isBest ? '<p style="color:#ffe082;font-size:13px">✨ 개인 최고 기록!</p>' : ''}
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="ghost" id="soloRetryBtn">다시 하기</button>
+          <button class="ghost" id="soloMenuBtn">모드 선택</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('soloRetryBtn').addEventListener('click', () => {
+      modal.remove();
+      this.startSoloMode(this.solo.mode, this.solo.startLevel);
+    });
+    document.getElementById('soloMenuBtn').addEventListener('click', () => {
+      modal.remove();
+      document.getElementById('gameScreen').classList.remove('solo-active');
+      this.solo = null;
+      this.player = null;
+      this.showSoloSelect();
+    });
+  }
+
   action(action) {
-    if (!this.inBattle()) return;
+    if (!this.inBattle() && !this.inSolo()) return;
     if (action === 'pause') return this.togglePause();
     if (this.paused) return;
     if (this.playerInvertTimer > 0) {
@@ -1561,7 +1844,15 @@ class Game {
     if (action === 'rotate') { if (this.groundAdjust(() => this.player.rotate(1))) this.audio.playSfx('rotate'); this.battleUsedClockwise = true; }
     if (action === 'ccw') { if (this.groundAdjust(() => this.player.rotate(-1))) this.audio.playSfx('rotate'); this.battleUsedCounterClockwise = true; }
     if (action === 'hold') { if (this.player.hold()) { this.battleUsedHold = true; this.audio.playSfx('hold'); } }
-    if (action === 'hard') { if (this.playerSlowTimer > 0) return; this.battleUsedHardDrop = true; this.input.vibrate('harddrop'); this.audio.playSfx('hardDrop'); this.resolve(this.player.hardDrop(), this.player); }
+    if (action === 'hard') {
+      if (!this.solo && this.playerSlowTimer > 0) return;
+      if (!this.solo) this.battleUsedHardDrop = true;
+      this.input.vibrate('harddrop');
+      this.audio.playSfx('hardDrop');
+      const result = this.player.hardDrop();
+      if (this.solo) this.resolveSolo(result);
+      else this.resolve(result, this.player);
+    }
     if (action.startsWith('skill')) this.useSkill(Number(action.slice(5)));
     if (action.startsWith('consumable')) this.useConsumable(Number(action.slice(10)));
   }
@@ -1587,8 +1878,10 @@ class Game {
   }
 
   currentFallInterval() {
-    if (this.playerHyperTimer > 0) return GAME_TIMING.PLAYER_FALL_INTERVAL * 0.12;
-    return GAME_TIMING.PLAYER_FALL_INTERVAL;
+    if (this.solo) return SOLO_FALL_SPEEDS[this.solo.level] ?? 800;
+    const base = GAME_TIMING.PLAYER_FALL_INTERVAL * (this.currentAscMod().playerFallFactor ?? 1.0);
+    if (this.playerHyperTimer > 0) return base * 0.12;
+    return base;
   }
 
   useSkill(index) {
@@ -1619,6 +1912,7 @@ class Game {
     const item = CONSUMABLES[id];
     if (!item) return;
     this.run.consumables.splice(index, 1);
+    this.runConsUsed = (this.runConsUsed || 0) + 1;
     this.message = item.use({ game: this, player: this.player, enemy: this.enemy });
     this.audio.playSfx(CONSUMABLE_SFX[id] || 'mana');
     if (this.player && this.enemy) this.renderer.resize(this.player.rows, this.enemy.rows);
@@ -1632,6 +1926,9 @@ class Game {
     if (result.cleared > 0) this.battleClearedLines += result.cleared;
     if (result.cleared > 0 && attacker === this.player) {
       this.battlePlayerClearedLines += result.cleared;
+      // 한 번에 쓰레기 8줄 이상 제거 (직접 클리어 + 클렌즈 onPlace 포함)
+      const totalGarbage = (result.garbageCleared || 0) + (result.instant?.purgedRows || 0);
+      if (totalGarbage >= 8) this.runGarbageNuke = true;
       this.input.vibrate(`clear${Math.min(4, result.cleared)}`);
     }
     if (attacker === this.player) this.battlePlayerPieces++;
@@ -1652,8 +1949,10 @@ class Game {
     if (attacker === this.player) {
       if (result.slow) {
         const wasSlowed = this.enemySlowTimer > 0;
-        const slowAdd = this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow;
+        const coolantFactor = this.currentAscMod().coolantFactor ?? 1.0;
+        const slowAdd = (this.run.relics.includes('set_abszero') ? result.slow * 2 : result.slow) * coolantFactor;
         this.enemySlowTimer += slowAdd;
+        this.battleTotalSlow += slowAdd;
         if (wasSlowed && this.run.relics.includes('frost_lock')) {
           this.enemyStunTimer += Math.floor(slowAdd * 0.5);
         }
@@ -1664,18 +1963,27 @@ class Game {
         const earned = Math.floor(this.bountyBank);
         if (earned > 0) {
           this.run.gold += earned;
+          this.battleBountyGold += earned;
           this.bountyBank -= earned;
         }
       }
+      if (result.explodedCells > 0) this.battleMaxExplodeCells = Math.max(this.battleMaxExplodeCells, result.explodedCells);
+      if (result.canceled > 0) this.battleWardCanceled += result.canceled;
+      if (result.cleared >= 1) this.battleMaxCombo = Math.max(this.battleMaxCombo, this.player.combo);
     }
     if (result.instant?.enemyGarbage) defender.receiveGarbage(result.instant.enemyGarbage);
     if (result.instant?.dispelEnemy && attacker === this.player) this.dispelEnemyAbilities();
     if (result.comboBreak && attacker === this.player) this.message = getLang() === 'ja' ? `${result.comboBreak}コンボ終了` : getLang() === 'en' ? `${result.comboBreak} combo ended` : `${result.comboBreak}콤보 종료`;
+    const manaFactor = this.currentAscMod().manaFactor ?? 1.0;
     if (attacker === this.player && result.cleared > 0 && this.run.relics.includes('mana_lens')) {
-      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.35);
+      const gain = result.mana * 0.35 * manaFactor;
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + gain);
+      this.battleMaxManaGain = Math.max(this.battleMaxManaGain, gain);
     }
     if (attacker === this.player && result.cleared > 0 && !this.player.held && this.run.relics.includes('hold_cache')) {
-      this.player.mp = Math.min(this.player.mpCap, this.player.mp + result.mana * 0.5);
+      const gain = result.mana * 0.5 * manaFactor;
+      this.player.mp = Math.min(this.player.mpCap, this.player.mp + gain);
+      this.battleMaxManaGain = Math.max(this.battleMaxManaGain, gain);
     }
     if (result.attack > 0) {
       // Heat and power scaling are shared battle pressure and apply to both sides.
@@ -1700,12 +2008,17 @@ class Game {
           }
         }
       }
-      const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, attack - 1) : attack;
+      const enemyAtk = (attacker === this.enemy) ? (this.currentAscMod().enemyAttackFactor ?? 1.0) : 1.0;
+      const scaledAttack = attack * enemyAtk;
+      const buffered = defender === this.player && this.run.relics.includes('garbage_buffer') ? Math.max(0, scaledAttack - 1) : scaledAttack;
       if (buffered > 0) {
         attacker.attackPool += buffered;
         const toSend = Math.floor(attacker.attackPool);
         attacker.attackPool = Number((attacker.attackPool - toSend).toFixed(4));
-        if (toSend > 0) defender.receiveGarbage(toSend);
+        if (toSend > 0) {
+          defender.receiveGarbage(toSend);
+          if (attacker === this.player) this.battleMaxSingleAttack = Math.max(this.battleMaxSingleAttack, toSend);
+        }
       }
     }
     this.emitResolveSfx(result, attacker, defender);
@@ -1782,14 +2095,26 @@ class Game {
   }
 
   winBattle() {
+    if (this.vs) {
+      if (!this._vsGameEndHandled) {
+        this._vsGameEndHandled = true;
+        this._handleVsGameEnd(true);
+      }
+      return;
+    }
     this.pendingChallengeText = '';
     if (this.activeChallenge && !this.challengeRewarded) {
       const st = this.challengeStatus();
       if (st && st.ok) {
         this.challengeRewarded = true;
-        const rewardDesc = this.grantChallengeReward(this.activeChallenge.reward);
-        this.pendingChallengeText = getLang() === 'ja' ? ` · 挑戦成功! ${rewardDesc}` : getLang() === 'en' ? ` · Challenge complete! ${rewardDesc}` : ` · 도전 성공! ${rewardDesc}`;
-        this.showToast(getLang() === 'ja' ? `🏆 挑戦成功!  ${rewardDesc}` : getLang() === 'en' ? `🏆 Challenge complete!  ${rewardDesc}` : `🏆 도전 성공!  ${rewardDesc}`, 'challenge-ok');
+        const isGreat = !st.grade || st.grade === 'great';
+        const reward = isGreat ? this.activeChallenge.reward : (this.activeChallenge.rewardOk || this.activeChallenge.reward);
+        const rewardDesc = this.grantChallengeReward(reward);
+        const gradeLabel = isGreat
+          ? (getLang() === 'ja' ? '大成功' : getLang() === 'en' ? 'Complete' : '대성공')
+          : (getLang() === 'ja' ? '成功' : getLang() === 'en' ? 'OK' : '성공');
+        this.pendingChallengeText = getLang() === 'ja' ? ` · 挑戦${gradeLabel}! ${rewardDesc}` : getLang() === 'en' ? ` · Challenge ${gradeLabel}! ${rewardDesc}` : ` · 도전 ${gradeLabel}! ${rewardDesc}`;
+        this.showToast(getLang() === 'ja' ? `🏆 挑戦${gradeLabel}!  ${rewardDesc}` : getLang() === 'en' ? `🏆 Challenge ${gradeLabel}!  ${rewardDesc}` : `🏆 도전 ${gradeLabel}!  ${rewardDesc}`, 'challenge-ok');
         this.audio.playSfx('challengeWin');
       } else {
         this.pendingChallengeText = getLang() === 'ja' ? ' · 挑戦失敗(ボーナスなし)' : getLang() === 'en' ? ' · Challenge failed (no bonus)' : ' · 도전 실패(보너스 없음)';
@@ -1797,8 +2122,11 @@ class Game {
         this.audio.playSfx('challengeFail');
       }
     }
-    const goldMult = this.run.relics.includes('greed') ? 1.2 : 1;
+    this.checkBattleAchievements(this.enemyCard.type);
+    this.checkBattleMilestoneAchievements();
+    const goldMult = (this.run.relics.includes('greed') ? 1.2 : 1) * (this.currentAscMod().goldFactor ?? 1.0);
     this.run.gold += Math.round(this.enemyCard.rewardGold * goldMult);
+    this.runMaxGold = Math.max(this.runMaxGold || 0, this.run.gold);
     const relicId = (this.enemyCard.type === 'elite' || this.enemyCard.type === 'boss') ? grantEliteRelic(this.run) : null;
     if (relicId) {
       this.discover('relics', relicId);
@@ -1814,10 +2142,12 @@ class Game {
     this.run.deck.refill();
     if (this.enemyCard?.type === 'boss' || isRunComplete(this.run)) {
       this.run.round = Math.max(this.run.round, 20);
+      this.checkSetAchievements?.();
       this.endRun(true);
       return;
     }
-    this.showRewards(makeRewards(this.enemyCard.rewardPool), relicId);
+    this.checkSetAchievements?.();
+    this.showRewards(makeRewards(this.enemyCard.rewardPool, this.currentAscMod().rewardTierPenalty ?? 0), relicId);
     this.autoSave();
   }
 
@@ -1905,15 +2235,61 @@ class Game {
   }
 
   endRun(win) {
+    if (this.vs) {
+      if (!win && !this._vsGameEndHandled) {
+        this._vsGameEndHandled = true;
+        this._handleVsGameEnd(false);
+      }
+      return;
+    }
     this.clearBattleTimeouts();
     this.lastRunResult = win ? 'win' : 'loss';
     if (win) this.audio.playSfx('runClear');
+    if (!this.run?.practiceMode) {
+      this.updateLifetimeSeen?.(this.run);
+      this.checkCompendiumAchievements?.();
+    }
+    const prevCleared = this.hasEverCleared?.() || false;
     this.saveRecord(win);
     this.deleteSave(true);
     document.getElementById('endScreen').classList.toggle('run-clear', win);
     this.show('endScreen');
     document.getElementById('endTitle').textContent = win ? 'RUN COMPLETE!' : 'RUN FAILED';
     document.getElementById('endSummary').textContent = `${ui('round', Math.min(this.run.round, 20))} · ${ui('gold')} ${this.run.gold} · HP ${this.run.hpRows}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' rows' : '줄'}`;
+    if (!win && !this.run?.practiceMode) {
+      const lt = this.loadLifetime?.();
+      if (lt) { lt.winStreak = 0; this.saveLifetime?.(lt); }
+    }
+    if (win) {
+      const lvl = this.getAscensionLevel?.() ?? 0;
+      this.checkRunAchievements?.(lvl);
+      // 단계별 해금: 이번 레벨 클리어 시 다음 레벨 해금
+      const prevMax = this.getMaxAscension?.() ?? 0;
+      if (!prevCleared) {
+        this.setMaxAscension?.(1); // 첫 클리어 → A1 해금
+      } else if (lvl >= prevMax && lvl < 10) {
+        this.setMaxAscension?.(lvl + 1);
+      }
+      const newMax = this.getMaxAscension?.() ?? 0;
+      const box = document.getElementById('ascensionUnlockBox');
+      if (box) {
+        if (!prevCleared) {
+          box.classList.remove('hidden');
+          box.textContent = '🔓 승천 시스템 해금! 메인 메뉴에서 A1 이상을 선택하세요.';
+          setTimeout(() => box.classList.add('hidden'), 6000);
+        } else if (newMax > prevMax && lvl < 10) {
+          box.classList.remove('hidden');
+          box.textContent = `🌟 ${ASCENSION_MODS[lvl]?.label} 클리어! ${ASCENSION_MODS[newMax]?.label ?? 'A10'} 해금!`;
+          setTimeout(() => box.classList.add('hidden'), 4000);
+        } else if (lvl >= 10) {
+          box.classList.remove('hidden');
+          box.textContent = '👑 신화(A10) 클리어! 최고 난이도 정복!';
+          setTimeout(() => box.classList.add('hidden'), 5000);
+        } else {
+          box.classList.add('hidden');
+        }
+      }
+    }
   }
 
   saveRecord(win) {
@@ -1939,6 +2315,279 @@ class Game {
     } catch {
       return [];
     }
+  }
+
+  // ===== 업적 =====
+  loadAchievements() {
+    try { return new Set(JSON.parse(localStorage.getItem(ACHIEVEMENT_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+
+  saveAchievements(set) {
+    localStorage.setItem(ACHIEVEMENT_KEY, JSON.stringify([...set]));
+  }
+
+  unlockAchievement(id) {
+    const set = this.loadAchievements();
+    if (set.has(id)) return;
+    set.add(id);
+    this.saveAchievements(set);
+    const ach = ACHIEVEMENTS.find(a => a.id === id);
+    if (ach) {
+      const lang = getLang();
+      const name = lang === 'en' ? ach.en : lang === 'ja' ? ach.ja : ach.ko;
+      this.showToast(`🏅 ${lang === 'en' ? 'Achievement: ' : lang === 'ja' ? '実績解除: ' : '업적 해금: '}${ach.icon} ${name}`, 'elite', 3500);
+    }
+  }
+
+  checkRunAchievements(ascensionLevel) {
+    if (this.run.practiceMode) return;
+    this.unlockAchievement('first_clear');
+    if (this.run.gold >= 200) this.unlockAchievement('rich');
+    if ((this.runMaxGold || 0) >= 500) this.unlockAchievement('gold_500');
+    if (this.run.equippedSkills.length >= 3) this.unlockAchievement('skill_master');
+    if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
+    if ((this.runEliteKills || 0) >= 3) this.unlockAchievement('elite_hunter');
+    if ((this.runConsUsed || 0) >= 5) this.unlockAchievement('cons_user');
+    // 한 종류 10개: 덱의 카드 shapeId 카운트
+    const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
+    const shapeCounts = {};
+    for (const id of allCards) {
+      const card = CARD_LIBRARY?.[id];
+      if (card?.shapeId) shapeCounts[card.shapeId] = (shapeCounts[card.shapeId] || 0) + 1;
+    }
+    if (Object.values(shapeCounts).some(n => n >= 10)) this.unlockAchievement('mono_deck');
+    if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
+    if (ascensionLevel >= 3) this.unlockAchievement('ascension_3');
+    if (ascensionLevel >= 5) this.unlockAchievement('ascension_5');
+    if (ascensionLevel >= 8) this.unlockAchievement('ascension_8');
+    if (ascensionLevel >= 10) this.unlockAchievement('ascension_10');
+    const lt = this.loadLifetime();
+    lt.totalWins = (lt.totalWins || 0) + 1;
+    lt.winStreak = (lt.winStreak || 0) + 1;
+    this.saveLifetime(lt);
+    if (lt.totalWins >= 3) this.unlockAchievement('three_wins');
+    if (lt.winStreak >= 10) this.unlockAchievement('win_streak_10');
+  }
+
+  checkBattleAchievements(enemyType) {
+    if (this.run?.practiceMode) return;
+    if (enemyType === 'boss') this.unlockAchievement('boss_kill');
+    if (enemyType === 'elite') {
+      this.runEliteKills = (this.runEliteKills || 0) + 1;
+      const lt = this.loadLifetime();
+      lt.eliteKills = (lt.eliteKills || 0) + 1;
+      this.saveLifetime(lt);
+      if (lt.eliteKills >= 5) this.unlockAchievement('elite_killer');
+    }
+  }
+
+  checkBattleMilestoneAchievements() {
+    if (this.run?.practiceMode) return;
+    // 한 번에 큰 공격
+    if (this.battleMaxSingleAttack >= 5) this.unlockAchievement('atk_big');
+    // 폭발 대량 제거
+    if (this.battleMaxExplodeCells >= 20) this.unlockAchievement('explode_big');
+    // 마나 대량 회복
+    if (this.battleMaxManaGain >= 40) this.unlockAchievement('mana_burst');
+    // 한 전투 냉각 누적
+    if (this.battleTotalSlow >= 20000) this.unlockAchievement('coolant_master');
+    // 한 전투 현상금 골드
+    if (this.battleBountyGold >= 40) this.unlockAchievement('bounty_hunter');
+    // 차단 누적
+    if (this.battleWardCanceled >= 8) this.unlockAchievement('ward_master');
+    // 콤보
+    if (this.battleMaxCombo >= 10) this.unlockAchievement('combo_master');
+    // 한 번에 쓰레기 8줄 이상 제거
+    if (this.runGarbageNuke) this.unlockAchievement('garbage_nuke');
+    // 덱 크기 (승리 시)
+    const deckSize = this.run.deck.draw.length + this.run.deck.discard.length;
+    if (deckSize >= 35) this.unlockAchievement('deck_overload');
+    if (deckSize <= 10) this.unlockAchievement('deck_minimalist');
+    // 장기전: 적이 100개 이상 피스를 놓은 전투에서 승리
+    if (this.battleEnemyPieces >= 100) this.unlockAchievement('long_battle');
+    // 상점 지출 (런 전체 누적)
+    if ((this.runShopSpent || 0) >= 100) this.unlockAchievement('shop_spender');
+  }
+
+  checkSetAchievements() {
+    if (this.run?.practiceMode) return;
+    const allCards = new Set([...this.run.deck.draw, ...this.run.deck.discard]);
+    let completedCount = 0;
+    for (const [setId, setDef] of Object.entries(SET_DEFINITIONS)) {
+      if (Object.values(setDef).every(id => allCards.has(id))) {
+        completedCount++;
+        this.unlockAchievement(`set_${setId}`);
+      }
+    }
+    if (completedCount === Object.keys(SET_DEFINITIONS).length) {
+      this.unlockAchievement('all_sets');
+    }
+  }
+
+  updateLifetimeSeen(run) {
+    const lt = this.loadLifetime();
+    const sc = new Set(lt.seenCards || []);
+    const ss = new Set(lt.seenSkills || []);
+    const sr = new Set(lt.seenRelics || []);
+    const sCons = new Set(lt.seenCons || []);
+    for (const id of [...run.deck.draw, ...run.deck.discard, ...(run.deck.extraCards || [])]) sc.add(id);
+    for (const id of run.ownedSkills) ss.add(id);
+    for (const id of run.relics) sr.add(id);
+    for (const id of run.consumables) sCons.add(id);
+    lt.seenCards = [...sc];
+    lt.seenSkills = [...ss];
+    lt.seenRelics = [...sr];
+    lt.seenCons = [...sCons];
+    this.saveLifetime(lt);
+    return { sc, ss, sr, sCons };
+  }
+
+  trackSeenConsumable(id) {
+    if (this.run?.practiceMode || !id) return;
+    const lt = this.loadLifetime();
+    const s = new Set(lt.seenCons || []);
+    s.add(id);
+    lt.seenCons = [...s];
+    this.saveLifetime(lt);
+    this.checkCompendiumAchievements();
+  }
+
+  checkCompendiumAchievements() {
+    if (this.run?.practiceMode) return;
+    const lt = this.loadLifetime();
+    const playerCardIds = new Set(
+      Object.values(CARD_LIBRARY)
+        .filter(c => c.tier && c.rarity !== 'base' && c.rarity !== 'curse' && !c.exhaust)
+        .map(c => c.id)
+    );
+    const seenCards = new Set(lt.seenCards || []);
+    const seenSkills = new Set(lt.seenSkills || []);
+    const seenRelics = new Set(lt.seenRelics || []);
+    const seenCons = new Set(lt.seenCons || []);
+    const totalSkills = Object.keys(SKILLS).length;
+    const totalRelics = Object.keys(RELICS).length;
+    const totalCons = Object.keys(CONSUMABLES).length;
+    const cardsOk = [...playerCardIds].every(id => seenCards.has(id));
+    const skillsOk = seenSkills.size >= totalSkills;
+    const relicsOk = seenRelics.size >= totalRelics;
+    const consOk = seenCons.size >= totalCons;
+    if (cardsOk) this.unlockAchievement('compendium_cards');
+    if (skillsOk) this.unlockAchievement('compendium_skills');
+    if (relicsOk) this.unlockAchievement('compendium_relics');
+    if (consOk) this.unlockAchievement('compendium_cons');
+    if (cardsOk && skillsOk && relicsOk && consOk) this.unlockAchievement('compendium_all');
+  }
+
+  // ===== 평생 통계 =====
+  loadLifetime() {
+    try { return JSON.parse(localStorage.getItem(LIFETIME_KEY) || '{}'); }
+    catch { return {}; }
+  }
+
+  saveLifetime(lt) {
+    localStorage.setItem(LIFETIME_KEY, JSON.stringify(lt));
+  }
+
+  incrementLifetime(key, threshold, achievementId) {
+    const lt = this.loadLifetime();
+    lt[key] = (lt[key] || 0) + 1;
+    this.saveLifetime(lt);
+    if (lt[key] >= threshold) this.unlockAchievement(achievementId);
+  }
+
+  // ===== 승천 =====
+  getMaxAscension() {
+    const n = parseInt(localStorage.getItem(ASCENSION_MAX_KEY) || '0', 10);
+    return isNaN(n) ? 0 : Math.max(0, Math.min(10, n));
+  }
+
+  setMaxAscension(n) {
+    const clamped = Math.max(0, Math.min(10, n));
+    if (clamped > this.getMaxAscension()) localStorage.setItem(ASCENSION_MAX_KEY, String(clamped));
+  }
+
+  getAscensionLevel() {
+    const n = parseInt(localStorage.getItem(ASCENSION_KEY) || '0', 10);
+    const max = this.getMaxAscension();
+    return isNaN(n) ? 0 : Math.max(0, Math.min(max, n));
+  }
+
+  setAscensionLevel(n) {
+    const max = this.getMaxAscension();
+    localStorage.setItem(ASCENSION_KEY, String(Math.max(0, Math.min(max, n))));
+  }
+
+  hasEverCleared() {
+    return this.loadRecords().some(r => r.result === 'win');
+  }
+
+  currentAscMod() {
+    return ASCENSION_MODS[this.getAscensionLevel()] || ASCENSION_MODS[0];
+  }
+
+  refreshAscensionDisplay() {
+    const el = document.getElementById('ascensionDisplay');
+    if (!el) return;
+    if (!this.hasEverCleared()) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    const lvl = this.getAscensionLevel();
+    const max = this.getMaxAscension();
+    const mod = ASCENSION_MODS[lvl];
+    const lang = getLang();
+    const modName = lang === 'en' ? mod.en : lang === 'ja' ? mod.ja : mod.ko;
+    const downBtn = lvl > 0 ? `<button class="ghost asc-btn" data-asc="${lvl - 1}">◀</button>` : `<button class="ghost asc-btn" disabled>◀</button>`;
+    const upBtn = lvl < max ? `<button class="ghost asc-btn" data-asc="${lvl + 1}">▶</button>` : `<button class="ghost asc-btn" disabled title="${lvl < 10 ? (lang === 'en' ? 'Clear this level to unlock' : '이 레벨 클리어 시 해금') : ''}">▶</button>`;
+    const mods = [];
+    if (mod.garbage > 0) mods.push(`적 쓰레기 +${mod.garbage}`);
+    if (mod.speedFactor < 1.0) mods.push(`적 속도 +${Math.round((1 - mod.speedFactor) * 100)}%`);
+    if (mod.eliteChanceBonus > 0) mods.push(`엘리트 확률 +${Math.round(mod.eliteChanceBonus * 100)}%`);
+    if (mod.playerFallFactor < 1.0) mods.push(`내 낙하속도 +${Math.round((1 - mod.playerFallFactor) * 100)}%`);
+    if (mod.manaFactor < 1.0) mods.push(`마나 회복 -${Math.round((1 - mod.manaFactor) * 100)}%`);
+    if (mod.playerStartHp != null) mods.push(`시작 체력 ${mod.playerStartHp}줄`);
+    if (mod.enemyAttackFactor > 1.0) mods.push(`적 공격력 +${Math.round((mod.enemyAttackFactor - 1) * 100)}%`);
+    if (mod.goldFactor != null && mod.goldFactor < 1.0) mods.push(`골드 획득 -${Math.round((1 - mod.goldFactor) * 100)}%`);
+    if (mod.coolantFactor != null && mod.coolantFactor < 1.0) mods.push(`냉각 효과 -${Math.round((1 - mod.coolantFactor) * 100)}%`);
+    if (mod.purgeFactor != null && mod.purgeFactor < 1.0) mods.push(`클렌즈 효과 -${Math.round((1 - mod.purgeFactor) * 100)}%`);
+    if (mod.rewardTierPenalty > 0) mods.push(`보상 티어 -${mod.rewardTierPenalty}`);
+    if (mod.startCurseCards > 0) mods.push(`시작 저주카드 ${mod.startCurseCards}장`);
+    const lockHint = lvl >= max && lvl < 10 ? `<small class="asc-lock">🔒 ${lang === 'en' ? 'Clear to unlock next' : '클리어하면 다음 단계 해금'}</small>` : '';
+    el.innerHTML = `<span>${lang === 'ja' ? '昇天レベル' : lang === 'en' ? 'Ascension' : '승천'}: ${downBtn} <strong>${mod.label} ${modName}</strong> ${upBtn}</span>${mods.length ? `<small class="asc-mods">${mods.join(' · ')}</small>` : ''}${lockHint}`;
+    el.querySelectorAll('.asc-btn[data-asc]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.setAscensionLevel(parseInt(btn.dataset.asc, 10));
+        this.refreshAscensionDisplay();
+      });
+    });
+  }
+
+  showAchievementsModal() {
+    const unlocked = this.loadAchievements();
+    const lang = getLang();
+    const rows = ACHIEVEMENTS.map(a => {
+      const isUnlocked = unlocked.has(a.id);
+      const name = lang === 'en' ? a.en : lang === 'ja' ? a.ja : a.ko;
+      const desc = isUnlocked ? (lang === 'en' ? a.en_d : lang === 'ja' ? a.ja_d : a.ko_d) : '???';
+      return `<div class="achievement-row ${isUnlocked ? 'unlocked' : 'locked'}">
+        <span class="ach-icon">${isUnlocked ? a.icon : '🔒'}</span>
+        <div><strong>${name}</strong><small>${desc}</small></div>
+      </div>`;
+    }).join('');
+    const count = unlocked.size;
+    const total = ACHIEVEMENTS.length;
+    const title = `${lang === 'ja' ? '実績' : lang === 'en' ? 'Achievements' : '업적'} (${count}/${total})`;
+    let ov = document.getElementById('achievementsModal');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'achievementsModal';
+      ov.className = 'deck-modal';
+      ov.innerHTML = '<div class="deck-modal-inner"><button class="ghost wide" data-close="1">✕ 닫기</button><h2 id="achModalTitle"></h2><div id="achModalList" class="achievements-list"></div></div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e => { if (e.target === ov || e.target.dataset.close) ov.classList.remove('active'); });
+    }
+    ov.querySelector('#achModalTitle').textContent = title;
+    ov.querySelector('#achModalList').innerHTML = rows;
+    ov.classList.add('active');
   }
 
   runToState() {
@@ -1986,6 +2635,7 @@ class Game {
   }
 
   autoSave() {
+    if (this.vs) return; // VS mode doesn't use the save system
     this.saveGame(true);
   }
 
@@ -2223,6 +2873,7 @@ class Game {
     const dt = Math.min(50, now - (this.last || now));
     this.last = now;
     if (this.inBattle()) this.updateBattle(dt, now);
+    else if (this.inSolo()) this.updateSolo(dt, now);
     else this.input?.update(now);
     requestAnimationFrame(t => this.loop(t));
   }
@@ -2442,26 +3093,37 @@ class Game {
     const fail = getLang() === 'ja' ? '失敗' : getLang() === 'en' ? 'fail' : '실패';
     const keep = getLang() === 'ja' ? '維持' : getLang() === 'en' ? 'ok' : '유지';
     const label = trChallengeLabel(c, c.label);
-    if (c.id === 'noHold') return { ok: !this.battleUsedHold, text: `${label}(${this.battleUsedHold ? fail : keep})` };
-    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, text: `${label}(${this.battleUsedSkill ? fail : keep})` };
-    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, text: `${label}(${this.battleUsedHardDrop ? fail : keep})` };
-    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, text: `${label}(${this.battleUsedCounterClockwise ? fail : keep})` };
-    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, text: `${label}(${this.battleUsedClockwise ? fail : keep})` };
-    if (c.id === 'timeAttack') return { ok: this.battleElapsedSec <= c.params.limit, text: `${getLang() === 'ja' ? 'タイムアタック' : getLang() === 'en' ? 'Time Attack' : c.label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
-    if (c.id === 'clearLines') return { ok: this.battlePlayerClearedLines >= c.params.target, text: `${getLang() === 'ja' ? 'ラインラッシュ' : getLang() === 'en' ? 'Line Rush' : c.label} ${this.battlePlayerClearedLines}/${c.params.target}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' lines' : '줄'}` };
+    if (c.id === 'noHold') return { ok: !this.battleUsedHold, grade: 'great', text: `${label}(${this.battleUsedHold ? fail : keep})` };
+    if (c.id === 'noSkill') return { ok: !this.battleUsedSkill, grade: 'great', text: `${label}(${this.battleUsedSkill ? fail : keep})` };
+    if (c.id === 'noHardDrop') return { ok: !this.battleUsedHardDrop, grade: 'great', text: `${label}(${this.battleUsedHardDrop ? fail : keep})` };
+    if (c.id === 'cwOnly') return { ok: !this.battleUsedCounterClockwise, grade: 'great', text: `${label}(${this.battleUsedCounterClockwise ? fail : keep})` };
+    if (c.id === 'ccwOnly') return { ok: !this.battleUsedClockwise, grade: 'great', text: `${label}(${this.battleUsedClockwise ? fail : keep})` };
+    if (c.id === 'timeAttack') {
+      const great = this.battleElapsedSec <= c.params.limit;
+      const ok = c.paramsOk ? this.battleElapsedSec <= c.paramsOk.limit : great;
+      const grade = great ? 'great' : ok ? 'ok' : null;
+      return { ok: !!grade, grade, text: `${getLang() === 'ja' ? 'タイムアタック' : getLang() === 'en' ? 'Time Attack' : label} ${Math.floor(this.battleElapsedSec)}/${c.params.limit}s` };
+    }
+    if (c.id === 'clearLines') {
+      const great = this.battlePlayerClearedLines >= c.params.target;
+      const ok = c.paramsOk ? this.battlePlayerClearedLines >= c.paramsOk.target : great;
+      const grade = great ? 'great' : ok ? 'ok' : null;
+      return { ok: !!grade, grade, text: `${getLang() === 'ja' ? 'ラインラッシュ' : getLang() === 'en' ? 'Line Rush' : label} ${this.battlePlayerClearedLines}/${c.params.target}${getLang() === 'ja' ? '行' : getLang() === 'en' ? ' lines' : '줄'}` };
+    }
     return null;
   }
 
   grantChallengeReward(reward) {
     if (!reward) return '';
-    if (reward.kind === 'gold') this.run.gold += reward.amount;
-    else if (reward.kind === 'relic') { if (!this.run.relics.includes(reward.id)) this.run.relics.push(reward.id); else this.run.gold += 40; }
-    else if (reward.kind === 'consumable') { if (this.run.consumables.length < 3) this.run.consumables.push(reward.id); else this.run.gold += 20; }
+    const gf = this.currentAscMod().goldFactor ?? 1.0;
+    if (reward.kind === 'gold') this.run.gold += Math.round(reward.amount * gf);
+    else if (reward.kind === 'relic') { if (!this.run.relics.includes(reward.id)) this.run.relics.push(reward.id); else this.run.gold += Math.round(40 * gf); }
+    else if (reward.kind === 'consumable') { if (this.run.consumables.length < 3) this.run.consumables.push(reward.id); else this.run.gold += Math.round(20 * gf); }
     else if (reward.kind === 'skill') {
       if (!this.run.ownedSkills.includes(reward.id)) {
         this.run.ownedSkills.push(reward.id);
         if (this.run.equippedSkills.length < 3) this.run.equippedSkills.push(reward.id);
-      } else this.run.gold += 30;
+      } else this.run.gold += Math.round(30 * gf);
     }
     return trRewardLabel(reward, reward.label);
   }
@@ -2624,7 +3286,9 @@ class Game {
         this.lockTimer = 0;
         this.lockResets = 0;
         this.groundTouched = false;
-        this.resolve(this.player.lock(), this.player);
+        const lockResult = this.player.lock();
+        if (this.solo) this.resolveSolo(lockResult);
+        else this.resolve(lockResult, this.player);
         return;
       }
       this.lockTimer += dt;
@@ -2632,7 +3296,9 @@ class Game {
         this.lockTimer = 0;
         this.lockResets = 0;
         this.groundTouched = false;
-        this.resolve(this.player.lock(), this.player);
+        const lockResult = this.player.lock();
+        if (this.solo) this.resolveSolo(lockResult);
+        else this.resolve(lockResult, this.player);
       }
       return;
     }
@@ -2694,8 +3360,264 @@ class Game {
     this.castBossDebuff();
   }
 
+  // ===== VS 모드 =====
+
+  showVsSelect() {
+    this.show('vsSelectScreen');
+    const relayBest = localStorage.getItem('bbs.vs.relay.record');
+    const el = document.getElementById('rec-vs-relay');
+    if (el) el.textContent = relayBest ? `최고: ${relayBest}킬` : '기록 없음';
+  }
+
+  startVsMode(mode, difficulty = 1) {
+    this.vs = { mode, difficulty, wins: [0, 0], game: 1, relayKills: 0, ended: false };
+    this._vsGameEndHandled = false;
+    this._startVsGame();
+  }
+
+  _makeVsDummyRun() {
+    return {
+      relics: [], skills: [], consumables: [], equippedSkills: [],
+      ownedSkills: [], gold: 0, round: 1, hpRows: 20,
+      deckCount: () => 21, persistentGrid: null, practiceMode: false
+    };
+  }
+
+  _startVsGame() {
+    this.clearBattleTimeouts();
+    this.vs.ended = false;
+    this._vsGameEndHandled = false;
+    const { mode, difficulty } = this.vs;
+
+    // Fake enemy card (no roguelike-specific fields needed)
+    const speeds = [280, 200, 140];
+    this.enemyCard = {
+      type: 'normal', name: 'VS 배틀', aiProfile: 'balanced',
+      speed: speeds[difficulty] ?? 200, mirror: false, ability: null,
+      rewardGold: 0, rewardPool: 'normal', startingRows: 20,
+      startingGarbage: 0, vsMode: true
+    };
+
+    // Build decks
+    const seed = Date.now();
+    const playerDeck = mode === 'random' ? this.makeRandomDeck(seed) : new Deck();
+    const enemyDeck  = mode === 'random' ? this.makeRandomDeck((seed ^ 0xdeadbeef) >>> 0) : new Deck();
+
+    this.player = new Board({ rows: 20, deck: playerDeck });
+    this.player.delaysGarbageOnClear = true;
+    this.player.onGarbageLanded = () => this.input.vibrate('garbage');
+    this.enemy = new Board({ rows: 20, deck: enemyDeck });
+    this.enemy.delaysGarbageOnClear = false;
+
+    this.ai = new AI('balanced', {}, difficulty);
+
+    // Reset all battle state
+    this.fallTimer = 0; this.lockTimer = 0; this.lockResets = 0; this.groundTouched = false;
+    this.enemyTimer = 0; this.enemyActionStall = 0; this.enemyAbilityTimer = 0;
+    this.enemyAbilitySuppressTimer = 0; this.gaugeStallTimer = 0; this.playerGaugeRushTimer = 0;
+    this.enemySlowTimer = 0; this.enemyStunTimer = 0; this.playerSlowTimer = 0;
+    this.battleClearedLines = 0; this.battlePlayerClearedLines = 0;
+    this.battlePlayerPieces = 0; this.battlePlayerAttacks = 0;
+    this.battleEnemyPieces = 0; this.battleEnemyAttacks = 0; this.battleElapsedSec = 0;
+    this.aiFocusActivations = 0; this.aiFocusInEpisode = false;
+    this.battleEndDelay = 0; this.battleEndResult = null;
+    this.playerFreezeTimer = 0; this.playerFogTimer = 0; this.playerHyperTimer = 0;
+    this.playerInvertTimer = 0; this.enemyForceDropTimer = 0;
+    this.bossOverloadCharge = 0; this.bossRhythmSent = 0; this.bossRhythmRestTimer = 0;
+    this.enemyDebuffs = {}; this.playerDebuffs = {};
+    this.battleUsedHold = false; this.battleUsedSkill = false; this.battleUsedHardDrop = false;
+    this.battleUsedCounterClockwise = false; this.battleUsedClockwise = false;
+    this.battleMaxSingleAttack = 0; this.battleMaxExplodeCells = 0; this.battleMaxManaGain = 0;
+    this.battleTotalSlow = 0; this.battleBountyGold = 0; this.battleWardCanceled = 0;
+    this.battleMaxCombo = 0; this.activeChallenge = null; this.challengeRewarded = false;
+    this.paused = false; this.autoSaveTimer = 0; this.skillCooldowns = {};
+    this.message = 'VS 배틀'; this.alertText = ''; this.alertTimer = 0;
+    this.battleFirstClearUsed = false; this.bountyBank = 0;
+
+    this.run = this._makeVsDummyRun();
+
+    const modeName = { normal: '일반 배틀', random: '랜덤 배틀', relay: '이어달리기' }[mode] || 'VS';
+    const seriesLabel = mode === 'relay' ? `${this.vs.relayKills}킬` : `게임 ${this.vs.game} · ${this.vs.wins[0]}:${this.vs.wins[1]}`;
+    document.getElementById('battleTitle').textContent = 'VS 모드';
+    document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
+    this.renderTouchSlots();
+    this.renderer.resize(this.player.rows, this.enemy.rows);
+    this.show('gameScreen');
+  }
+
+  makePureDeck() {
+    // Standard 7-bag × 3 deck, base cards have no abilities (abilityId: 'none')
+    return new Deck();
+  }
+
+  makeRandomDeck(seed) {
+    const SHAPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+    const allCards = Object.values(CARD_LIBRARY);
+    let rng = (seed >>> 0);
+    const rand = () => {
+      rng = ((Math.imul(rng, 1664525) + 1013904223) >>> 0);
+      return rng / 0x100000000;
+    };
+    const cards = [];
+    for (let r = 0; r < 3; r++) {
+      for (const s of SHAPES) {
+        const baseCard = CARD_LIBRARY[s];
+        const donor = allCards[Math.floor(rand() * allCards.length)];
+        const ability = ABILITY_LIBRARY[donor.abilityId] || ABILITY_LIBRARY.none;
+        cards.push({
+          id: `rnd_${s}_${r}`,
+          name: `랜덤 ${s}`,
+          shapeId: s,
+          shapeName: baseCard.shapeName,
+          abilityId: ability.id,
+          abilityName: ability.name,
+          cellCount: baseCard.cellCount,
+          shape: baseCard.shape,
+          cellAttack: ability.cellAttack,
+          traits: [...ability.traits],
+          onPlace: ability.onPlace ? { ...ability.onPlace } : null,
+          penalty: !!ability.penalty,
+          fuse: ability.fuse || 0,
+          exhaust: false,
+          rarity: 'base',
+          tier: 'bronze'
+        });
+      }
+    }
+    return new VsDeck(cards);
+  }
+
+  _handleVsGameEnd(playerWon) {
+    if (!this.vs) return;
+    if (playerWon) this.vs.wins[0]++;
+    else this.vs.wins[1]++;
+
+    if (this.vs.mode === 'relay') {
+      if (playerWon) {
+        this.vs.relayKills++;
+        if (this.vs.relayKills % 3 === 0) this._relayDrop();
+        setTimeout(() => this._startNextRelayEnemy(), 800);
+      } else {
+        this.vs.ended = true;
+        const best = parseInt(localStorage.getItem('bbs.vs.relay.record') || '0', 10);
+        if (this.vs.relayKills > best) {
+          localStorage.setItem('bbs.vs.relay.record', String(this.vs.relayKills));
+        }
+        this._showVsResult(false);
+      }
+      return;
+    }
+
+    // Series mode (best-of-3)
+    const [pw, ew] = this.vs.wins;
+    if (pw >= 2 || ew >= 2) {
+      this.vs.ended = true;
+      this._showVsResult(pw >= 2);
+    } else {
+      this.vs.game++;
+      this._showVsInterGame(playerWon);
+    }
+  }
+
+  _relayDrop() {
+    const allRelicIds = Object.keys(RELICS);
+    const allConsIds = Object.keys(CONSUMABLES);
+    const pool = [
+      ...allRelicIds.map(r => ({ type: 'relic', id: r })),
+      ...allConsIds.map(c => ({ type: 'cons', id: c }))
+    ];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    if (pick.type === 'relic' && !this.run.relics.includes(pick.id)) {
+      this.run.relics.push(pick.id);
+      this.flashAlert(`유물 획득: ${RELICS[pick.id]?.name || pick.id}`);
+    } else if (pick.type === 'cons') {
+      if (this.run.consumables.length < 3) {
+        this.run.consumables.push(pick.id);
+        this.renderTouchSlots();
+        this.flashAlert(`소모품 획득: ${CONSUMABLES[pick.id]?.name || pick.id}`);
+      } else {
+        // Try relic instead
+        const relicId = allRelicIds.find(r => !this.run.relics.includes(r));
+        if (relicId) {
+          this.run.relics.push(relicId);
+          this.flashAlert(`유물 획득: ${RELICS[relicId]?.name || relicId}`);
+        }
+      }
+    }
+  }
+
+  _startNextRelayEnemy() {
+    if (!this.vs || this.vs.ended) return;
+    const { difficulty } = this.vs;
+    const speeds = [280, 200, 140];
+    this.enemyCard.speed = speeds[difficulty] ?? 200;
+    this.enemy = new Board({ rows: 20, deck: new Deck() });
+    this.enemy.delaysGarbageOnClear = false;
+    this.ai = new AI('balanced', {}, difficulty);
+    this._vsGameEndHandled = false;
+    this.battleEndResult = null;
+    this.battleEndDelay = 0;
+    this.enemyTimer = 0; this.enemyActionStall = 0; this.enemyAbilityTimer = 0;
+    this.enemyAbilitySuppressTimer = 0; this.enemySlowTimer = 0; this.enemyStunTimer = 0;
+    this.enemyForceDropTimer = 0; this.bossOverloadCharge = 0;
+    this.bossRhythmSent = 0; this.bossRhythmRestTimer = 0;
+    this.enemyDebuffs = {}; this.battleEnemyPieces = 0; this.battleEnemyAttacks = 0;
+    this.aiFocusActivations = 0; this.aiFocusInEpisode = false;
+    this.message = `${this.vs.relayKills}킬! 다음 적 등장`;
+    const modeName = '이어달리기';
+    const seriesLabel = `${this.vs.relayKills}킬`;
+    document.getElementById('battleMeta').textContent = `${modeName} · ${seriesLabel}`;
+    this.renderer.resize(this.player.rows, this.enemy.rows);
+  }
+
+  _showVsInterGame(playerWon) {
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>라운드 ${this.vs.game - 1} — ${playerWon ? '승리 🎉' : '패배 💀'}</h3>
+        <p style="color:#d7e5ff;font-size:22px;margin:10px 0">${this.vs.wins[0]} : ${this.vs.wins[1]}</p>
+        <button class="ghost" id="vsNextGameBtn">다음 게임 →</button>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('vsNextGameBtn').addEventListener('click', () => {
+      modal.remove();
+      this._startVsGame();
+    });
+  }
+
+  _showVsResult(playerWon) {
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    const label = this.vs.mode === 'relay'
+      ? `이어달리기 종료 · ${this.vs.relayKills}킬`
+      : `시리즈 ${playerWon ? '승리' : '패배'} (${this.vs.wins[0]}:${this.vs.wins[1]})`;
+    modal.innerHTML = `
+      <div class="deck-modal-inner">
+        <h3>${playerWon ? '🏆 승리!' : '💀 패배'}</h3>
+        <p style="color:#d7e5ff;margin:8px 0">${label}</p>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="ghost" id="vsRetryBtn">다시 하기</button>
+          <button class="ghost" id="vsMenuBtn">VS 메뉴</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('vsRetryBtn').addEventListener('click', () => {
+      modal.remove();
+      this.startVsMode(this.vs.mode, this.vs.difficulty);
+    });
+    document.getElementById('vsMenuBtn').addEventListener('click', () => {
+      modal.remove();
+      this.vs = null;
+      this.player = null;
+      this.enemy = null;
+      this.run = new RunState();
+      this.showVsSelect();
+    });
+  }
+
   castBossDebuff() {
-    const name = trEnemyName(this.enemyCard, this.enemyCard.name);
+    const name = trEnemyName(this.enemyCard, this.enemyCard?.name);
     const kinds = ['fog', 'invert', 'rotate', 'hyper', 'slow', 'garbage'];
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'fog') {
@@ -2723,10 +3645,51 @@ class Game {
   }
 }
 
+// VsDeck: wraps pre-built card objects for VS/random modes
+class VsDeck {
+  constructor(cardObjects) {
+    this._all = [...cardObjects];
+    this._byId = {};
+    for (const c of cardObjects) this._byId[c.id] = c;
+    this.draw = [...cardObjects.map(c => c.id)];
+    this.discard = [];
+    this.extraCards = [];
+    this.removedBase = [];
+    this._vshuffle(this.draw);
+  }
+  _vshuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+  refill() {
+    this.draw = [...this._all.map(c => c.id)];
+    this.discard = [];
+    this._vshuffle(this.draw);
+  }
+  beginBattle() { this.battleExhausted = new Set(); }
+  size() { return this.draw.length + this.discard.length; }
+  next() {
+    if (!this.draw.length) this.refill();
+    const id = this.draw.shift();
+    this.discard.push(id);
+    return this._byId[id];
+  }
+  preview(n = 3) {
+    while (this.draw.length < n) this.refill();
+    return this.draw.slice(0, n).map(id => this._byId[id]);
+  }
+  addCard() {}
+  removeCard() { return false; }
+  pollute() {}
+  toState() { return { extraCards: [], removedBase: [], draw: [...this.draw], discard: [...this.discard] }; }
+}
+
 new Game();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20260524-audio4').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260829-vs1').catch(() => {});
   });
 }

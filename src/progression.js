@@ -1,9 +1,10 @@
-import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260524-audio4';
-import { Deck, shuffle } from './deck.js?v=20260524-audio4';
-import { SKILLS } from './skills.js?v=20260526-wardbalance1';
-import { CONSUMABLES } from './consumables.js?v=20260524-audio4';
+import { BASE_TYPES, CARD_DESCRIPTIONS, CARD_LIBRARY, DEFAULT_ROWS, MAX_ROUND, SET_DEFINITIONS, SET_LABELS, SET_RELICS, TIER_LABELS, TIER_ORDER, TIERS, TYPES } from './constants.js?v=20260829-ascension1';
+import { Deck, shuffle } from './deck.js?v=20260829-ascension1';
+import { SKILLS } from './skills.js?v=20260829-ascension1';
+import { CONSUMABLES } from './consumables.js?v=20260829-ascension1';
+import { wrapDataMap } from "./i18n-data.js?v=20260829-ascension1";
 
-export const RELICS = {
+const RELICS_KO = {
   combo_amp: {
     id: 'combo_amp',
     icon: '🔥',
@@ -222,6 +223,7 @@ export const RELICS = {
     desc: '받는 공격 게이지가 즉시 빨간색이 됩니다(지연 없음). 라인 클리어로 파란색으로 되돌릴 수 없습니다. 대신 한 번에 받는 최대 쓰레기는 3줄로 제한됩니다.'
   }
 };
+export const RELICS = wrapDataMap(RELICS_KO, "relic");
 
 const PROFILE_ICON = {
   balanced: '⚖️', fast: '⚡', opener: '🚀', turtle: '🐢', spiker: '🔱',
@@ -459,8 +461,8 @@ const GAMBLE_TIERS = {
   gold: { gtier: 'gold', tier: TIERS.GOLD, bet: 80, reward: 220, chance: 0.4, title: '골드 도박', desc: '80골드를 겁니다. 40% 확률로 220골드 + 연금술 핵(유물). 안 하면 이후 도박이 사라집니다.' }
 };
 
-export function makeBoss(round) {
-  const card = makeEnemy(round, true, BOSS);
+export function makeBoss(round, ascMod = null) {
+  const card = makeEnemy(round, true, BOSS, undefined, [], ascMod);
   card.type = 'boss';
   card.icon = '💀';
   card.ability = 'overload';
@@ -508,22 +510,48 @@ export function makeChallenge(round, exclude = [], ownedRelics = []) {
   const ids = ['noHold', 'noSkill', 'noHardDrop', 'cwOnly', 'ccwOnly', 'timeAttack', 'clearLines'].filter(id => !exclude.includes(id));
   if (!ids.length) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
-  const params = id === 'timeAttack' ? { limit: 40 + round * 2 }
-    : id === 'clearLines' ? { target: Math.min(40, 14 + round) }
-      : {};
   const tpl = CHALLENGES[id];
+  if (id === 'cwOnly' || id === 'ccwOnly') {
+    const amount = 18 + round * 3;
+    return { id, label: tpl.label, cond: tpl.desc({}), params: {}, reward: { kind: 'gold', amount, label: `골드 +${amount}`, detail: '' } };
+  }
+  if (id === 'timeAttack') {
+    const limitGreat = 40 + round * 2;
+    const limitOk = Math.round(limitGreat * 1.5);
+    const rewardOkAmt = 18 + round * 2;
+    return {
+      id, label: tpl.label,
+      cond: tpl.desc({ limit: limitGreat }), params: { limit: limitGreat },
+      condOk: tpl.desc({ limit: limitOk }), paramsOk: { limit: limitOk },
+      reward: rollChallengeReward(round, ownedRelics),
+      rewardOk: { kind: 'gold', amount: rewardOkAmt, label: `골드 +${rewardOkAmt}`, detail: '' }
+    };
+  }
+  if (id === 'clearLines') {
+    const targetGreat = Math.min(40, 14 + round);
+    const targetOk = Math.max(4, Math.floor(targetGreat * 0.6));
+    const rewardOkAmt = 15 + round * 2;
+    return {
+      id, label: tpl.label,
+      cond: tpl.desc({ target: targetGreat }), params: { target: targetGreat },
+      condOk: tpl.desc({ target: targetOk }), paramsOk: { target: targetOk },
+      reward: rollChallengeReward(round, ownedRelics),
+      rewardOk: { kind: 'gold', amount: rewardOkAmt, label: `골드 +${rewardOkAmt}`, detail: '' }
+    };
+  }
+  const params = {};
   return { id, label: tpl.label, cond: tpl.desc(params), params, reward: rollChallengeReward(round, ownedRelics) };
 }
 
-export function makeEnemyChoices(round, ownedRelics = []) {
-  if (round === MAX_ROUND) return [makeBoss(round)];
+export function makeEnemyChoices(round, ownedRelics = [], ascMod = null) {
+  if (round === MAX_ROUND) return [makeBoss(round, ascMod)];
   const count = round % 3 === 0 ? 3 : 2;
   const unlocked = ENEMIES.filter(enemy => !enemy.minRound || round >= enemy.minRound);
   const mirrorAllowed = Math.random() < 0.35;
   const normalCandidates = unlocked.filter(enemy => !enemy.mirror || mirrorAllowed);
   const normalPool = shuffle(round <= 2 ? normalCandidates.filter(enemy => ['소프트 스타터', '라인 헌터', '스피드 드론'].includes(enemy.name)) : round <= 5 ? normalCandidates.filter(enemy => !['마나 도둑', '클렌즈 워든'].includes(enemy.name)) : normalCandidates);
   const elitePool = shuffle(ELITES.filter(enemy => !enemy.minRound || round >= enemy.minRound));
-  const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01;
+  const eliteSlot = round >= 4 && Math.random() < 0.3 + round * 0.01 + (ascMod?.eliteChanceBonus ?? 0);
   const choices = [];
   const usedChallengeIds = [];
   for (let i = 0; i < count; i++) {
@@ -531,12 +559,12 @@ export function makeEnemyChoices(round, ownedRelics = []) {
     const base = elite ? elitePool.shift() : normalPool.shift();
     const challenge = (!elite && round >= 3 && Math.random() < 0.33) ? makeChallenge(round, usedChallengeIds, ownedRelics) : null;
     if (challenge) usedChallengeIds.push(challenge.id);
-    choices.push(makeEnemy(round, elite, base, challenge, ownedRelics));
+    choices.push(makeEnemy(round, elite, base, challenge, ownedRelics, ascMod));
   }
   return choices;
 }
 
-export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined, ownedRelics = []) {
+export function makeEnemy(round, elite = false, selectedBase = null, preChallenge = undefined, ownedRelics = [], ascMod = null) {
   const pool = elite ? ELITES : ENEMIES;
   const base = selectedBase || pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, round);
@@ -548,8 +576,11 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
     ? base.openingRows || 13
     : DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 5) + tier * 2;
   const eliteRows = DEFAULT_ROWS + (base.rows || 0) + Math.floor(level / 3) + tier * 3;
-  const startingGarbage = (base.garbage || 0) + Math.floor(level / 7) + tier + (elite ? 1 + tier : 0);
-  const speed = Math.max(82, (base.speed || 430) - level * (elite ? 8 : 5) - tier * (elite ? 32 : 24));
+  const ascGarbage = ascMod?.garbage ?? 0;
+  const ascSpeedFactor = ascMod?.speedFactor ?? 1.0;
+  const startingGarbage = (base.garbage || 0) + Math.floor(level / 7) + tier + (elite ? 1 + tier : 0) + ascGarbage;
+  const rawSpeed = (base.speed || 430) - level * (elite ? 8 : 5) - tier * (elite ? 32 : 24);
+  const speed = Math.max(82, Math.round(rawSpeed * ascSpeedFactor));
   const baseSkill = base.aiSkill || {};
   const aiSkill = {
     mistakeRate: Math.max(0, (baseSkill.mistakeRate || 0) - level * 0.004 - tier * 0.012 - (elite ? 0.03 : 0)),
@@ -579,15 +610,20 @@ export function makeEnemy(round, elite = false, selectedBase = null, preChalleng
     ability: round >= 4 || elite ? base.ability : null,
     mirror,
     challenge,
+    difficultyTier: tier,
     icon: enemyIcon(base, elite ? 'elite' : 'normal')
   };
 }
 
-export function makeRewards(pool = 'normal') {
+export function makeRewards(pool = 'normal', tierPenalty = 0) {
   const elite = String(pool).startsWith('elite');
-  const sourceTier = String(pool).includes(TIERS.GOLD) ? TIERS.GOLD
+  let sourceTier = String(pool).includes(TIERS.GOLD) ? TIERS.GOLD
     : String(pool).includes(TIERS.SILVER) ? TIERS.SILVER
       : pool === 'normal' ? TIERS.BRONZE : pool;
+  if (!elite && tierPenalty > 0) {
+    const idx = TIER_ORDER.indexOf(sourceTier);
+    sourceTier = TIER_ORDER[Math.max(0, idx - tierPenalty)] ?? TIERS.BRONZE;
+  }
   const rewardCards = Object.fromEntries(Object.values(CARD_LIBRARY)
     .filter(isPlayerRewardCard)
     .map(card => [card.id, card]));
@@ -707,7 +743,7 @@ export function makeEventChoices(run, eventKey) {
   const sideChoices = [];
   const removable = removableDeckCards(run);
   if (removable.length) {
-    const id = removable[0];
+    const id = shuffle(removable)[0];
     choices.push({
       kind: 'removeCard',
       id,
@@ -890,3 +926,104 @@ export function isShopRound(round) {
 export function isRunComplete(run) {
   return run.round > MAX_ROUND;
 }
+
+// 각 레벨의 효과는 누적. speedFactor/playerFallFactor < 1.0 = 더 빠름(어려움)
+export const ASCENSION_MODS = [
+  { level:  0, label: 'A0',  ko: '기본',   en: 'Normal',     ja: '通常',
+    garbage: 0, speedFactor: 1.00, eliteChanceBonus: 0.00,
+    playerFallFactor: 1.00, manaFactor: 1.00, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  1, label: 'A1',  ko: '단련',   en: 'Hardened',   ja: '鍛錬',
+    garbage: 1, speedFactor: 1.00, eliteChanceBonus: 0.00,
+    playerFallFactor: 1.00, manaFactor: 1.00, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  2, label: 'A2',  ko: '격전',   en: 'Intense',    ja: '激戦',
+    garbage: 1, speedFactor: 0.90, eliteChanceBonus: 0.10,
+    playerFallFactor: 1.00, manaFactor: 1.00, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  3, label: 'A3',  ko: '폭풍',   en: 'Storm',      ja: '嵐',
+    garbage: 1, speedFactor: 0.88, eliteChanceBonus: 0.10,
+    playerFallFactor: 0.88, manaFactor: 0.80, playerStartHp: null,
+    enemyAttackFactor: 1.00, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  4, label: 'A4',  ko: '지옥',   en: 'Inferno',    ja: '地獄',
+    garbage: 2, speedFactor: 0.85, eliteChanceBonus: 0.15,
+    playerFallFactor: 0.85, manaFactor: 0.80, playerStartHp: null,
+    enemyAttackFactor: 1.20, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  5, label: 'A5',  ko: '초월',   en: 'Ascended',   ja: '超越',
+    garbage: 2, speedFactor: 0.82, eliteChanceBonus: 0.20,
+    playerFallFactor: 0.82, manaFactor: 0.70, playerStartHp: 18,
+    enemyAttackFactor: 1.20, rewardTierPenalty: 0, startCurseCards: 0 },
+  { level:  6, label: 'A6',  ko: '심연',   en: 'Abyss',      ja: '深淵',
+    garbage: 3, speedFactor: 0.80, eliteChanceBonus: 0.25,
+    playerFallFactor: 0.80, manaFactor: 0.65, playerStartHp: 18,
+    enemyAttackFactor: 1.30, rewardTierPenalty: 1, startCurseCards: 0 },
+  { level:  7, label: 'A7',  ko: '혼돈',   en: 'Chaos',      ja: '混沌',
+    garbage: 3, speedFactor: 0.78, eliteChanceBonus: 0.30,
+    playerFallFactor: 0.78, manaFactor: 0.60, playerStartHp: 17,
+    enemyAttackFactor: 1.40, rewardTierPenalty: 1, startCurseCards: 2 },
+  { level:  8, label: 'A8',  ko: '멸망',   en: 'Ruin',       ja: '滅亡',
+    garbage: 4, speedFactor: 0.75, eliteChanceBonus: 0.35,
+    playerFallFactor: 0.75, manaFactor: 0.55, playerStartHp: 17,
+    enemyAttackFactor: 1.50, rewardTierPenalty: 1, startCurseCards: 2 },
+  { level:  9, label: 'A9',  ko: '절망',   en: 'Despair',    ja: '絶望',
+    garbage: 5, speedFactor: 0.72, eliteChanceBonus: 0.40,
+    playerFallFactor: 0.72, manaFactor: 0.50, playerStartHp: 16,
+    enemyAttackFactor: 1.60, rewardTierPenalty: 1, startCurseCards: 3, goldFactor: 0.8 },
+  { level: 10, label: 'A10', ko: '신화',   en: 'Mythic',     ja: '神話',
+    garbage: 6, speedFactor: 0.68, eliteChanceBonus: 0.50,
+    playerFallFactor: 0.68, manaFactor: 0.40, playerStartHp: 15,
+    enemyAttackFactor: 1.80, rewardTierPenalty: 1, startCurseCards: 4, coolantFactor: 0.5, purgeFactor: 0.5 },
+];
+
+export const ACHIEVEMENTS = [
+  { id: 'first_clear', icon: '🏆', ko: '첫 클리어', en: 'First Clear', ja: '初クリア', ko_d: '게임을 처음으로 클리어했습니다', en_d: 'Clear the game for the first time', ja_d: '初めてゲームをクリアした' },
+  { id: 'three_wins', icon: '🥉', ko: '삼연승', en: 'Triple Win', ja: '三連勝', ko_d: '3회 클리어 (누적)', en_d: 'Clear 3 times (total)', ja_d: '3回クリア(累計)' },
+  { id: 'boss_kill', icon: '💀', ko: '보스 처치', en: 'Boss Slayer', ja: 'ボス討伐', ko_d: '최종 보스를 처치했습니다', en_d: 'Defeat the final boss', ja_d: 'ラストボスを倒した' },
+  { id: 'elite_killer', icon: '⚡', ko: '엘리트 사냥꾼', en: 'Elite Hunter', ja: 'エリートハンター', ko_d: '엘리트 5마리 처치 (누적)', en_d: 'Defeat 5 elites (total)', ja_d: 'エリート5体討伐(累計)' },
+  { id: 'rich', icon: '💰', ko: '부자', en: 'Rich', ja: '大富豪', ko_d: '골드 200 이상 보유하고 클리어', en_d: 'Clear with 200+ gold', ja_d: '200G以上持ってクリア' },
+  { id: 'skill_master', icon: '🎯', ko: '스킬 마스터', en: 'Skill Master', ja: 'スキルマスター', ko_d: '스킬 3개 장착하고 클리어', en_d: 'Clear with 3 skills equipped', ja_d: '3スキル装備してクリア' },
+  { id: 'relic_hunter', icon: '🧬', ko: '유물 사냥꾼', en: 'Relic Hunter', ja: '遺物ハンター', ko_d: '유물 5개 이상 보유하고 클리어', en_d: 'Clear with 5+ relics', ja_d: '遺物5個以上でクリア' },
+  { id: 'lucky_gambler', icon: '🎰', ko: '행운의 도박사', en: 'Lucky Gambler', ja: '幸運の賭博師', ko_d: '도박에서 승리', en_d: 'Win a gamble', ja_d: 'ギャンブルに勝利した' },
+  { id: 'deck_cleaner', icon: '✂️', ko: '덱 청소부', en: 'Deck Cleaner', ja: 'デッキ清掃員', ko_d: '카드 제거 5회 사용 (누적)', en_d: 'Remove cards 5 times (total)', ja_d: 'カード除去5回使用(累計)' },
+  { id: 'ascension_1', icon: '🌙', ko: '승천자', en: 'Ascendant', ja: '昇天者', ko_d: '승천 A1 이상에서 클리어', en_d: 'Clear at Ascension A1+', ja_d: '昇天A1以上でクリア' },
+  { id: 'ascension_3', icon: '⭐', ko: '별의 전사', en: 'Star Warrior', ja: '星の戦士', ko_d: '승천 A3 이상에서 클리어', en_d: 'Clear at Ascension A3+', ja_d: '昇天A3以上でクリア' },
+  { id: 'ascension_5', icon: '🌟', ko: '초월자', en: 'Transcended', ja: '超越者', ko_d: '승천 A5 이상에서 클리어', en_d: 'Clear at Ascension A5+', ja_d: '昇天A5以上でクリア' },
+  { id: 'ascension_8', icon: '💎', ko: '심연의 정복자', en: 'Abyss Conqueror', ja: '深淵の征服者', ko_d: '승천 A8 이상에서 클리어', en_d: 'Clear at Ascension A8+', ja_d: '昇天A8以上でクリア' },
+  { id: 'ascension_10', icon: '👑', ko: '신화의 왕', en: 'Mythic King', ja: '神話の王', ko_d: '승천 A10(신화)에서 클리어', en_d: 'Clear at Ascension A10 (Mythic)', ja_d: '昇天A10(神話)でクリア' },
+  // 세트 도감
+  { id: 'set_highPower',   icon: '⚡', ko: '파워 세트 완성',   en: 'Power Set Complete',   ja: 'パワーセット完成',   ko_d: '파워 세트 7종 모두 보유', en_d: 'Collect all 7 Power cards',     ja_d: 'パワーカード7種コンプリート' },
+  { id: 'set_bomb',        icon: '💣', ko: '봄브 세트 완성',   en: 'Bomb Set Complete',    ja: 'ボムセット完成',     ko_d: '봄브 세트 7종 모두 보유', en_d: 'Collect all 7 Bomb cards',      ja_d: 'ボムカード7種コンプリート' },
+  { id: 'set_manaBonus',   icon: '🔮', ko: '마나 세트 완성',   en: 'Mana Set Complete',    ja: 'マナセット完成',     ko_d: '마나 세트 7종 모두 보유', en_d: 'Collect all 7 Mana cards',      ja_d: 'マナカード7種コンプリート' },
+  { id: 'set_purgeGarbage',icon: '🧼', ko: '클렌즈 세트 완성', en: 'Cleanse Set Complete', ja: 'クレンズセット完成', ko_d: '클렌즈 세트 7종 모두 보유', en_d: 'Collect all 7 Cleanse cards',  ja_d: 'クレンズカード7種コンプリート' },
+  { id: 'set_coolant',     icon: '❄️', ko: '냉각 세트 완성',   en: 'Coolant Set Complete', ja: '冷却セット完成',     ko_d: '냉각 세트 7종 모두 보유', en_d: 'Collect all 7 Coolant cards',   ja_d: '冷却カード7種コンプリート' },
+  { id: 'set_bounty',      icon: '💰', ko: '현상금 세트 완성', en: 'Bounty Set Complete',  ja: '懸賞金セット完成',   ko_d: '현상금 세트 7종 모두 보유', en_d: 'Collect all 7 Bounty cards',  ja_d: '懸賞金カード7種コンプリート' },
+  { id: 'set_wardBlock',   icon: '🛡️', ko: '차단 세트 완성',   en: 'Ward Set Complete',    ja: '차단セット完成',     ko_d: '차단 세트 7종 모두 보유', en_d: 'Collect all 7 Ward cards',      ja_d: '차단カード7種コンプリート' },
+  { id: 'set_comboCharge', icon: '🔗', ko: '콤보 세트 완성',   en: 'Combo Set Complete',   ja: 'コンボセット完成',   ko_d: '콤보 세트 7종 모두 보유', en_d: 'Collect all 7 Combo cards',     ja_d: 'コンボカード7種コンプリート' },
+  { id: 'all_sets',          icon: '📖', ko: '세트 도감 완성',     en: 'Set Compendium',       ja: 'セット図鑑完成',     ko_d: '모든 특수 블록 세트 완성 (8세트)', en_d: 'Complete all 8 block sets',   ja_d: '全8セット完成' },
+  // 카테고리별 도감
+  { id: 'compendium_skills', icon: '🎓', ko: '스킬 도감',          en: 'Skill Compendium',     ja: 'スキル図鑑',         ko_d: '모든 스킬 수집 (누적)', en_d: 'Collect all skills (lifetime)',    ja_d: '全スキル収集(累計)' },
+  { id: 'compendium_relics', icon: '🏺', ko: '유물 도감',          en: 'Relic Compendium',     ja: '遺物図鑑',           ko_d: '모든 유물 수집 (누적)', en_d: 'Collect all relics (lifetime)',    ja_d: '全遺物収集(累計)' },
+  { id: 'compendium_cons',   icon: '🎒', ko: '소모품 도감',        en: 'Item Compendium',      ja: 'アイテム図鑑',       ko_d: '모든 소모품 수집 (누적)', en_d: 'Collect all consumables (lifetime)', ja_d: '全アイテム収集(累計)' },
+  { id: 'compendium_cards',  icon: '📦', ko: '블록 도감',          en: 'Block Compendium',     ja: 'ブロック図鑑',       ko_d: '모든 특수 블록 카드 수집 (누적)', en_d: 'Collect all special block cards (lifetime)', ja_d: '全特殊ブロックカード収集(累計)' },
+  { id: 'compendium_all',    icon: '📚', ko: '대도감',             en: 'Grand Compendium',     ja: '大図鑑',             ko_d: '블록/스킬/유물/소모품 도감 모두 달성', en_d: 'Complete all 4 compendium achievements', ja_d: '4種類の図鑑全達成' },
+  // 전투 마일스톤
+  { id: 'atk_big',        icon: '💥', ko: '대포격',           en: 'Cannon Fire',      ja: '大砲撃',       ko_d: '한 번에 5줄 이상 공격', en_d: 'Send 5+ garbage in a single attack', ja_d: '一度に5列以上攻撃' },
+  { id: 'explode_big',    icon: '💣', ko: '대폭발',           en: 'Big Explosion',    ja: '大爆発',       ko_d: '폭발로 한 번에 20개 이상 블록 제거', en_d: 'Destroy 20+ cells in one explosion', ja_d: '爆発で一度に20個以上破壊' },
+  { id: 'mana_burst',     icon: '🔮', ko: '마나 폭발',        en: 'Mana Burst',       ja: 'マナバースト', ko_d: '한 번에 40 이상 마나 회복', en_d: 'Recover 40+ mana in a single turn', ja_d: '一度に40以上マナ回復' },
+  { id: 'garbage_nuke',   icon: '🧹', ko: '쓰레기 대청소',    en: 'Garbage Purge',    ja: 'ゴミ大掃除',   ko_d: '한 번에 쓰레기 8줄 이상 제거 (클렌즈 포함)', en_d: 'Remove 8+ garbage rows at once (including cleanse)', ja_d: '一度にゴミ8行以上消去(クレンズ含む)' },
+  { id: 'coolant_master', icon: '❄️', ko: '냉각 장인',        en: 'Coolant Master',   ja: '冷却マスター', ko_d: '한 전투에서 적을 20초 이상 냉각', en_d: 'Slow the enemy for 20+ seconds in one battle', ja_d: '一戦闘で敵を20秒以上冷却' },
+  { id: 'bounty_hunter',  icon: '🏴', ko: '현상금 사냥꾼',    en: 'Bounty Hunter',    ja: '賞金稼ぎ',     ko_d: '한 전투에서 현상금으로 40골드 이상 획득', en_d: 'Earn 40+ bounty gold in one battle', ja_d: '一戦闘で懸賞金40G以上獲得' },
+  { id: 'shop_spender',   icon: '🛒', ko: '큰 손',            en: 'Big Spender',      ja: '大散財',       ko_d: '상점에서 한 런에 100골드 이상 지출', en_d: 'Spend 100+ gold at shops in one run', ja_d: 'ショップで一ランに100G以上消費' },
+  { id: 'ward_master',    icon: '🛡️', ko: '차단 장인',        en: 'Ward Master',      ja: '차단マスター', ko_d: '한 전투에서 쓰레기줄 8개 이상 차단', en_d: 'Block 8+ garbage rows in one battle', ja_d: '一戦闘でガベージ8行以上차단' },
+  { id: 'combo_master',   icon: '🔗', ko: '콤보 장인',        en: 'Combo Master',     ja: 'コンボマスター', ko_d: '10 콤보 이상 달성', en_d: 'Achieve 10+ combo', ja_d: '10コンボ以上達成' },
+  { id: 'deck_overload',  icon: '📤', ko: '덱 과부하',        en: 'Deck Overload',    ja: 'デッキ過負荷', ko_d: '카드 35장 이상으로 클리어', en_d: 'Clear with 35+ cards in deck', ja_d: 'カード35枚以上でクリア' },
+  { id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',        en: 'Deck Minimalist',  ja: 'デッキ最小', ko_d: '카드 10장 이하로 클리어', en_d: 'Clear with 10 or fewer cards in deck', ja_d: 'カード10枚以下でクリア' },
+  // 런 달성 업적
+  { id: 'elite_hunter',   icon: '🎯', ko: '엘리트 청소부',     en: 'Elite Cleaner',    ja: 'エリート退治', ko_d: '한 런에서 엘리트 3마리 처치', en_d: 'Defeat 3 elites in one run', ja_d: '一ランでエリート3体討伐' },
+  { id: 'long_battle',    icon: '⏱️', ko: '장기전',            en: 'Long Battle',      ja: '長期戦',       ko_d: '한 전투에서 적이 100개 피스를 놓을 때까지 버티고 승리', en_d: 'Win while the enemy places 100+ pieces in one battle', ja_d: '敵が100ピース置くまで耐えて勝利' },
+  { id: 'l_clear',        icon: '🔷', ko: 'L 블록 삭제',       en: 'L-Block Deleted',  ja: 'Lブロック削除', ko_d: 'L 모양 카드를 덱에서 제거', en_d: 'Remove an L-shaped card from your deck', ja_d: 'L型カードをデッキから除去' },
+  { id: 'mono_deck',      icon: '🔩', ko: '한 우물만 파기',    en: 'Mono Build',       ja: '一点特化',     ko_d: '덱에 같은 모양 블록이 10개 이상 있는 상태로 클리어', en_d: 'Clear with 10+ of the same shape in deck', ja_d: '同一形状10枚以上でクリア' },
+  { id: 'gold_500',       icon: '💎', ko: '황금 부자',         en: 'Gold Hoarder',     ja: '黄金持ち',     ko_d: '한 런에서 500골드 이상 보유', en_d: 'Hold 500+ gold in one run', ja_d: '一ランで500G以上保有' },
+  { id: 'win_streak_10',  icon: '🔥', ko: '10연승',            en: '10-Win Streak',    ja: '10連勝',       ko_d: '연속으로 10회 클리어', en_d: 'Clear 10 times in a row', ja_d: '連続10回クリア' },
+  { id: 'cons_user',      icon: '🎒', ko: '소모품 애호가',     en: 'Item User',        ja: 'アイテム愛用者', ko_d: '한 런에서 소모품 5개 이상 사용', en_d: 'Use 5+ consumables in one run', ja_d: '一ランでアイテム5個以上使用' },
+];

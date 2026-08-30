@@ -1,6 +1,7 @@
-import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260524-audio4';
-import { GAMEPAD_LABELS } from './input.js?v=20260524-audio4';
-import { dataName, trCardName, trEnemyName, ui } from './i18n.js?v=20260524-audio4';
+import { ABILITY_GLYPH, CARD_LIBRARY, COLS, COLORS, GAME_TIMING, TYPES } from './constants.js?v=20260829-ascension1';
+import { GAMEPAD_LABELS } from './input.js?v=20260829-ascension1';
+import { dataName, trCardName, trEnemyName, ui } from './i18n.js?v=20260829-ascension1';
+import { tEnemyName } from './i18n-data.js?v=20260829-ascension1';
 
 // 특수블록이면 글리프+이름을 돌려준다(기본 미노는 null). 이름을 계속 노출해 익히게 한다.
 // 일부 글리프는 폰트상 작게 렌더돼 키워서 그린다.
@@ -532,5 +533,98 @@ export class Renderer {
     ctx.font = '12px Courier New';
     const text = message || `Incoming shown by side meters | Last Attack ${player.lastAttack.toFixed(1)} | ${battle}`;
     ctx.fillText(text, 28, y + 25);
+  }
+
+  resizeSolo(rows) {
+    const mobile = window.innerWidth < 720;
+    const mobileWidth = Math.max(320, Math.min(430, window.innerWidth));
+    const viewportH = Math.floor(window.visualViewport?.height || window.innerHeight);
+    const widthCell = Math.floor((mobileWidth - 44) / COLS);
+    const heightCell = Math.floor((viewportH - 180) / rows);
+    const cell = mobile ? Math.max(15, Math.min(24, widthCell, heightCell)) : 24;
+    const bw = COLS * cell;
+    const bh = rows * cell;
+    const canvasW = mobile ? mobileWidth : 700;
+    const boardX = mobile ? Math.floor((mobileWidth - bw) / 2) : Math.floor((canvasW - bw) / 2);
+    const boardY = mobile ? 8 : 60;
+    const canvasH = mobile ? boardY + bh + 60 : boardY + bh + 20;
+    this.soloLayout = { mobile, cell, rows, w: canvasW, h: canvasH, bX: boardX, bY: boardY, bw, bh };
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    this.canvas.width = Math.round(canvasW * dpr);
+    this.canvas.height = Math.round(canvasH * dpr);
+    this.canvas.style.width = `${canvasW}px`;
+    this.canvas.style.height = `${canvasH}px`;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const scale = Math.min(1,
+      (window.innerWidth - 8) / canvasW,
+      ((window.visualViewport?.height || window.innerHeight) - (mobile ? 140 : 100)) / canvasH
+    );
+    this.canvas.style.transform = `scale(${scale})`;
+    this.canvas.parentElement.style.height = `${Math.ceil(canvasH * scale)}px`;
+  }
+
+  drawSolo(player, solo, modeConfig, ended = false) {
+    if (!this.soloLayout) this.resizeSolo(player.rows);
+    const L = this.soloLayout;
+    const ctx = this.ctx;
+    ctx.fillStyle = '#090b14';
+    ctx.fillRect(0, 0, L.w, L.h);
+    // left mini-panel: hold + level
+    if (!L.mobile) {
+      const px = L.bX - 110;
+      ctx.fillStyle = '#0f1424';
+      ctx.fillRect(px, L.bY, 100, 130);
+      ctx.strokeStyle = '#26375f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px, L.bY, 100, 130);
+      ctx.fillStyle = '#9fb2dc';
+      ctx.font = 'bold 10px Courier New';
+      ctx.fillText('HOLD', px + 8, L.bY + 14);
+      if (player.held) this.preview(player.held, px + 18, L.bY + 22, Math.max(6, L.cell * 0.44));
+      ctx.fillStyle = '#7ab8ff';
+      ctx.fillText(`LEVEL ${solo.level + 1}`, px + 8, L.bY + 92);
+      ctx.fillStyle = '#d7e5ff';
+      ctx.fillText(`${solo.linesCleared}줄`, px + 8, L.bY + 108);
+    }
+    // right mini-panel: next queue
+    if (!L.mobile) {
+      const nx = L.bX + L.bw + 10;
+      ctx.fillStyle = '#0f1424';
+      ctx.fillRect(nx, L.bY, 100, 180);
+      ctx.strokeStyle = '#26375f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(nx, L.bY, 100, 180);
+      ctx.fillStyle = '#9fb2dc';
+      ctx.font = 'bold 10px Courier New';
+      ctx.fillText('NEXT', nx + 8, L.bY + 14);
+      const nextQ = player.nextQueue?.slice(0, 4) || [];
+      nextQ.forEach((card, i) => this.preview(card, nx + 18, L.bY + 24 + i * 38, Math.max(7, L.cell * 0.44)));
+      // time stat
+      const isCountdown = modeConfig.timeLimit > 0;
+      const displayMs = isCountdown ? Math.max(0, modeConfig.timeLimit - solo.elapsed) : solo.elapsed;
+      const totalSec = Math.floor(displayMs / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      const cs = Math.floor((displayMs % 1000) / 10);
+      const timeStr = `${min}:${String(sec).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+      ctx.fillStyle = isCountdown && displayMs < 10000 ? '#ff8080' : '#ffe082';
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillText(timeStr, nx + 8, L.bY + 168);
+    }
+    // draw the board
+    this.board(player, L.bX, L.bY, L.cell, '', 0);
+    // end overlay
+    if (ended) {
+      ctx.fillStyle = 'rgba(5,7,14,.72)';
+      ctx.fillRect(0, 0, L.w, L.h);
+      ctx.fillStyle = solo.topOut ? '#ffcad5' : '#8dffb0';
+      ctx.font = `bold 30px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillText(solo.topOut ? 'GAME OVER' : 'CLEAR!', L.w / 2, L.h / 2 - 20);
+      ctx.font = '15px Courier New';
+      ctx.fillStyle = '#d7e5ff';
+      ctx.fillText(`${solo.linesCleared}줄`, L.w / 2, L.h / 2 + 16);
+      ctx.textAlign = 'left';
+    }
   }
 }

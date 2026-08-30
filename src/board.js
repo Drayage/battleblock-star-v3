@@ -1,5 +1,5 @@
-import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260524-audio4';
-import { Deck } from './deck.js?v=20260524-audio4';
+import { CARD_LIBRARY, COLS, DEFAULT_ROWS, GAME_TIMING, SHAPES, TYPES } from './constants.js?v=20260829-ascension1';
+import { Deck } from './deck.js?v=20260829-ascension1';
 
 const KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
 export const SPAWN_Y = -2;
@@ -426,6 +426,7 @@ export class Board {
     }
     this.applyReadyGarbage();
     this.lastAttack = result.attack;
+    result.placedShapeId = placedCard?.shapeId ?? null;
     if (this._glassBrokeThisPlace) {
       result.glassBroken = this._glassBrokeThisPlace;
       this._glassBrokeThisPlace = 0;
@@ -455,7 +456,8 @@ export class Board {
       labels.push(`MP +${effect.mana}`);
     }
     if (effect.purgeGarbageRows) {
-      result.purgedRows = this.purgeGarbageRows(effect.purgeGarbageRows);
+      const scaledPurge = Math.max(1, Math.floor(effect.purgeGarbageRows * (this.purgeFactor ?? 1.0)));
+      result.purgedRows = this.purgeGarbageRows(scaledPurge);
       if (result.purgedRows > 0) labels.push(`GARBAGE -${result.purgedRows}`);
       else labels.push('PURGE READY');
       if (this.sanctuaryActive && result.purgedRows > 0) result.attack = Number((result.attack + result.purgedRows * 0.5).toFixed(2));
@@ -538,6 +540,7 @@ export class Board {
       chargeGained += row.filter(c => c?.traits.includes('comboCharge')).length;
     }
 
+    const garbageRowsCleared = rows.filter(r => this.grid[r]?.some(c => c?.traits?.includes('garbage'))).length;
     const clearSet = new Set(rows);
     const kept = this.grid.filter((_, r) => !clearSet.has(r));
     while (kept.length < this.rows) kept.unshift(emptyRow());
@@ -548,6 +551,7 @@ export class Board {
     const bombR = 1 + this.explodeRadiusBonus;
     const timeR = 2 + this.explodeRadiusBonus;
     let blastBonusAttack = 0;
+    let totalExplodedCells = 0;
     const mergeCols = src => {
       for (const [c, my] of src) if (!allCols.has(c) || my > allCols.get(c)) allCols.set(c, my);
     };
@@ -555,28 +559,34 @@ export class Board {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
       const { destroyed, cols } = this.explodeBombAt(x, targetY, bombR);
       blastBonusAttack += Math.min(1.5, destroyed * 0.05);
+      totalExplodedCells += destroyed;
       mergeCols(cols);
     }
     for (const { x, y } of timeBombCells) {
       const targetY = Math.min(this.rows - 1, y + clearedBelow(y));
       const { destroyed, cols } = this.explodeBombAt(x, targetY, timeR);
       blastBonusAttack += Math.min(1.5, destroyed * 0.05);
+      totalExplodedCells += destroyed;
       mergeCols(cols);
     }
     if (this.explodeRadiusBonus > 0) attack += blastBonusAttack;
     if (allCols.size) this.queueExplosionDrops(allCols);
+    let purgedRowsCount = 0;
     if (purgeCells > 0) {
       // 클렌즈 칸당 가비지 1줄 제거.
-      const purgedRows = this.purgeGarbageRows(purgeCells);
-      if (this.sanctuaryActive && purgedRows > 0) attack += purgedRows * 0.5;
+      const scaledPurgeCells = Math.max(1, Math.floor(purgeCells * (this.purgeFactor ?? 1.0)));
+      purgedRowsCount = this.purgeGarbageRows(scaledPurgeCells);
+      if (this.sanctuaryActive && purgedRowsCount > 0) attack += purgedRowsCount * 0.5;
     }
     return {
       cleared: rows.length,
       fullCleared: fullRows.size,
+      garbageCleared: garbageRowsCleared + purgedRowsCount,
       attack: Number(attack.toFixed(2)),
       mana: Number(mana.toFixed(2)),
       bombRows,
       exploded: bombCells.length + timeBombCells.length > 0,
+      explodedCells: totalExplodedCells,
       purge,
       slow: coolantCells * GAME_TIMING.COOLANT_SLOW,
       gold,
