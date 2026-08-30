@@ -69,18 +69,18 @@ const META_KEY = 'bbs.meta.v1';
 
 const META_UPGRADES = [
   { id: 'startGold',       icon: '💰',  name: '초기 자금',    desc: '런 시작 골드 +15',                    maxLevel: 4, costs: [1, 1, 2, 2] },
-  { id: 'rerollDiscount',  icon: '🔄',  name: '리롤 할인',    desc: '상점 리롤 비용 -5G',                  maxLevel: 3, costs: [1, 2, 2] },
+  { id: 'rerollDiscount',  icon: '🔄',  name: '리롤 할인',    desc: '상점 리롤 비용 -5G',                  maxLevel: 3, costs: [1, 1, 2] },
   { id: 'startCons',       icon: '💊',  name: '비상 소모품',  desc: '런 시작 소모품 +1',                   maxLevel: 2, costs: [2, 2] },
-  { id: 'startHp',         icon: '❤️',  name: '체력 강화',    desc: '런 시작 HP(필드 높이) +1',            maxLevel: 3, costs: [2, 3, 4] },
-  { id: 'shopDeals',       icon: '🏪',  name: '상점 특가',    desc: '상점 할인 아이템 +1칸',               maxLevel: 2, costs: [3, 4] },
-  { id: 'startRewardTier', icon: '🎁',  name: '보상 강화',    desc: '1라운드 보상 티어 +1 (최대 2단계)',    maxLevel: 2, costs: [3, 5] },
-  { id: 'startCardAdd',    icon: '🃏',  name: '덱 확장',      desc: '시작 덱에 랜덤 특수 카드 +1',         maxLevel: 3, costs: [3, 4, 5] },
-  { id: 'startCardRem',    icon: '✂️',  name: '덱 정리',      desc: '런 시작 전 카드 무료 제거 +1',        maxLevel: 2, costs: [4, 5] },
-  { id: 'startRelic',      icon: '📦',  name: '유물 상자',    desc: '런 시작시 랜덤 유물 1개',             maxLevel: 1, costs: [5] },
-  { id: 'rewardReroll',   icon: '🎲',  name: '보상 재굴리기', desc: '런 당 보상 재굴리기 +1회',            maxLevel: 2, costs: [3, 4] },
-  { id: 'battleRecovery', icon: '💉',  name: '전투 회복',    desc: '적 처치 후 가비지 1줄 회복',          maxLevel: 2, costs: [4, 5] },
+  { id: 'startHp',         icon: '❤️',  name: '체력 강화',    desc: '런 시작 HP(필드 높이) +1',            maxLevel: 3, costs: [2, 2, 3] },
+  { id: 'shopDeals',       icon: '🏪',  name: '상점 특가',    desc: '상점 할인 아이템 +1칸',               maxLevel: 2, costs: [2, 3] },
+  { id: 'startRewardTier', icon: '🎁',  name: '보상 강화',    desc: '1라운드 보상 티어 +1 (최대 2단계)',    maxLevel: 2, costs: [3, 4] },
+  { id: 'startCardAdd',    icon: '🃏',  name: '덱 확장',      desc: '시작 덱에 랜덤 특수 카드 +1',         maxLevel: 3, costs: [2, 3, 4] },
+  { id: 'startCardRem',    icon: '✂️',  name: '덱 정리',      desc: '런 시작 전 카드 무료 제거 +1',        maxLevel: 2, costs: [3, 4] },
+  { id: 'startRelic',      icon: '📦',  name: '유물 상자',    desc: '런 시작시 랜덤 유물 1개',             maxLevel: 1, costs: [4] },
+  { id: 'rewardReroll',    icon: '🎲',  name: '보상 재굴리기', desc: '런 당 보상 재굴리기 +1회',           maxLevel: 2, costs: [2, 3] },
+  { id: 'battleRecovery',  icon: '💉',  name: '전투 회복',    desc: '적 처치 후 가비지 1줄 회복',         maxLevel: 2, costs: [3, 4] },
 ];
-// 합계 포인트: 6+5+4+9+7+8+12+9+5+7+9 = 81 (65포인트로 우선순위 선택 필요)
+// 합계 포인트: 6+4+4+7+5+7+9+7+4+5+7 = 65 (업적 전부 달성 시 전부 최대)
 
 // Standard Tetris Guideline gravity: (0.8-(level-1)*0.007)^(level-1) seconds, min 17ms
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
