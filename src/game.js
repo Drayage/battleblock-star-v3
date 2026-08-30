@@ -90,7 +90,7 @@ const META_UPGRADES = [
 const SOLO_FALL_SPEEDS = [1000, 793, 617, 473, 356, 262, 190, 135, 94, 64, 43, 29, 18, 17, 17];
 const SOLO_RECORD_KEY = 'bbs.solo.records.v1';
 const SOLO_MUSIC_BASE = { sprint40: 'soloSprint', marathon150: 'soloMarathon', marathon300: 'soloMarathon', timeatk2: 'soloTimeAtk', timeatk3: 'soloTimeAtk', endless: 'soloEndless' };
-// sprint40은 10줄마다 4단계, 나머지는 절대 레벨 기준
+// sprint40은 10줄마다 4단계, 타임어택은 시간 기준, 나머지는 절대 레벨 기준
 function getSoloMusicPreset(modeKey, level, linesCleared = 0) {
   const base = SOLO_MUSIC_BASE[modeKey];
   if (!base) return null;
@@ -101,9 +101,20 @@ function getSoloMusicPreset(modeKey, level, linesCleared = 0) {
     if (rel >= 1) return base + 'Mid';
     return base;
   }
+  if (modeKey === 'timeatk2' || modeKey === 'timeatk3') return base; // 항상 base에서 시작
   if (level >= 9) return base + 'Max';
   if (level >= 6) return base + 'Fast';
   if (level >= 3) return base + 'Mid';
+  return base;
+}
+// 타임어택 전용: 경과/남은 시간 기준으로 음악 단계 결정
+function getTimeAtkMusicPreset(modeKey, elapsed) {
+  const base = SOLO_MUSIC_BASE[modeKey];
+  const timeLimit = SOLO_MODES[modeKey]?.timeLimit || 0;
+  const remaining = timeLimit - elapsed;
+  if (remaining <= 15000) return base + 'Max';
+  if (remaining <= 30000) return base + 'Fast';
+  if (elapsed >= timeLimit / 2) return base + 'Mid';
   return base;
 }
 const SOLO_MODES = {
@@ -1827,7 +1838,7 @@ class Game {
     this.show('gameScreen');
     this.renderer.resizeSolo(20);
     const soloPreset = getSoloMusicPreset(modeKey, startLevel, 0);
-    if (soloPreset) this.audio.setScene(soloPreset);
+    if (soloPreset) { this.audio.setScene(soloPreset); this.solo._musicPreset = soloPreset; }
     this.updateSoloStats();
   }
 
@@ -1857,6 +1868,14 @@ class Game {
     const modeConfig = SOLO_MODES[this.solo.mode];
     if (modeConfig.timeLimit > 0 && this.solo.elapsed >= modeConfig.timeLimit) {
       return this.finishSolo(false);
+    }
+    // 타임어택: 시간 기준 음악 단계 전환 (50% / 30초 / 15초)
+    if (modeConfig.timeLimit > 0) {
+      const tp = getTimeAtkMusicPreset(this.solo.mode, this.solo.elapsed);
+      if (tp !== this.solo._musicPreset) {
+        this.solo._musicPreset = tp;
+        this.audio.setIntensity(tp);
+      }
     }
     // 카운트다운 심장소리: 조건 진입 후 초마다
     {
@@ -1904,7 +1923,8 @@ class Game {
       if (modeConfig.speedRamp) {
         const prevLevel = this.solo.level;
         this.solo.level = Math.min(SOLO_FALL_SPEEDS.length - 1, this.solo.startLevel + Math.floor(this.solo.linesCleared / 10));
-        if (this.solo.level !== prevLevel) {
+        // 타임어택은 updateSolo에서 시간 기준으로 음악 전환, 여기선 스킵
+        if (!modeConfig.timeLimit && this.solo.level !== prevLevel) {
           const sp = getSoloMusicPreset(this.solo.mode, this.solo.level, this.solo.linesCleared);
           if (sp) this.audio.setIntensity(sp);
         }
