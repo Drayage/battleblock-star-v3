@@ -117,6 +117,27 @@ function getTimeAtkMusicPreset(modeKey, elapsed) {
   if (elapsed >= timeLimit / 2) return base + 'Mid';
   return base;
 }
+// medals: [crown, gold, silver, bronze] thresholds — time modes: ms (lower=better), score modes: points (higher=better)
+const SOLO_MEDALS = {
+  sprint40:    { type: 'time',  thresholds: [40000, 60000, 90000, 120000] },
+  marathon150: { type: 'time',  thresholds: [180000, 300000, 420000, 600000] },
+  marathon300: { type: 'time',  thresholds: [360000, 600000, 840000, 1200000] },
+  timeatk2:   { type: 'score', thresholds: [100, 80, 60, 40] },
+  timeatk3:   { type: 'score', thresholds: [150, 120, 90, 60] },
+};
+const MEDAL_RANKS = ['crown', 'gold', 'silver', 'bronze'];
+const MEDAL_EMOJI = { crown: '👑', gold: '🥇', silver: '🥈', bronze: '🥉' };
+function getMedal(modeKey, ms, score, topOut) {
+  const cfg = SOLO_MEDALS[modeKey];
+  if (!cfg) return null;
+  if (cfg.type === 'time' && topOut) return null;
+  const val = cfg.type === 'time' ? ms : score;
+  for (let i = 0; i < cfg.thresholds.length; i++) {
+    const ok = cfg.type === 'time' ? val <= cfg.thresholds[i] : val >= cfg.thresholds[i];
+    if (ok) return MEDAL_RANKS[i];
+  }
+  return null;
+}
 const SOLO_MODES = {
   sprint40:    { name: '40줄 스프린트', goalLines: 40,  timeLimit: 0,      speedRamp: true,  unit: 'time'  },
   timeatk2:   { name: '타임어택 2분',  goalLines: 0,   timeLimit: 120000, speedRamp: true,  unit: 'lines' },
@@ -1997,6 +2018,7 @@ class Game {
       const rec = records[key];
       if (!rec) { el.textContent = '기록 없음'; continue; }
       const parts = [];
+      if (rec.medal) parts.push(MEDAL_EMOJI[rec.medal]);
       if (cfg.unit === 'time' && rec.timeTop10?.length) {
         parts.push(`⏱ ${fmtMs(rec.timeTop10[0].ms)}`);
       }
@@ -2193,33 +2215,41 @@ class Game {
       if (modeRec.timeTop10[0] === timeEntry) isBestTime = true;
     }
 
+    // medal
+    const medal = getMedal(this.solo.mode, this.solo.elapsed, Math.round((this.solo.score || 0) * 100) / 100, topOut);
+    const MEDAL_ORDER = { crown: 4, gold: 3, silver: 2, bronze: 1 };
+    const prevMedal = modeRec.medal || null;
+    if (medal && (MEDAL_ORDER[medal] || 0) > (MEDAL_ORDER[prevMedal] || 0)) modeRec.medal = medal;
     records[this.solo.mode] = modeRec;
     try { localStorage.setItem(SOLO_RECORD_KEY, JSON.stringify(records)); } catch {}
     const isBest = isBestTime || isBestScore;
     // solo achievements
-    if (!topOut) this._checkSoloAchievements(this.solo.mode, this.solo.elapsed, this.solo.score || 0);
+    this._checkSoloAchievements(records);
     // draw final frame with end overlay
     this.renderer.drawSolo(this.player, this.solo, modeConfig, true, this.isNoFlash());
     // show result overlay after short delay
-    setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore), 800);
+    setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore, medal), 800);
   }
 
-  _checkSoloAchievements(mode, ms, score) {
-    if (mode === 'sprint40') {
-      if (ms <= 55000) this.unlockAchievement('sprint_55s');
-      if (ms <= 40000) this.unlockAchievement('sprint_40s');
-    } else if (mode === 'marathon150') {
-      if (ms <= 180000) this.unlockAchievement('marathon150_3m');
-    } else if (mode === 'marathon300') {
-      if (ms <= 360000) this.unlockAchievement('marathon300_6m');
-    } else if (mode === 'timeatk2') {
-      if (score >= 100) this.unlockAchievement('timeatk2_100');
-    } else if (mode === 'timeatk3') {
-      if (score >= 150) this.unlockAchievement('timeatk3_150');
-    }
+  _checkSoloAchievements(records) {
+    const MEDAL_ORDER = { crown: 4, gold: 3, silver: 2, bronze: 1 };
+    const medalModes = Object.keys(SOLO_MEDALS);
+    const medals = medalModes.map(k => records[k]?.medal || null);
+    const rank = m => MEDAL_ORDER[m] || 0;
+    const total = medals.filter(Boolean).length;
+    const bronzeAll = medalModes.every(k => rank(records[k]?.medal) >= 1);
+    const silverCount = medals.filter(m => rank(m) >= 2).length;
+    const goldCount = medals.filter(m => rank(m) >= 3).length;
+    const crownCount = medals.filter(m => m === 'crown').length;
+    if (total >= 1) this.unlockAchievement('solo_medal_1');
+    if (bronzeAll)  this.unlockAchievement('solo_all_bronze');
+    if (silverCount >= 2) this.unlockAchievement('solo_silver_2');
+    if (goldCount >= 1)   this.unlockAchievement('solo_gold_1');
+    if (goldCount >= 2)   this.unlockAchievement('solo_gold_2');
+    if (crownCount >= 1)  this.unlockAchievement('solo_crown_1');
   }
 
-  showSoloResult(isBest = false, isBestTime = false, isBestScore = false) {
+  showSoloResult(isBest = false, isBestTime = false, isBestScore = false, medal = null) {
     const modeConfig = SOLO_MODES[this.solo.mode];
     const topOut = this.solo.topOut;
     const modal = document.createElement('div');
@@ -2246,6 +2276,7 @@ class Game {
         <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
         <p style="color:#ffe082;font-size:14px;margin:4px 0">💥 점수: ${Math.round((this.solo.score || 0) * 100) / 100}</p>
         ${bestTag ? `<p style="color:#ffe082;font-size:13px">✨ ${bestTag}</p>` : ''}
+        ${medal ? `<p style="font-size:22px;margin:6px 0">${MEDAL_EMOJI[medal]} <span style="font-size:14px;color:#d7e5ff">${{ crown: '왕관', gold: '금메달', silver: '은메달', bronze: '동메달' }[medal]}</span></p>` : ''}
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
           <button class="ghost" id="soloRetryBtn">다시 하기</button>
           <button class="ghost" id="soloLbResultBtn">순위 보기</button>
