@@ -496,7 +496,7 @@ class Game {
     const _c = document.getElementById('codexBtn'); if (_c) _c.textContent = this.menuText('codex');
     const _r = document.getElementById('recordsBtn'); if (_r) _r.textContent = this.menuText('records');
     const _s = document.getElementById('settingsBtn'); if (_s) _s.textContent = this.menuText('settings');
-    const _tut = document.getElementById('tutorialBtn'); if (_tut) _tut.textContent = t('menu.tutorial');
+    const _tut = document.getElementById('tutorialBtn'); if (_tut) _tut.innerHTML = t('menu.tutorial').replace(/(.{2})/g, '$1<br>').replace(/<br>$/, '');
     document.getElementById('startRunBtn').textContent = this.practiceMode ? `${t('menu.startRun')} (Practice)` : t('menu.startRun');
     if (this.run) {
       document.getElementById('menuRound').textContent = `${this.run.round} / 20`;
@@ -2843,6 +2843,7 @@ class Game {
   }
 
   unlockAchievement(id) {
+    if (this.run?.practiceMode || this.practiceMode) return;
     const set = this.loadAchievements();
     if (set.has(id)) return;
     set.add(id);
