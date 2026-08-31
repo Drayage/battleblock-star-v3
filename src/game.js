@@ -597,6 +597,7 @@ class Game {
   }
 
   allCodexEnemies() {
+    if (this._codexEnemiesCache) return this._codexEnemiesCache;
     const map = new Map();
     for (let round = 1; round <= 20; round++) {
       for (const enemy of makeEnemyChoices(round, [])) {
@@ -605,11 +606,12 @@ class Game {
       }
     }
     const typeRank = enemy => ({ normal: 0, elite: 1, boss: 2 }[enemy?.type] ?? 0);
-    return [...map.values()].sort((a, b) =>
+    this._codexEnemiesCache = [...map.values()].sort((a, b) =>
       typeRank(a) - typeRank(b)
       || this.tierRank(a.tier) - this.tierRank(b.tier)
       || trEnemyName(a, a.name).localeCompare(trEnemyName(b, b.name), this.currentLocale())
     );
+    return this._codexEnemiesCache;
   }
 
   tierRank(tier) {
@@ -2088,6 +2090,7 @@ class Game {
     document.getElementById('gameScreen').classList.add('solo-active');
     this.show('gameScreen');
     this.renderer.resizeSolo(20);
+    this.audio.setScene(null); // reset before applying solo preset so retry always restarts music
     const soloPreset = getSoloMusicPreset(modeKey, startLevel, 0);
     if (soloPreset) { this.audio.setScene(soloPreset); this.solo._musicPreset = soloPreset; }
     this.updateSoloStats();
