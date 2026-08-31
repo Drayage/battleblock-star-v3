@@ -1298,7 +1298,7 @@ class Game {
       this.run.deck.removeCard(choice.id);
       this.run.deck.refill();
       this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
-      if (CARD_LIBRARY[choice.id]?.shapeId === 'L') this.unlockAchievement('l_clear');
+      if (CARD_LIBRARY[choice.id]?.shapeId === 'I') this.unlockAchievement('i_clear');
       this.checkDeckMinimalist();
     }
     if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
@@ -1772,7 +1772,7 @@ class Game {
         this.run.deck.removeCard(id);
         this.run.deck.refill();
         this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
-        if (CARD_LIBRARY[id]?.shapeId === 'L') this.unlockAchievement('l_clear');
+        if (CARD_LIBRARY[id]?.shapeId === 'I') this.unlockAchievement('i_clear');
         this.checkDeckMinimalist();
         done(true);
       },

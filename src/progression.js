@@ -1028,7 +1028,7 @@ export const ACHIEVEMENTS = [
   { cat: 'run', id: 'elite_hunter',   icon: '🎯', ko: '엘리트 청소부',  en: 'Elite Cleaner',         ja: 'エリート退治',   ko_d: '한 런에서 엘리트 3마리 처치', en_d: 'Defeat 3 elites in one run', ja_d: '一ランでエリート3体討伐' },
   { cat: 'run', id: 'long_battle',    icon: '⏱️', ko: '장기전',         en: 'Long Battle',           ja: '長期戦',         ko_d: '한 전투에서 적이 100개 피스를 놓을 때까지 버티고 승리', en_d: 'Win while the enemy places 100+ pieces in one battle', ja_d: '敵が100ピース置くまで耐えて勝利' },
   { cat: 'run', id: 'lucky_gambler',  icon: '🎰', ko: '행운의 도박사',  en: 'Lucky Gambler',         ja: '幸運の賭博師',   ko_d: '도박에서 승리', en_d: 'Win a gamble', ja_d: 'ギャンブルに勝利した' },
-  { cat: 'run', id: 'l_clear',        icon: '🔷', ko: 'L 블록 삭제',    en: 'L-Block Deleted',       ja: 'Lブロック削除',  ko_d: 'L 모양 카드를 덱에서 제거', en_d: 'Remove an L-shaped card from your deck', ja_d: 'L型カードをデッキから除去' },
+  { cat: 'run', id: 'i_clear',        icon: '🟦', ko: 'I 블록 삭제',    en: 'I-Block Deleted',       ja: 'Iブロック削除',  ko_d: 'I 모양 카드를 덱에서 제거', en_d: 'Remove an I-shaped card from your deck', ja_d: 'I型カードをデッキから除去' },
   { cat: 'run', id: 'shop_spender',   icon: '🛒', ko: '큰 손',          en: 'Big Spender',           ja: '大散財',         ko_d: '한 상점에서 300골드 이상 지출', en_d: 'Spend 300+ gold in a single shop visit', ja_d: '一回のショップで300G以上消費' },
   { cat: 'run', id: 'cons_user',      icon: '🎒', ko: '소모품 애호가',  en: 'Item User',             ja: 'アイテム愛用者', ko_d: '한 런에서 소모품 5개 이상 사용', en_d: 'Use 5+ consumables in one run', ja_d: '一ランでアイテム5個以上使用' },
   { cat: 'run', id: 'gold_500',       icon: '💎', ko: '황금 부자',      en: 'Gold Hoarder',          ja: '黄金持ち',       ko_d: '한 런에서 500골드 이상 보유', en_d: 'Hold 500+ gold in one run', ja_d: '一ランで500G以上保有' },
