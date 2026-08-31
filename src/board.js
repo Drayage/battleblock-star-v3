@@ -152,7 +152,7 @@ export class Board {
     board.armDelayBonus = 0;
     board.clearDelayBonus = 0;
     board.delaysGarbageOnClear = true;
-    board.instantGarbage = false;
+    board.instantGarbage = !!state.instantGarbage;
     // 구버전 세이브 호환: {x, y, radius} → {col: x, maxY: y+radius}
     board.pendingDrops = (state.pendingDrops || []).map(d => {
       if (d.col != null && d.maxY != null) return { col: d.col, maxY: d.maxY };
@@ -727,13 +727,9 @@ export class Board {
     const n = Math.max(0, Math.ceil(amount));
     if (n === 0) return;
     if (this.instantGarbage) {
-      // 한 번에 빨간색으로 전환되는 줄은 최대 3줄 — 초과분은 정상 타이머로 분리
-      const instant = Math.min(n, 3);
-      this.garbageEntries.push({ amount: instant, timer: 0, instant: true });
-      if (n > 3) {
-        const restTimer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
-        this.garbageEntries.push({ amount: n - 3, timer: restTimer });
-      }
+      // 즉각 경보: 최대 3줄 하드캡 — 초과분은 무효화
+      const capped = Math.min(n, 3);
+      this.garbageEntries.push({ amount: capped, timer: 0, instant: true });
     } else {
       const timer = Math.max(GAME_TIMING.GARBAGE_MIN_ARM, GAME_TIMING.GARBAGE_ARM_DELAY + (this.armDelayBonus || 0));
       this.garbageEntries.push({ amount: n, timer });
@@ -965,6 +961,7 @@ export class Board {
       forceCrushNext: this.forceCrushNext,
       explodeRadiusBonus: this.explodeRadiusBonus,
       sanctuaryActive: this.sanctuaryActive,
+      instantGarbage: this.instantGarbage,
       comboEngine: this.comboEngine,
       chargeCapBonus: this.chargeCapBonus,
       chargeCarryOver: this.chargeCarryOver,

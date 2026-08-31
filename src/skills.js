@@ -9,8 +9,11 @@ const SKILLS_KO = {
     cost: 28,
     cooldown: 9000,
     desc: '가장 낮은 쓰레기 행 1줄을 제거합니다.',
-    activate({ player }) {
-      return player.purgeGarbageRows(1) > 0;
+    activate({ player, resolve }) {
+      const purged = player.purgeGarbageRows(1);
+      if (purged === 0) return false;
+      if (player.sanctuaryActive) resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      return true;
     }
   },
   double_shot: {
@@ -131,8 +134,11 @@ const SKILLS_KO = {
     cost: 38,
     cooldown: 11000,
     desc: '피해 없이 가장 낮은 쓰레기 행 3줄을 제거합니다.',
-    activate({ player }) {
-      return player.purgeGarbageRows(3) > 0;
+    activate({ player, resolve }) {
+      const purged = player.purgeGarbageRows(3);
+      if (purged === 0) return false;
+      if (player.sanctuaryActive) resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      return true;
     }
   },
   all_i_mode: {
@@ -156,7 +162,7 @@ const SKILLS_KO = {
     tier: 'silver',
     cost: 40,
     cooldown: 12000,
-    desc: '5초 동안 적의 행동 속도를 늦춥니다.',
+    desc: '적의 행동 속도를 늦춥니다(최대 5초로 갱신).',
     activate({ game }) {
       game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 5000);
       return true;
@@ -278,7 +284,8 @@ const SKILLS_KO = {
       if (player.defeated) return false;
       const purged = player.purgeGarbageRows(99);
       if (purged === 0) return false;
-      resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      const mult = player.sanctuaryActive ? 1.0 : 0.5;
+      resolve({ attack: Number((purged * mult).toFixed(2)), cleared: 0, slow: 0 }, player);
       return true;
     }
   },
@@ -289,7 +296,7 @@ const SKILLS_KO = {
     tier: 'gold',
     cost: 90,
     cooldown: 22000,
-    desc: '적에게 쓰레기 5줄을 즉시 전송하고 3초 동안 둔화시킵니다.',
+    desc: '적에게 쓰레기 5줄을 즉시 전송하고 적 둔화를 최대 3초로 갱신합니다.',
     activate({ enemy, game }) {
       if (!enemy || enemy.defeated) return false;
       enemy.receiveGarbage(5);

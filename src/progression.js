@@ -143,7 +143,7 @@ const RELICS_KO = {
     icon: '💣',
     name: '대폭발 신관',
     tier: TIERS.DIAMOND,
-    desc: '[봄브 세트] 모든 폭발 반경이 +1 증가합니다.'
+    desc: '[봄브 세트] 모든 폭발 반경이 +1 증가하고, 폭발로 파괴된 셀당 +0.05 추가 공격력을 얻습니다(폭발당 최대 1.5).'
   },
   set_manawell: {
     id: 'set_manawell',
@@ -1003,7 +1003,7 @@ export const ACHIEVEMENTS = [
   { cat: 'clear', id: 'first_clear',    icon: '🏆', ko: '첫 클리어',         en: 'First Clear',          ja: '初クリア',       ko_d: '게임을 처음으로 클리어했습니다', en_d: 'Clear the game for the first time', ja_d: '初めてゲームをクリアした' },
   { cat: 'clear', id: 'skill_master',   icon: '🎯', ko: '스킬 마스터',        en: 'Skill Master',          ja: 'スキルマスター',  ko_d: '스킬 3개 장착하고 클리어', en_d: 'Clear with 3 skills equipped', ja_d: '3スキル装備してクリア' },
   { cat: 'clear', id: 'relic_hunter',   icon: '🧬', ko: '유물 사냥꾼',        en: 'Relic Hunter',          ja: '遺物ハンター',    ko_d: '유물 5개 이상 보유하고 클리어', en_d: 'Clear with 5+ relics', ja_d: '遺物5個以上でクリア' },
-  { cat: 'clear', id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',          en: 'Deck Minimalist',       ja: 'デッキ最小',     ko_d: '카드 10장 이하로 클리어', en_d: 'Clear with 10 or fewer cards in deck', ja_d: 'カード10枚以下でクリア' },
+  { cat: 'clear', id: 'deck_minimalist',icon: '📥', ko: '덱 미니멀',          en: 'Deck Minimalist',       ja: 'デッキ最小',     ko_d: '런 중 덱이 10장 이하가 되는 순간', en_d: 'Reach 10 or fewer cards in deck during a run', ja_d: 'ラン中にデッキが10枚以下になった瞬間' },
   { cat: 'clear', id: 'junk_collector', icon: '🗑️', ko: '저주받은 덱',        en: 'Cursed Deck',           ja: '呪われたデッキ', ko_d: '정크·저주 카드 4개 이상 보유하고 클리어', en_d: 'Clear with 4+ junk/curse cards in deck', ja_d: 'ジャンク・呪いカード4枚以上でクリア' },
   { cat: 'clear', id: 'ascension_1',    icon: '🌙', ko: '승천자',             en: 'Ascendant',             ja: '昇天者',         ko_d: '승천 A1 이상에서 클리어', en_d: 'Clear at Ascension A1+', ja_d: '昇天A1以上でクリア' },
   { cat: 'clear', id: 'asc_clear_2',    icon: '🌙', ko: 'A2 격전 클리어',     en: 'A2 Intense Clear',      ja: 'A2クリア',       ko_d: '승천 A2(격전)에서 클리어', en_d: 'Clear at Ascension A2 (Intense)', ja_d: '昇天A2(激戦)でクリア' },
@@ -1067,10 +1067,10 @@ export const ACHIEVEMENTS = [
   { cat: 'lifetime', id: 'compendium_cards', icon: '📦', ko: '블록 도감',        en: 'Block Compendium',  ja: 'ブロック図鑑', ko_d: '모든 특수 블록 카드 수집 (누적)', en_d: 'Collect all special block cards (lifetime)', ja_d: '全特殊ブロックカード収集(累計)' },
   { cat: 'lifetime', id: 'compendium_all',   icon: '📚', ko: '대도감',           en: 'Grand Compendium',  ja: '大図鑑',     ko_d: '블록/스킬/유물/소모품 도감 모두 달성', en_d: 'Complete all 4 compendium achievements', ja_d: '4種類の図鑑全達成' },
   // ── 솔로 모드 ──────────────────────────────────────────────
-  { cat: 'solo', id: 'sprint_55s',     icon: '⚡', ko: '빛의 속도',       en: 'Speed of Light',    ja: '光速',             ko_d: '40줄 스프린트 55초 이내 클리어', en_d: 'Clear 40-line sprint in under 55s', ja_d: '40ラインスプリント55秒以内クリア' },
-  { cat: 'solo', id: 'sprint_40s',     icon: '⚡', ko: '초광속',          en: 'Hyperspeed',        ja: '超光速',           ko_d: '40줄 스프린트 40초 이내 클리어', en_d: 'Clear 40-line sprint in under 40s', ja_d: '40ラインスプリント40秒以内クリア' },
-  { cat: 'solo', id: 'marathon150_3m', icon: '🏃', ko: '마라톤 주자',     en: 'Marathon Runner',   ja: 'マラソン走者',     ko_d: '마라톤 150줄 3분 이내 클리어', en_d: 'Clear marathon 150 in under 3 minutes', ja_d: 'マラソン150ライン3分以内クリア' },
-  { cat: 'solo', id: 'marathon300_6m', icon: '🏃', ko: '울트라 마라톤',   en: 'Ultra Marathon',    ja: 'ウルトラマラソン', ko_d: '마라톤 300줄 6분 이내 클리어', en_d: 'Clear marathon 300 in under 6 minutes', ja_d: 'マラソン300ライン6分以内クリア' },
-  { cat: 'solo', id: 'timeatk2_100',   icon: '💥', ko: '타임어택 고수',   en: 'Time Attack Pro',   ja: 'タイムアタック達人', ko_d: '타임어택 2분에서 100점 이상', en_d: 'Score 100+ in 2-minute time attack', ja_d: '2分タイムアタックで100点以上' },
-  { cat: 'solo', id: 'timeatk3_150',   icon: '💥', ko: '타임어택 달인',   en: 'Time Attack Master',ja: 'タイムアタック名人', ko_d: '타임어택 3분에서 150점 이상', en_d: 'Score 150+ in 3-minute time attack', ja_d: '3分タイムアタックで150点以上' },
+  { cat: 'solo', id: 'solo_medal_1',   icon: '🥉', ko: '첫 메달',         en: 'First Medal',       ja: '初メダル',         ko_d: '솔로 모드에서 메달 1개 이상 획득', en_d: 'Earn at least 1 medal in solo modes', ja_d: 'ソロモードでメダル1個以上獲得' },
+  { cat: 'solo', id: 'solo_all_bronze',icon: '🏅', ko: '전천후 도전자',   en: 'All-Rounder',       ja: '全能挑戦者',       ko_d: '모든 솔로 모드에서 동메달 이상 획득', en_d: 'Earn bronze or above in all solo modes', ja_d: '全ソロモードで銅メダル以上獲得' },
+  { cat: 'solo', id: 'solo_silver_2',  icon: '🥈', ko: '실력자',          en: 'Skilled Player',    ja: '実力者',           ko_d: '솔로 모드 은메달 2개 이상', en_d: 'Earn 2+ silver medals in solo modes', ja_d: 'ソロモード銀メダル2個以上' },
+  { cat: 'solo', id: 'solo_gold_1',    icon: '🥇', ko: '금빛 손길',       en: 'Golden Touch',      ja: '黄金の手',         ko_d: '솔로 모드 금메달 1개 이상', en_d: 'Earn 1+ gold medal in solo modes', ja_d: 'ソロモード金メダル1個以上' },
+  { cat: 'solo', id: 'solo_gold_2',    icon: '🥇', ko: '황금빛 실력',     en: 'Double Gold',       ja: 'ダブルゴールド',   ko_d: '솔로 모드 금메달 2개 이상', en_d: 'Earn 2+ gold medals in solo modes', ja_d: 'ソロモード金メダル2個以上' },
+  { cat: 'solo', id: 'solo_crown_1',   icon: '👑', ko: '왕의 귀환',       en: 'Crown Bearer',      ja: '王の帰還',         ko_d: '솔로 모드 왕관 1개 이상', en_d: 'Earn 1+ crown in solo modes', ja_d: 'ソロモード王冠1個以上' },
 ];

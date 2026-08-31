@@ -51,9 +51,9 @@ const CONSUMABLES_KO = {
     name: '집중 칩',
     tier: 'silver',
     short: 'F',
-    desc: '10초 동안 적의 행동 속도를 늦춥니다.',
+    desc: '적의 행동 속도를 늦춥니다(최대 10초로 갱신).',
     use({ game }) {
-      game.enemySlowTimer = Math.max(game.enemySlowTimer, 10000);
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 10000);
       return '집중 칩 사용';
     }
   },
@@ -64,8 +64,11 @@ const CONSUMABLES_KO = {
     tier: 'silver',
     short: 'C',
     desc: '내 쓰레기 행 4줄을 정화합니다.',
-    use({ player }) {
-      player.purgeGarbageRows(4);
+    use({ player, game }) {
+      const purged = player.purgeGarbageRows(4);
+      if (purged > 0 && player.sanctuaryActive) {
+        game.resolve({ attack: Number((purged * 0.5).toFixed(2)), cleared: 0, slow: 0 }, player);
+      }
       return '만능 클렌즈 사용';
     }
   },

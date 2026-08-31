@@ -82,7 +82,7 @@ const META_UPGRADES = [
   { id: 'rewardReroll',    icon: '🎲',  name: '보상 재굴리기', desc: '런 당 보상 재굴리기 +1회',           maxLevel: 4, costs: [1, 2, 3, 4] },
   { id: 'battleRecovery',  icon: '💉',  name: '전투 회복',    desc: '적 처치 후 가비지 1줄 회복',         maxLevel: 3, costs: [2, 3, 4] },
   { id: 'cardUpgrade',     icon: '🔧',  name: '카드 업그레이드', desc: '시작 덱 카드 1장을 특수 버전으로 업그레이드', maxLevel: 2, costs: [2, 4] },
-  { id: 'startMana',       icon: '⚡',  name: '전투 시작 마나', desc: '전투 시작 시 마나 +20',            maxLevel: 2, costs: [1, 2] },
+  { id: 'startMana',       icon: '⚡',  name: '전투 시작 마나', desc: '전투 시작 시 마나 +10',            maxLevel: 2, costs: [1, 2] },
 ];
 // 합계 포인트: 4+3+3+3+5+4+7+7+5+10+9+6+3 = 69 (업적 70개, 1P 여유)
 
@@ -116,6 +116,27 @@ function getTimeAtkMusicPreset(modeKey, elapsed) {
   if (remaining <= 30000) return base + 'Fast';
   if (elapsed >= timeLimit / 2) return base + 'Mid';
   return base;
+}
+// medals: [crown, gold, silver, bronze] thresholds — time modes: ms (lower=better), score modes: points (higher=better)
+const SOLO_MEDALS = {
+  sprint40:    { type: 'time',  thresholds: [40000, 60000, 90000, 120000] },
+  marathon150: { type: 'time',  thresholds: [180000, 300000, 420000, 600000] },
+  marathon300: { type: 'time',  thresholds: [360000, 600000, 840000, 1200000] },
+  timeatk2:   { type: 'score', thresholds: [100, 80, 60, 40] },
+  timeatk3:   { type: 'score', thresholds: [150, 120, 90, 60] },
+};
+const MEDAL_RANKS = ['crown', 'gold', 'silver', 'bronze'];
+const MEDAL_EMOJI = { crown: '👑', gold: '🥇', silver: '🥈', bronze: '🥉' };
+function getMedal(modeKey, ms, score, topOut) {
+  const cfg = SOLO_MEDALS[modeKey];
+  if (!cfg) return null;
+  if (cfg.type === 'time' && topOut) return null;
+  const val = cfg.type === 'time' ? ms : score;
+  for (let i = 0; i < cfg.thresholds.length; i++) {
+    const ok = cfg.type === 'time' ? val <= cfg.thresholds[i] : val >= cfg.thresholds[i];
+    if (ok) return MEDAL_RANKS[i];
+  }
+  return null;
 }
 const SOLO_MODES = {
   sprint40:    { name: '40줄 스프린트', goalLines: 40,  timeLimit: 0,      speedRamp: true,  unit: 'time'  },
@@ -682,43 +703,219 @@ class Game {
   openTutorial() {
     const overlay = document.getElementById('tutorialOverlay');
     if (!overlay) return;
-    const ART = [
-      // slide 1 — controls
-      '  ← [블록] →\n    ↓\n  [Z/↑] 회전\n[Space] 하드드롭\n[Shift] 홀드',
-      // slide 2 — line clear
-      '████████████  ← clear!\n  ██  ████\n ████  ██\n[combo] x2 → +가비지',
-      // slide 3 — deck
-      '┌──────────┐  ┌──────────┐  ┌──────────┐\n│ CARD [1] │  │ CARD [2] │  │ CARD [3] │\n│ 공격      │  │ 방어      │  │ 강화      │\n└──────────┘  └──────────┘  └──────────┘',
-      // slide 4 — VS battle
-      '  내 HP ██████░░░░  상대 HP ████░░░░░░\n\n  줄 제거 → 가비지 발사 →→→\n\n  상대 HP 0 = 승리!',
-      // slide 5 — solo mode
-      '마라톤   Sprint40  타임어택  엔드리스\n150/300줄  40줄      ⏱최대     ∞\n  빠르게↑   최속↑     점수↑     레벨↑',
+
+    // ── Mini interactive tetris board ──
+    const COLS = 8, ROWS = 13, CELL = 26;
+    const COLORS = {
+      I:'#00cfcf', O:'#d4af00', T:'#aa44ee', L:'#e07800', J:'#2255ff', S:'#22b022', Z:'#cc2222',
+      ghost:'rgba(200,220,255,0.13)', fill:'#334466'
+    };
+    const SHAPES = {
+      I:[[[0,1],[1,1],[2,1],[3,1]],[[2,0],[2,1],[2,2],[2,3]]],
+      O:[[[1,0],[2,0],[1,1],[2,1]]],
+      T:[[[1,0],[0,1],[1,1],[2,1]],[[1,0],[1,1],[2,1],[1,2]],[[0,1],[1,1],[2,1],[1,2]],[[1,0],[0,1],[1,1],[1,2]]],
+      L:[[[2,0],[0,1],[1,1],[2,1]],[[1,0],[1,1],[1,2],[2,2]],[[0,1],[1,1],[2,1],[0,2]],[[0,0],[1,0],[1,1],[1,2]]],
+      J:[[[0,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[1,1],[1,2]],[[0,1],[1,1],[2,1],[2,2]],[[1,0],[1,1],[0,2],[1,2]]],
+      S:[[[1,0],[2,0],[0,1],[1,1]],[[1,0],[1,1],[2,1],[2,2]]],
+      Z:[[[0,0],[1,0],[1,1],[2,1]],[[2,0],[1,1],[2,1],[1,2]]]
+    };
+    let board, piece, holdPiece, holdUsed, stepIndex, stepDone, actionCount;
+
+    const cells = (type, rot, x, y) => SHAPES[type][rot % SHAPES[type].length].map(([cx,cy])=>[x+cx,y+cy]);
+    const valid = (type, rot, x, y) => cells(type,rot,x,y).every(([cx,cy])=>cx>=0&&cx<COLS&&cy>=0&&cy<ROWS&&!board[cy]?.[cx]);
+    const ghostY = (type, rot, x, y) => { let g=y; while(valid(type,rot,x,g+1))g++; return g; };
+    const spawn = (type, sx=2) => { piece={type,x:sx,y:0,rot:0}; holdUsed=false; };
+    const lock = () => {
+      if (!piece) return 0;
+      cells(piece.type,piece.rot,piece.x,piece.y).forEach(([cx,cy])=>{ if(cy>=0)board[cy][cx]=piece.type; });
+      let cleared=0;
+      for(let r=ROWS-1;r>=0;r--) {
+        if(board[r].every(c=>c)){board.splice(r,1);board.unshift(Array(COLS).fill(null));cleared++;r++;}
+      }
+      piece=null; return cleared;
+    };
+
+    // Canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = COLS*CELL; canvas.height = ROWS*CELL;
+    canvas.style.cssText = 'display:block;margin:0 auto;border-radius:4px;border:1px solid #1e3060;background:#050b17;touch-action:none';
+    const ctx = canvas.getContext('2d');
+
+    const draw = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle='#0d1a2e'; ctx.lineWidth=0.5;
+      for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(COLS*CELL,r*CELL);ctx.stroke();}
+      for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,ROWS*CELL);ctx.stroke();}
+      for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
+        if(board[r][c]){ ctx.fillStyle=COLORS[board[r][c]]||COLORS.fill; ctx.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2); }
+      }
+      if(piece){
+        const gy=ghostY(piece.type,piece.rot,piece.x,piece.y);
+        if(gy!==piece.y){ ctx.fillStyle=COLORS.ghost; cells(piece.type,piece.rot,piece.x,gy).forEach(([cx,cy])=>{if(cy>=0)ctx.fillRect(cx*CELL+1,cy*CELL+1,CELL-2,CELL-2);}); }
+        ctx.fillStyle=COLORS[piece.type];
+        cells(piece.type,piece.rot,piece.x,piece.y).forEach(([cx,cy])=>{if(cy>=0)ctx.fillRect(cx*CELL+1,cy*CELL+1,CELL-2,CELL-2);});
+      }
+    };
+    const flash = (color='#22ff88') => {
+      ctx.fillStyle=color+'33';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    };
+
+    const lang = getLang();
+    const STEPS = [
+      { ko:{t:'이동',h:'← → 키로 블록을 3번 이동하세요'},en:{t:'Move',h:'Move the block 3 times with ← → keys'},ja:{t:'移動',h:'← →キーでブロックを3回動かしてください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));spawn('I',2);actionCount=0;},
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y)){piece.x--;actionCount++;} if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y)){piece.x++;actionCount++;} if(actionCount>=3&&!stepDone)done(); }
+      },
+      { ko:{t:'회전',h:'Z 또는 ↑ 키로 블록을 회전하세요'},en:{t:'Rotate',h:'Rotate with Z or ↑ key'},ja:{t:'回転',h:'ZまたはJキーでブロックを回転してください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));spawn('T',2);},
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z'||k==='x'||k==='X')&&valid(piece.type,nr,piece.x,piece.y)){piece.rot=nr;if(!stepDone)done();} }
+      },
+      { ko:{t:'하드드롭',h:'Space 키로 블록을 하드드롭 하세요'},en:{t:'Hard Drop',h:'Press Space to hard drop'},ja:{t:'ハードドロップ',h:'Spaceキーでハードドロップしてください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));spawn('L',2);},
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z')&&valid(piece.type,nr,piece.x,piece.y))piece.rot=nr; if(k===' '&&!stepDone){piece.y=ghostY(piece.type,piece.rot,piece.x,piece.y);lock();done();} }
+      },
+      { ko:{t:'홀드',h:'Shift 또는 C 키로 블록을 홀드하세요'},en:{t:'Hold',h:'Press Shift or C to hold'},ja:{t:'ホールド',h:'ShiftまたはCキーでホールドしてください'},
+        setup(){board=Array.from({length:ROWS},()=>Array(COLS).fill(null));holdPiece=null;spawn('S',2);},
+        key(k){ if(!piece||holdUsed)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; if((k==='Shift'||k==='c'||k==='C')&&!stepDone){const prev=holdPiece;holdPiece=piece.type;holdUsed=true;spawn(prev||'J',2);done();} }
+      },
+      { ko:{t:'라인 클리어',h:'빈 칸을 채워서 줄을 클리어하세요! (Space: 하드드롭)'},en:{t:'Line Clear',h:'Fill the gap to clear a row! (Space: hard drop)'},ja:{t:'ライン消去',h:'空きを埋めてラインを消してください！(Space: ハードドロップ)'},
+        setup(){
+          board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+          for(let c=0;c<COLS;c++){ if(c!==4)board[ROWS-1][c]='Z'; }
+          for(let c=0;c<COLS;c++){ if(c!==3)board[ROWS-2][c]='J'; }
+          spawn('I',2);
+        },
+        key(k){ if(!piece)return; if(k==='ArrowLeft'&&valid(piece.type,piece.rot,piece.x-1,piece.y))piece.x--; if(k==='ArrowRight'&&valid(piece.type,piece.rot,piece.x+1,piece.y))piece.x++; const nr=(piece.rot+1)%SHAPES[piece.type].length; if((k==='ArrowUp'||k==='z'||k==='Z')&&valid(piece.type,nr,piece.x,piece.y))piece.rot=nr; if(k===' '){piece.y=ghostY(piece.type,piece.rot,piece.x,piece.y);const c=lock();if(c>0&&!stepDone)done();else if(!piece)spawn('I',2);} if(k==='ArrowDown'&&valid(piece.type,piece.rot,piece.x,piece.y+1))piece.y++; }
+      },
+      { info:true,
+        ko:{t:'업적',h:'특정 조건을 달성하면 업적을 획득합니다.\n업적마다 승천 포인트를 지급해요.\n포인트가 쌓이면 승천 레벨이 오릅니다.\n메인 메뉴 → [업적] 버튼에서 확인하세요!',
+          art:`<div style="font-size:26px;margin-bottom:10px">🏆</div><div style="display:flex;flex-direction:column;gap:5px;text-align:left;background:#0b1220;border:1px solid #263d72;border-radius:6px;padding:10px 14px;font-size:12px;width:100%"><div style="color:#22cc66">✓ 처음으로 10줄 제거 — +5 pt</div><div style="color:#22cc66">✓ 첫 전투 승리 — +10 pt</div><div style="color:#7988a5">□ 20라운드 클리어 — +50 pt</div><div style="color:#7988a5">□ 콤보 x5 달성 — +8 pt</div></div><div style="margin-top:8px;font-size:12px;color:#5585d4">업적 포인트 → 승천 레벨 상승</div>`
+        },
+        en:{t:'Achievements',h:'Complete special conditions to earn achievements.\nEach achievement grants Ascension Points.\nPoints accumulate to raise your Ascension Level.\nCheck them with the [Achievements] button!',
+          art:`<div style="font-size:26px;margin-bottom:10px">🏆</div><div style="display:flex;flex-direction:column;gap:5px;text-align:left;background:#0b1220;border:1px solid #263d72;border-radius:6px;padding:10px 14px;font-size:12px;width:100%"><div style="color:#22cc66">✓ Clear 10 lines for the first time — +5 pt</div><div style="color:#22cc66">✓ Win your first battle — +10 pt</div><div style="color:#7988a5">□ Clear all 20 rounds — +50 pt</div><div style="color:#7988a5">□ Achieve combo ×5 — +8 pt</div></div><div style="margin-top:8px;font-size:12px;color:#5585d4">Achievement Points → Ascension Level Up</div>`
+        },
+        ja:{t:'実績',h:'特定の条件を達成すると実績を獲得できます。\n実績ごとに昇天ポイントが付与されます。\nポイントが溜まると昇天レベルが上がります。\nメインメニュー → [実績]ボタンで確認しましょう！',
+          art:`<div style="font-size:26px;margin-bottom:10px">🏆</div><div style="display:flex;flex-direction:column;gap:5px;text-align:left;background:#0b1220;border:1px solid #263d72;border-radius:6px;padding:10px 14px;font-size:12px;width:100%"><div style="color:#22cc66">✓ 初めて10ライン消去 — +5 pt</div><div style="color:#22cc66">✓ 初めてバトル勝利 — +10 pt</div><div style="color:#7988a5">□ 20ラウンドクリア — +50 pt</div><div style="color:#7988a5">□ コンボ×5達成 — +8 pt</div></div><div style="margin-top:8px;font-size:12px;color:#5585d4">実績ポイント → 昇天レベルアップ</div>`
+        },
+      },
+      { info:true,
+        ko:{t:'성장 (승천)',h:'업적 포인트로 승천 레벨을 올리세요.\n[성장] 버튼에서 영구 강화를 구매합니다.\n런이 거듭될수록 시작 HP·골드·덱이 강해져요!\n런을 클리어해도 강화 효과는 영구히 유지됩니다.',
+          art:`<div style="font-size:26px;margin-bottom:10px">⬆️</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px"><div style="background:#1a2640;border:1px solid #263d72;border-radius:6px;padding:6px 12px;font-size:12px;color:#a8d0ff;text-align:center">Lv.0<br><span style="font-size:10px;color:#7988a5">기본</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#263d72;border:1px solid #5585d4;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.1<br><span style="font-size:10px;color:#7dc8ff">HP +2</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#1e3060;border:1px solid #7d92d6;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.2<br><span style="font-size:10px;color:#7dc8ff">Gold +3</span></div></div><div style="font-size:12px;color:#5585d4">메인 메뉴 → [성장] 버튼</div>`
+        },
+        en:{t:'Meta Progression',h:'Spend Ascension Points to raise your Ascension Level.\nBuy permanent upgrades from the [Meta] button.\nHP, Gold, and Deck bonuses carry over to every run!\nClearing a run keeps all upgrades permanently.',
+          art:`<div style="font-size:26px;margin-bottom:10px">⬆️</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px"><div style="background:#1a2640;border:1px solid #263d72;border-radius:6px;padding:6px 12px;font-size:12px;color:#a8d0ff;text-align:center">Lv.0<br><span style="font-size:10px;color:#7988a5">Base</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#263d72;border:1px solid #5585d4;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.1<br><span style="font-size:10px;color:#7dc8ff">HP +2</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#1e3060;border:1px solid #7d92d6;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.2<br><span style="font-size:10px;color:#7dc8ff">Gold +3</span></div></div><div style="font-size:12px;color:#5585d4">Main Menu → [Meta] button</div>`
+        },
+        ja:{t:'成長（昇天）',h:'昇天ポイントで昇天レベルを上げましょう。\n[成長]ボタンから永続強化を購入できます。\nHP・ゴールド・デッキ強化は毎ランに持続！\nランをクリアしても強化効果は永続します。',
+          art:`<div style="font-size:26px;margin-bottom:10px">⬆️</div><div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px"><div style="background:#1a2640;border:1px solid #263d72;border-radius:6px;padding:6px 12px;font-size:12px;color:#a8d0ff;text-align:center">Lv.0<br><span style="font-size:10px;color:#7988a5">基本</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#263d72;border:1px solid #5585d4;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.1<br><span style="font-size:10px;color:#7dc8ff">HP +2</span></div><div style="color:#5585d4;font-size:18px;align-self:center">→</div><div style="background:#1e3060;border:1px solid #7d92d6;border-radius:6px;padding:6px 12px;font-size:12px;color:#e2ecff;text-align:center">Lv.2<br><span style="font-size:10px;color:#7dc8ff">Gold +3</span></div></div><div style="font-size:12px;color:#5585d4">メインメニュー → [成長]ボタン</div>`
+        },
+      },
     ];
-    const SLIDES = ['s1', 's2', 's3', 's4', 's5'];
-    let cur = 0;
-    const render = () => {
-      const s = SLIDES[cur];
-      overlay.querySelector('#tutorialStepLabel').textContent = `${cur + 1} / ${SLIDES.length}`;
-      overlay.querySelector('#tutorialArt').textContent = ART[cur];
-      overlay.querySelector('#tutorialSlideTitle').textContent = t(`tutorial.${s}.title`);
-      overlay.querySelector('#tutorialSlideBody').textContent = t(`tutorial.${s}.body`);
-      overlay.querySelectorAll('.tutorial-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
-      overlay.querySelector('#tutorialPrevBtn').textContent = cur === 0 ? '' : t('tutorial.prev');
-      overlay.querySelector('#tutorialPrevBtn').style.visibility = cur === 0 ? 'hidden' : '';
-      overlay.querySelector('#tutorialNextBtn').textContent = cur === SLIDES.length - 1 ? t('tutorial.done') : t('tutorial.next');
+
+    let keyHandler=null, touchState={};
+    const closeOverlay = () => {
+      if(keyHandler){document.removeEventListener('keydown',keyHandler);keyHandler=null;}
+      overlay.classList.remove('active');
     };
-    const dots = overlay.querySelector('#tutorialDots');
-    dots.innerHTML = SLIDES.map((_, i) => `<span class="tutorial-dot${i === 0 ? ' active' : ''}"></span>`).join('');
-    overlay.querySelector('#tutorialCloseBtn').onclick = () => overlay.classList.remove('active');
-    overlay.querySelector('#tutorialPrevBtn').onclick = () => { if (cur > 0) { cur--; render(); } };
-    overlay.querySelector('#tutorialNextBtn').onclick = () => {
-      if (cur < SLIDES.length - 1) { cur++; render(); }
-      else overlay.classList.remove('active');
+
+    const done = () => {
+      stepDone=true;
+      flash();
+      draw();
+      setTimeout(()=>{
+        stepIndex++;
+        if(stepIndex>=STEPS.length){ closeOverlay(); return; }
+        stepDone=false;
+        loadStep(stepIndex);
+      }, 700);
     };
-    overlay.onclick = e => { if (e.target === overlay) overlay.classList.remove('active'); };
-    cur = 0;
-    render();
+
+    const updateDots = () => overlay.querySelectorAll('.tutorial-dot').forEach((d,i)=>d.classList.toggle('active',i===stepIndex));
+    const updateHold = () => {
+      const hd = overlay.querySelector('#tutHold');
+      if(hd){ hd.style.background=holdPiece?COLORS[holdPiece]:'#1a2640'; hd.textContent=holdPiece||''; }
+    };
+
+    const loadStep = (idx) => {
+      const s=STEPS[idx]; const ld=s[lang]||s.ko;
+      overlay.querySelector('#tutorialStepLabel').textContent=`${idx+1} / ${STEPS.length}`;
+      overlay.querySelector('#tutorialSlideTitle').textContent=ld.t||'';
+      overlay.querySelector('#tutorialSlideBody').textContent=ld.h;
+      updateDots();
+      const gameArea=artDiv.querySelector('#tutGameArea');
+      const infoArea=artDiv.querySelector('#tutInfoArea');
+      const nav=overlay.querySelector('.tutorial-nav');
+      if(s.info){
+        gameArea.style.display='none';
+        infoArea.style.display='flex';
+        infoArea.innerHTML=ld.art||'';
+        nav.style.display='';
+        const nb=overlay.querySelector('#tutorialNextBtn');
+        nb.textContent=idx===STEPS.length-1?t('tutorial.done'):t('tutorial.next');
+        nb.style.visibility='';
+        overlay.querySelector('#tutorialPrevBtn').style.visibility='hidden';
+      } else {
+        gameArea.style.display='flex';
+        infoArea.style.display='none';
+        nav.style.display='none';
+        s.setup(); draw(); updateHold();
+      }
+    };
+
+    // Build UI into artDiv
+    const artDiv = overlay.querySelector('#tutorialArt');
+    artDiv.style.cssText='display:flex;flex-direction:column;gap:6px;background:transparent;border:none;padding:0;min-height:unset';
+    artDiv.innerHTML=`<div id="tutGameArea" style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px">
+          <div style="font-size:10px;color:#5585d4">HOLD</div>
+          <div id="tutHold" style="width:38px;height:38px;border:1px solid #263d72;border-radius:4px;background:#1a2640;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:bold"></div>
+        </div>
+        <div id="tutCanvasWrap"></div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:2px">
+        <button class="ghost tut-btn" data-act="left" style="padding:6px 12px">◀</button>
+        <button class="ghost tut-btn" data-act="rot" style="padding:6px 12px">↻</button>
+        <button class="ghost tut-btn" data-act="right" style="padding:6px 12px">▶</button>
+        <button class="ghost tut-btn" data-act="drop" style="padding:6px 14px">▼▼</button>
+        <button class="ghost tut-btn" data-act="hold" style="padding:6px 10px">HOLD</button>
+      </div>
+    </div>
+    <div id="tutInfoArea" style="display:none;flex-direction:column;align-items:center;background:#0b1220;border:1px solid #263d72;border-radius:8px;padding:16px 12px;min-height:160px;text-align:center"></div>`;
+    artDiv.querySelector('#tutCanvasWrap').appendChild(canvas);
+
+    // Touch button wiring
+    artDiv.querySelectorAll('.tut-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const a=btn.dataset.act;
+        const fakeKey={'left':'ArrowLeft','right':'ArrowRight','rot':'z','drop':' ','hold':'c'}[a];
+        if(fakeKey&&!stepDone){STEPS[stepIndex]?.key?.(fakeKey);draw();updateHold();}
+      });
+    });
+
+    // Keyboard
+    keyHandler=(e)=>{
+      if(!overlay.classList.contains('active'))return;
+      if(e.key==='Escape'){closeOverlay();return;}
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)&&!STEPS[stepIndex]?.info)e.preventDefault();
+      if(!STEPS[stepIndex]?.info&&!stepDone)STEPS[stepIndex]?.key?.(e.key);
+      if(!STEPS[stepIndex]?.info){draw();updateHold();}
+    };
+    document.addEventListener('keydown',keyHandler);
+
+    // Next button (for info steps)
+    overlay.querySelector('#tutorialNextBtn').onclick=()=>{if(!stepDone)done();};
+    overlay.querySelector('#tutorialPrevBtn').style.visibility='hidden';
+
+    // Dots & close
+    overlay.querySelector('#tutorialDots').innerHTML=STEPS.map((_,i)=>`<span class="tutorial-dot${i===0?' active':''}"></span>`).join('');
+    overlay.querySelector('#tutorialCloseBtn').onclick=closeOverlay;
+    overlay.onclick=e=>{if(e.target===overlay)closeOverlay();};
+
+    // Launch
     overlay.classList.add('active');
+    stepIndex=0; stepDone=false;
+    loadStep(0);
   }
 
   openCodex() {
@@ -1101,6 +1298,7 @@ class Game {
       this.run.deck.refill();
       this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
       if (CARD_LIBRARY[choice.id]?.shapeId === 'L') this.unlockAchievement('l_clear');
+      this.checkDeckMinimalist();
     }
     if (choice.kind === 'removeChoice') return this.chooseRemoveCard(choice.price, done);
     if (choice.kind === 'upgradeCard') {
@@ -1574,10 +1772,17 @@ class Game {
         this.run.deck.refill();
         this.incrementLifetime('cardRemoves', 5, 'deck_cleaner');
         if (CARD_LIBRARY[id]?.shapeId === 'L') this.unlockAchievement('l_clear');
+        this.checkDeckMinimalist();
         done(true);
       },
       onSkip: () => skipped(false)
     });
+  }
+
+  checkDeckMinimalist() {
+    if (!this.run) return;
+    const total = (this.run.deck.draw?.length || 0) + (this.run.deck.discard?.length || 0);
+    if (total <= 10) this.unlockAchievement('deck_minimalist');
   }
 
   acquireSkill(id, done = () => {}, skipped = done) {
@@ -1813,6 +2018,7 @@ class Game {
       const rec = records[key];
       if (!rec) { el.textContent = '기록 없음'; continue; }
       const parts = [];
+      if (rec.medal) parts.push(MEDAL_EMOJI[rec.medal]);
       if (cfg.unit === 'time' && rec.timeTop10?.length) {
         parts.push(`⏱ ${fmtMs(rec.timeTop10[0].ms)}`);
       }
@@ -2009,33 +2215,41 @@ class Game {
       if (modeRec.timeTop10[0] === timeEntry) isBestTime = true;
     }
 
+    // medal
+    const medal = getMedal(this.solo.mode, this.solo.elapsed, Math.round((this.solo.score || 0) * 100) / 100, topOut);
+    const MEDAL_ORDER = { crown: 4, gold: 3, silver: 2, bronze: 1 };
+    const prevMedal = modeRec.medal || null;
+    if (medal && (MEDAL_ORDER[medal] || 0) > (MEDAL_ORDER[prevMedal] || 0)) modeRec.medal = medal;
     records[this.solo.mode] = modeRec;
     try { localStorage.setItem(SOLO_RECORD_KEY, JSON.stringify(records)); } catch {}
     const isBest = isBestTime || isBestScore;
     // solo achievements
-    if (!topOut) this._checkSoloAchievements(this.solo.mode, this.solo.elapsed, this.solo.score || 0);
+    this._checkSoloAchievements(records);
     // draw final frame with end overlay
     this.renderer.drawSolo(this.player, this.solo, modeConfig, true, this.isNoFlash());
     // show result overlay after short delay
-    setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore), 800);
+    setTimeout(() => this.showSoloResult(isBest, isBestTime, isBestScore, medal), 800);
   }
 
-  _checkSoloAchievements(mode, ms, score) {
-    if (mode === 'sprint40') {
-      if (ms <= 55000) this.unlockAchievement('sprint_55s');
-      if (ms <= 40000) this.unlockAchievement('sprint_40s');
-    } else if (mode === 'marathon150') {
-      if (ms <= 180000) this.unlockAchievement('marathon150_3m');
-    } else if (mode === 'marathon300') {
-      if (ms <= 360000) this.unlockAchievement('marathon300_6m');
-    } else if (mode === 'timeatk2') {
-      if (score >= 100) this.unlockAchievement('timeatk2_100');
-    } else if (mode === 'timeatk3') {
-      if (score >= 150) this.unlockAchievement('timeatk3_150');
-    }
+  _checkSoloAchievements(records) {
+    const MEDAL_ORDER = { crown: 4, gold: 3, silver: 2, bronze: 1 };
+    const medalModes = Object.keys(SOLO_MEDALS);
+    const medals = medalModes.map(k => records[k]?.medal || null);
+    const rank = m => MEDAL_ORDER[m] || 0;
+    const total = medals.filter(Boolean).length;
+    const bronzeAll = medalModes.every(k => rank(records[k]?.medal) >= 1);
+    const silverCount = medals.filter(m => rank(m) >= 2).length;
+    const goldCount = medals.filter(m => rank(m) >= 3).length;
+    const crownCount = medals.filter(m => m === 'crown').length;
+    if (total >= 1) this.unlockAchievement('solo_medal_1');
+    if (bronzeAll)  this.unlockAchievement('solo_all_bronze');
+    if (silverCount >= 2) this.unlockAchievement('solo_silver_2');
+    if (goldCount >= 1)   this.unlockAchievement('solo_gold_1');
+    if (goldCount >= 2)   this.unlockAchievement('solo_gold_2');
+    if (crownCount >= 1)  this.unlockAchievement('solo_crown_1');
   }
 
-  showSoloResult(isBest = false, isBestTime = false, isBestScore = false) {
+  showSoloResult(isBest = false, isBestTime = false, isBestScore = false, medal = null) {
     const modeConfig = SOLO_MODES[this.solo.mode];
     const topOut = this.solo.topOut;
     const modal = document.createElement('div');
@@ -2062,6 +2276,7 @@ class Game {
         <p style="color:#d7e5ff;margin:8px 0">${resultLine}</p>
         <p style="color:#ffe082;font-size:14px;margin:4px 0">💥 점수: ${Math.round((this.solo.score || 0) * 100) / 100}</p>
         ${bestTag ? `<p style="color:#ffe082;font-size:13px">✨ ${bestTag}</p>` : ''}
+        ${medal ? `<p style="font-size:22px;margin:6px 0">${MEDAL_EMOJI[medal]} <span style="font-size:14px;color:#d7e5ff">${{ crown: '왕관', gold: '금메달', silver: '은메달', bronze: '동메달' }[medal]}</span></p>` : ''}
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
           <button class="ghost" id="soloRetryBtn">다시 하기</button>
           <button class="ghost" id="soloLbResultBtn">순위 보기</button>
@@ -2719,7 +2934,7 @@ class Game {
       }
     }
     // 전투 시작 마나
-    if (lvl('startMana')) run.startMana = lvl('startMana') * 20;
+    if (lvl('startMana')) run.startMana = lvl('startMana') * 10;
   }
 
   showMetaScreen() {
@@ -2839,11 +3054,8 @@ class Game {
     if (this.run.relics.length >= 5) this.unlockAchievement('relic_hunter');
     if ((this.runEliteKills || 0) >= 3) this.unlockAchievement('elite_hunter');
     if ((this.runConsUsed || 0) >= 5) this.unlockAchievement('cons_user');
-    // 덱 미니멀: 클리어 시점에 10장 이하
-    const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
-    const deckSizeAtClear = allCards.length;
-    if (deckSizeAtClear <= 10) this.unlockAchievement('deck_minimalist');
     // 저주 덱: 정크/저주 카드 4개 이상으로 클리어
+    const allCards = [...(this.run.deck.draw || []), ...(this.run.deck.discard || [])];
     const curseCount = allCards.filter(id => CARD_LIBRARY?.[id]?.traits?.includes('curse')).length;
     if (curseCount >= 4) this.unlockAchievement('junk_collector');
     if (ascensionLevel >= 1) this.unlockAchievement('ascension_1');
