@@ -377,6 +377,7 @@ class Game {
       this._refreshNoFlashBtn();
     };
     document.getElementById('noFlashToggleBtn')?.addEventListener('click', _noFlashHandler);
+    document.getElementById('fullResetBtn')?.addEventListener('click', () => this.confirmFullReset());
     document.getElementById('noFlashToggleBtnPause')?.addEventListener('click', _noFlashHandler);
     document.getElementById('devCodeSubmitBtn')?.addEventListener('click', () => {
       const val = document.getElementById('devCodeInput')?.value?.trim().toUpperCase();
@@ -2840,6 +2841,29 @@ class Game {
 
   saveAchievements(set) {
     localStorage.setItem(ACHIEVEMENT_KEY, JSON.stringify([...set]));
+  }
+
+  confirmFullReset() {
+    const modal = document.createElement('div');
+    modal.className = 'deck-modal active';
+    modal.innerHTML = `
+      <div class="deck-modal-inner" style="max-width:360px;text-align:center">
+        <h3 style="color:#e07878">⚠️ 전체 초기화</h3>
+        <p style="color:#d7e5ff;font-size:13px;margin:10px 0">업적, 성장(메타), 솔로 기록, 전투 기록, 도감, 현재 런 세이브가 <strong>모두 삭제</strong>됩니다.<br>되돌릴 수 없습니다.</p>
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
+          <button id="fullResetConfirmBtn" class="ghost danger">전부 삭제</button>
+          <button id="fullResetCancelBtn" class="ghost">취소</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('fullResetCancelBtn').onclick = () => modal.remove();
+    document.getElementById('fullResetConfirmBtn').onclick = () => {
+      const KEYS = [RECORD_KEY, SAVE_KEY, CODEX_KEY, ACHIEVEMENT_KEY, ASCENSION_KEY, ASCENSION_MAX_KEY, LIFETIME_KEY, META_KEY, SOLO_RECORD_KEY, 'bbs.settings.noFlash', 'bbs_practice'];
+      KEYS.forEach(k => localStorage.removeItem(k));
+      modal.remove();
+      this.showToast('모든 세이브가 초기화되었습니다.', 'damage', 3000);
+      setTimeout(() => location.reload(), 1500);
+    };
   }
 
   unlockAchievement(id) {
