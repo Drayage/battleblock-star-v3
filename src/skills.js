@@ -162,9 +162,9 @@ const SKILLS_KO = {
     tier: 'silver',
     cost: 40,
     cooldown: 12000,
-    desc: '5초 동안 적의 행동 속도를 늦춥니다.',
+    desc: '적의 행동 속도를 늦춥니다(최대 5초로 갱신).',
     activate({ game }) {
-      game.enemySlowTimer = (game.enemySlowTimer || 0) + 5000;
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 5000);
       return true;
     }
   },
@@ -296,12 +296,12 @@ const SKILLS_KO = {
     tier: 'gold',
     cost: 90,
     cooldown: 22000,
-    desc: '적에게 쓰레기 5줄을 즉시 전송하고 3초 동안 둔화시킵니다.',
+    desc: '적에게 쓰레기 5줄을 즉시 전송하고 적 둔화를 최대 3초로 갱신합니다.',
     activate({ enemy, game }) {
       if (!enemy || enemy.defeated) return false;
       enemy.receiveGarbage(5);
       game.battlePlayerAttacks = (game.battlePlayerAttacks || 0) + 5;
-      game.enemySlowTimer = (game.enemySlowTimer || 0) + 3000;
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 3000);
       return true;
     }
   },

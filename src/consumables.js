@@ -51,9 +51,9 @@ const CONSUMABLES_KO = {
     name: '집중 칩',
     tier: 'silver',
     short: 'F',
-    desc: '10초 동안 적의 행동 속도를 늦춥니다.',
+    desc: '적의 행동 속도를 늦춥니다(최대 10초로 갱신).',
     use({ game }) {
-      game.enemySlowTimer = (game.enemySlowTimer || 0) + 10000;
+      game.enemySlowTimer = Math.max(game.enemySlowTimer || 0, 10000);
       return '집중 칩 사용';
     }
   },
