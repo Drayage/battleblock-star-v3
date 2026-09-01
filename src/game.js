@@ -2200,12 +2200,6 @@ class Game {
     this.solo.topOut = topOut;
     this.audio.playSfx(topOut ? 'defeat' : 'victory');
     const modeConfig = SOLO_MODES[this.solo.mode];
-    // 연습모드: 기록 저장·업적 없이 결과만 표시
-    if (this.practiceMode) {
-      this.renderer.drawSolo(this.player, this.solo, modeConfig, true, this.isNoFlash());
-      setTimeout(() => this.showSoloResult(false, false, false, null), 800);
-      return;
-    }
     const date = new Date().toISOString().slice(0, 10);
     let records = {};
     try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
