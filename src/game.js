@@ -302,6 +302,7 @@ class Game {
     onLangChange(() => {
       applyDomTranslations();
       this.refreshLangButtons();
+      this._codexEnemiesCache = null; // 언어 변경 시 도감 정렬 캐시 무효화
       // 동적 토글/메뉴 라벨도 갱신
       this.audio._emit?.();
       this.refreshMenu();
@@ -510,9 +511,11 @@ class Game {
     document.getElementById('deleteSaveBtn').disabled = !localStorage.getItem(SAVE_KEY);
     this.renderRecords();
     this.refreshAscensionDisplay();
+    const _meta = document.getElementById('metaBtn'); if (_meta) _meta.textContent = t('menu.meta');
+    const _reset = document.getElementById('fullResetBtn'); if (_reset) _reset.textContent = t('menu.fullReset');
     const cleared = this.hasEverCleared();
     const soloBtn = document.getElementById('soloModesBtn');
-    if (soloBtn) soloBtn.classList.toggle('hidden', !cleared);
+    if (soloBtn) { soloBtn.textContent = t('menu.solo'); soloBtn.classList.toggle('hidden', !cleared); }
     const vsBtn = document.getElementById('vsModeBtn');
     if (vsBtn) vsBtn.classList.toggle('hidden', !cleared);
     this._refreshNoFlashBtn();
@@ -2197,6 +2200,12 @@ class Game {
     this.solo.topOut = topOut;
     this.audio.playSfx(topOut ? 'defeat' : 'victory');
     const modeConfig = SOLO_MODES[this.solo.mode];
+    // 연습모드: 기록 저장·업적 없이 결과만 표시
+    if (this.practiceMode) {
+      this.renderer.drawSolo(this.player, this.solo, modeConfig, true, this.isNoFlash());
+      setTimeout(() => this.showSoloResult(false, false, false, null), 800);
+      return;
+    }
     const date = new Date().toISOString().slice(0, 10);
     let records = {};
     try { records = JSON.parse(localStorage.getItem(SOLO_RECORD_KEY) || '{}'); } catch {}
@@ -2782,30 +2791,32 @@ class Game {
     if (win) {
       const lvl = this.getAscensionLevel?.() ?? 0;
       this.checkRunAchievements?.(lvl);
-      // 단계별 해금: 이번 레벨 클리어 시 다음 레벨 해금
-      const prevMax = this.getMaxAscension?.() ?? 0;
-      if (!prevCleared) {
-        this.setMaxAscension?.(1); // 첫 클리어 → A1 해금
-      } else if (lvl >= prevMax && lvl < 10) {
-        this.setMaxAscension?.(lvl + 1);
-      }
-      const newMax = this.getMaxAscension?.() ?? 0;
-      const box = document.getElementById('ascensionUnlockBox');
-      if (box) {
+      if (!this.run?.practiceMode) {
+        // 단계별 해금: 이번 레벨 클리어 시 다음 레벨 해금
+        const prevMax = this.getMaxAscension?.() ?? 0;
         if (!prevCleared) {
-          box.classList.remove('hidden');
-          box.textContent = '🔓 승천 시스템 해금! 메인 메뉴에서 A1 이상을 선택하세요.';
-          setTimeout(() => box.classList.add('hidden'), 6000);
-        } else if (newMax > prevMax && lvl < 10) {
-          box.classList.remove('hidden');
-          box.textContent = `🌟 ${ASCENSION_MODS[lvl]?.label} 클리어! ${ASCENSION_MODS[newMax]?.label ?? 'A10'} 해금!`;
-          setTimeout(() => box.classList.add('hidden'), 4000);
-        } else if (lvl >= 10) {
-          box.classList.remove('hidden');
-          box.textContent = '👑 신화(A10) 클리어! 최고 난이도 정복!';
-          setTimeout(() => box.classList.add('hidden'), 5000);
-        } else {
-          box.classList.add('hidden');
+          this.setMaxAscension?.(1); // 첫 클리어 → A1 해금
+        } else if (lvl >= prevMax && lvl < 10) {
+          this.setMaxAscension?.(lvl + 1);
+        }
+        const newMax = this.getMaxAscension?.() ?? 0;
+        const box = document.getElementById('ascensionUnlockBox');
+        if (box) {
+          if (!prevCleared) {
+            box.classList.remove('hidden');
+            box.textContent = '🔓 승천 시스템 해금! 메인 메뉴에서 A1 이상을 선택하세요.';
+            setTimeout(() => box.classList.add('hidden'), 6000);
+          } else if (newMax > prevMax && lvl < 10) {
+            box.classList.remove('hidden');
+            box.textContent = `🌟 ${ASCENSION_MODS[lvl]?.label} 클리어! ${ASCENSION_MODS[newMax]?.label ?? 'A10'} 해금!`;
+            setTimeout(() => box.classList.add('hidden'), 4000);
+          } else if (lvl >= 10) {
+            box.classList.remove('hidden');
+            box.textContent = '👑 신화(A10) 클리어! 최고 난이도 정복!';
+            setTimeout(() => box.classList.add('hidden'), 5000);
+          } else {
+            box.classList.add('hidden');
+          }
         }
       }
     }

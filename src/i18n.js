@@ -77,6 +77,9 @@ const STRINGS = {
   'menu.achievements': { ko: '업적', en: 'Achievements', ja: '実績' },
   'menu.ascensionLevel': { ko: '승천 레벨', en: 'Ascension Level', ja: '昇天レベル' },
   'menu.tutorial': { ko: '튜토리얼', en: 'Tutorial', ja: 'チュートリアル' },
+  'menu.meta': { ko: '성장', en: 'Growth', ja: '成長' },
+  'menu.solo': { ko: '솔로', en: 'Solo', ja: 'ソロ' },
+  'menu.fullReset': { ko: '초기화', en: 'Reset All', ja: 'リセット' },
 
   // ===== 튜토리얼 =====
   'tutorial.prev': { ko: '이전', en: 'Prev', ja: '前へ' },
